@@ -5,6 +5,7 @@ generated using Kedro 0.17.7
 import numpy as np
 from typing import Dict, Tuple
 from phasespace import GenParticle, nbody_decay
+import pandas as pd
 
 def gen_nbody_decay_data(
     parameters: Dict[str, np.ndarray]
@@ -17,7 +18,8 @@ def gen_nbody_decay_data(
 
     weights, particles = nbody_decay(B0_MASS, [PION_MASS, KAON_MASS]).generate(n_events=N_EVENTS)
 
-    return weights, particles
+    result = pd.DataFrame(weights, particles)
+    return result
 
 
 def gen_sequential_decay_data(
