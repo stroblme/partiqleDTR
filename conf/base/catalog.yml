@@ -8,6 +8,6 @@ phasespace:
   filepath: data/00_parameters/phasespace.pkl
   backend: pickle
 
-# nbody_decay_data:
-#   type: pandas.ParquetDataSet
-#   filepath: data/02_intermediate/nbody_decay_data.pq
+nbody_decay_data:
+  type: pandas.ParquetDataSet
+  filepath: data/02_intermediate/nbody_decay_data.pq
