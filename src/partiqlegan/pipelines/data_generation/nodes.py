@@ -28,34 +28,32 @@ def gen_decay_from_file(
 
 def gen_nbody_decay_data(
     parameters: Dict[str, np.ndarray]
-) -> Tuple[Dict[str, np.ndarray]]:
-    B0_MASS = parameters["B0_MASS"] if "B0_MASS" in parameters else None
-    KSTARZ_MASS = parameters["KSTARZ_MASS"] if "KSTARZ_MASS" in parameters else None
-    PION_MASS = parameters["PION_MASS"] if "PION_MASS" in parameters else None
-    KAON_MASS = parameters["KAON_MASS"] if "KAON_MASS" in parameters else None
-    N_EVENTS  = parameters["N_EVENTS"] if "N_EVENTS" in parameters else 1000
+) -> Dict[str, np.ndarray]:
 
-    weights, particles = nbody_decay(B0_MASS, [PION_MASS, KAON_MASS]).generate(n_events=N_EVENTS)
-
-    result = pd.DataFrame(weights, particles)
-    return result
+    particles = dict()
+    N_EVENTS = parameters["N_EVENTS"] if "N_EVENTS" in parameters else None
 
 
-def gen_sequential_decay_data(
-    parameters: Dict[str, np.ndarray]
-) -> Tuple[Dict[str, np.ndarray]]:
-    B0_MASS = parameters["B0_MASS"] if "B0_MASS" in parameters else None
-    KSTARZ_MASS = parameters["KSTARZ_MASS"] if "KSTARZ_MASS" in parameters else None
-    PION_MASS = parameters["PION_MASS"] if "PION_MASS" in parameters else None
-    KAON_MASS = parameters["KAON_MASS"] if "KAON_MASS" in parameters else None
-    N_EVENTS  = parameters["N_EVENTS"] if "N_EVENTS" in parameters else 1000
+    # Retrive particle masses and number of events
+    for key, value in parameters.items():
+        if "MASS" in key:
+            particleName = key.replace("_MASS","")
+            particles[f"{particleName}_0"] = GenParticle(particleName, value)
 
-    kaon = GenParticle('K+', KAON_MASS)
-    pion = GenParticle('pi-', PION_MASS)
-    kstar = GenParticle('K*', KSTARZ_MASS).set_children(kaon, pion)
-    gamma = GenParticle('gamma', 0)
-    bz = GenParticle('B0', B0_MASS).set_children(kstar, gamma)
+    # Add some extra particles
+    particles["Pp_1"] = GenParticle("Pp_1", parameters["Pp_MASS"])
+    particles["Pm_1"] = GenParticle("Pm_1", parameters["Pm_MASS"])
+    particles["P0_1"] = GenParticle("P0_1", parameters["P0_MASS"])
 
-    weights, particles = bz.generate(n_events=N_EVENTS)
+    # Build the decay tree
+    particles["D0_0"].set_children(particles["Kp_0"], particles["Pm_0"], particles["P0_0"])
+    particles["O_0"].set_children(particles["Pp_1"], particles["Pm_1"], particles["P0_1"])
+    particles["Bp_0"].set_children(particles["D0_0"], particles["O_0"], particles["Pp_0"])
 
-    return weights, particles
+    # Generate a few events
+    weights, tree = particles["Bp_0"].generate(n_events=N_EVENTS)
+
+    for i, p in enumerate(tree):
+        tree[p] = np.array(tree[p]).reshape(4,N_EVENTS)
+
+    return tree
