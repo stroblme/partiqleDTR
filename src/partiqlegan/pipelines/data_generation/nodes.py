@@ -5,7 +5,26 @@ generated using Kedro 0.17.7
 import numpy as np
 from typing import Dict, Tuple
 from phasespace import GenParticle, nbody_decay
-import pandas as pd
+def gen_decay_from_file(
+    parameters: Dict[str, Any]
+) -> Dict[str, np.ndarray]:
+    MOTHER_PARTICLE = parameters["MOTHER_PARTICLE"] if "MOTHER_PARTICLE" in parameters else None
+    DECAY_FILE = parameters["DECAY_FILE"] if "DECAY_FILE" in parameters else None
+    N_EVENTS = parameters["N_EVENTS"] if "N_EVENTS" in parameters else None
+
+    parser = DecFileParser(DECAY_FILE)
+    parser.parse()
+
+    chain = parser.build_decay_chains(MOTHER_PARTICLE)
+    DecayChainViewer(chain)
+
+    decay_process = GenMultiDecay.from_dict(chain)
+
+    weights, events = decay_process.generate(n_events=N_EVENTS)
+
+
+    return events
+
 
 def gen_nbody_decay_data(
     parameters: Dict[str, np.ndarray]
