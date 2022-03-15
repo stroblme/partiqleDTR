@@ -3,8 +3,12 @@ This is a boilerplate pipeline 'data_generation'
 generated using Kedro 0.17.7
 """
 import numpy as np
-from typing import Dict, Tuple
+from typing import Dict, Tuple, Any
 from phasespace import GenParticle, nbody_decay
+from phasespace.fromdecay import GenMultiDecay
+from decaylanguage import DecFileParser, DecayChainViewer 
+
+
 def gen_decay_from_file(
     parameters: Dict[str, Any]
 ) -> Dict[str, np.ndarray]:
