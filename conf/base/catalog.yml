@@ -6,8 +6,15 @@
 phasespace:
   type: pickle.PickleDataSet
   filepath: data/00_parameters/phasespace.pkl
-  backend: pickle
+
+decaylanguage:
+  type: yaml.YAMLDataSet
+  filepath: data/00_parameters/decaylanguage.yml
+
+decay_tree_data:
+  type: pickle.PickleDataSet
+  filepath: data/02_intermediate/decay_tree_data.pkl
 
 nbody_decay_data:
-  type: pandas.ParquetDataSet
-  filepath: data/02_intermediate/nbody_decay_data.pq
+  type: pickle.PickleDataSet
+  filepath: data/02_intermediate/nbody_decay_data.pkl
