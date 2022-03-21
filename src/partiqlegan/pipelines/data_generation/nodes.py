@@ -15,12 +15,16 @@ def gen_decay_from_file(
     MOTHER_PARTICLE = parameters["MOTHER_PARTICLE"] if "MOTHER_PARTICLE" in parameters else None
     DECAY_FILE = parameters["DECAY_FILE"] if "DECAY_FILE" in parameters else None
     N_EVENTS = parameters["N_EVENTS"] if "N_EVENTS" in parameters else None
+    VIEW_GRAPH = parameters["VIEW_GRAPH"] if "VIEW_GRAPH" in parameters else None
 
     parser = DecFileParser(DECAY_FILE)
     parser.parse()
 
     chain = parser.build_decay_chains(MOTHER_PARTICLE)
-    DecayChainViewer(chain)
+
+    if VIEW_GRAPH:
+        dcv = DecayChainViewer(chain)
+        dcv.graph.render(filename='mygraph', format='pdf', view=True, cleanup=True)
 
     decay_process = GenMultiDecay.from_dict(chain)
 
