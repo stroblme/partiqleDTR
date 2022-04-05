@@ -13,6 +13,7 @@ def gen_decay_from_file(
     parameters: Dict[str, Any]
 ) -> Dict[str, np.ndarray]:
     MOTHER_PARTICLE = parameters["MOTHER_PARTICLE"] if "MOTHER_PARTICLE" in parameters else None
+    STABLE_PARTICLES = parameters["STABLE_PARTICLES"] if "STABLE_PARTICLES" in parameters else ()
     DECAY_FILE = parameters["DECAY_FILE"] if "DECAY_FILE" in parameters else None
     N_EVENTS = parameters["N_EVENTS"] if "N_EVENTS" in parameters else None
     VIEW_GRAPH = parameters["VIEW_GRAPH"] if "VIEW_GRAPH" in parameters else None
@@ -20,7 +21,7 @@ def gen_decay_from_file(
     parser = DecFileParser(DECAY_FILE)
     parser.parse()
 
-    chain = parser.build_decay_chains(MOTHER_PARTICLE)
+    chain = parser.build_decay_chains(MOTHER_PARTICLE, stable_particles=STABLE_PARTICLES)
 
     if VIEW_GRAPH:
         dcv = DecayChainViewer(chain)
