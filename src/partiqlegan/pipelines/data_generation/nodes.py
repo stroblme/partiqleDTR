@@ -3,7 +3,7 @@ This is a boilerplate pipeline 'data_generation'
 generated using Kedro 0.17.7
 """
 import numpy as np
-from typing import Dict, Tuple, Any
+from typing import Dict, Tuple, Any, List
 from phasespace import GenParticle, nbody_decay
 from phasespace.fromdecay import GenMultiDecay
 from decaylanguage import DecFileParser, DecayChainViewer 
@@ -11,7 +11,7 @@ from decaylanguage import DecFileParser, DecayChainViewer
 
 def gen_decay_from_file(
     parameters: Dict[str, Any]
-) -> Dict[str, np.ndarray]:
+) -> Tuple[Dict, List, List]:
     MOTHER_PARTICLE = parameters["MOTHER_PARTICLE"] if "MOTHER_PARTICLE" in parameters else None
     STABLE_PARTICLES = parameters["STABLE_PARTICLES"] if "STABLE_PARTICLES" in parameters else ()
     DECAY_FILE = parameters["DECAY_FILE"] if "DECAY_FILE" in parameters else None
@@ -21,18 +21,18 @@ def gen_decay_from_file(
     parser = DecFileParser(DECAY_FILE)
     parser.parse()
 
-    chain = parser.build_decay_chains(MOTHER_PARTICLE, stable_particles=STABLE_PARTICLES)
+    decay_chain = parser.build_decay_chains(MOTHER_PARTICLE, stable_particles=STABLE_PARTICLES)
 
     if VIEW_GRAPH:
-        dcv = DecayChainViewer(chain)
+        dcv = DecayChainViewer(decay_chain)
         dcv.graph.render(filename='mygraph', format='pdf', view=True, cleanup=True)
 
-    decay_process = GenMultiDecay.from_dict(chain)
+    decay_process = GenMultiDecay.from_dict(decay_chain)
 
     weights, events = decay_process.generate(n_events=N_EVENTS)
 
 
-    return events
+    return (decay_chain, weights, events)
 
 
 def gen_nbody_decay_data(

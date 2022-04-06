@@ -1,5 +1,6 @@
 venv
 *.pdf
+.ipython
 
 ##########################
 # KEDRO PROJECT
