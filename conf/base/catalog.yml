@@ -3,9 +3,9 @@
 # Documentation for this file format can be found in "The Data Catalog"
 # Link: https://kedro.readthedocs.io/en/stable/05_data/01_data_catalog.html
 
-phasespace:
-  type: pickle.PickleDataSet
-  filepath: data/00_parameters/phasespace.pkl
+# phasespace:
+#   type: pickle.PickleDataSet
+#   filepath: data/00_parameters/phasespace.pkl
 
 decaylanguage:
   type: yaml.YAMLDataSet
@@ -15,6 +15,6 @@ decay_tree_data:
   type: pickle.PickleDataSet
   filepath: data/02_intermediate/decay_tree_data.pkl
 
-nbody_decay_data:
-  type: pickle.PickleDataSet
-  filepath: data/02_intermediate/nbody_decay_data.pkl
+# nbody_decay_data:
+#   type: pickle.PickleDataSet
+#   filepath: data/02_intermediate/nbody_decay_data.pkl
