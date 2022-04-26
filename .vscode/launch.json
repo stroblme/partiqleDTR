@@ -4,16 +4,16 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
-        {
-            "name": "Python: Kedro Run - gen_nbody_decay_data",
-            "type": "python",
-            "request": "launch",
-            "console": "integratedTerminal",
-            "module": "kedro",
-            "args": ["run", "--node", "gen_nbody_decay_data"]
-            // Any other arguments should be passed as a comma-seperated-list
-            // e.g "args": ["run", "--pipeline", "pipeline_name"]
-        },
+        // {
+        //     "name": "Python: Kedro Run - gen_nbody_decay_data",
+        //     "type": "python",
+        //     "request": "launch",
+        //     "console": "integratedTerminal",
+        //     "module": "kedro",
+        //     "args": ["run", "--node", "gen_nbody_decay_data"]
+        //     // Any other arguments should be passed as a comma-seperated-list
+        //     // e.g "args": ["run", "--pipeline", "pipeline_name"]
+        // },
         {
             "name": "Python: Kedro Run - gen_decay_from_file",
             "type": "python",
@@ -21,6 +21,26 @@
             "console": "integratedTerminal",
             "module": "kedro",
             "args": ["run", "--node", "gen_decay_from_file"]
+            // Any other arguments should be passed as a comma-seperated-list
+            // e.g "args": ["run", "--pipeline", "pipeline_name"]
+        },
+        {
+            "name": "Python: Kedro Run - train_test_split",
+            "type": "python",
+            "request": "launch",
+            "console": "integratedTerminal",
+            "module": "kedro",
+            "args": ["run", "--node", "train_test_split"]
+            // Any other arguments should be passed as a comma-seperated-list
+            // e.g "args": ["run", "--pipeline", "pipeline_name"]
+        },
+        {
+            "name": "Python: Kedro Run - default",
+            "type": "python",
+            "request": "launch",
+            "console": "integratedTerminal",
+            "module": "kedro",
+            "args": ["run"]
             // Any other arguments should be passed as a comma-seperated-list
             // e.g "args": ["run", "--pipeline", "pipeline_name"]
         }
