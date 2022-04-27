@@ -11,10 +11,14 @@ decaylanguage:
   type: yaml.YAMLDataSet
   filepath: data/00_parameters/decaylanguage.yml
 
-decay_tree_data:
+decay_tree_structure:
   type: pickle.PickleDataSet
-  filepath: data/02_intermediate/decay_tree_data.pkl
+  filepath: data/02_intermediate/decay_tree_structure.pkl
 
+decay_tree_events:
+  type: pickle.PickleDataSet
+  filepath: data/02_intermediate/decay_tree_events.pkl
+  
 # nbody_decay_data:
 #   type: pickle.PickleDataSet
 #   filepath: data/02_intermediate/nbody_decay_data.pkl
