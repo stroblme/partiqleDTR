@@ -23,9 +23,8 @@ def gen_decay_from_file(
 
     decay_chain = parser.build_decay_chains(MOTHER_PARTICLE, stable_particles=STABLE_PARTICLES)
 
-    if VIEW_GRAPH:
-        dcv = DecayChainViewer(decay_chain)
-        dcv.graph.render(filename='mygraph', format='pdf', view=True, cleanup=True)
+    dcv = DecayChainViewer(decay_chain)
+    dcv.graph.render(filename='decayGraph', format='pdf', view=VIEW_GRAPH, cleanup=True)
 
     decay_process = GenMultiDecay.from_dict(decay_chain)
 
