@@ -4,6 +4,7 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
+
         // {
         //     "name": "Python: Kedro Run - gen_nbody_decay_data",
         //     "type": "python",
@@ -15,22 +16,22 @@
         //     // e.g "args": ["run", "--pipeline", "pipeline_name"]
         // },
         {
-            "name": "Python: Kedro Run - gen_decay_from_file",
+            "name": "Python: Kedro Run - data generation",
             "type": "python",
             "request": "launch",
             "console": "integratedTerminal",
             "module": "kedro",
-            "args": ["run", "--node", "gen_decay_from_file"]
+            "args": ["run", "--pipeline", "data_generation_pipeline"]
             // Any other arguments should be passed as a comma-seperated-list
             // e.g "args": ["run", "--pipeline", "pipeline_name"]
         },
         {
-            "name": "Python: Kedro Run - train_test_split",
+            "name": "Python: Kedro Run - data processing",
             "type": "python",
             "request": "launch",
             "console": "integratedTerminal",
             "module": "kedro",
-            "args": ["run", "--node", "train_test_split"]
+            "args": ["run", "--pipeline", "data_processing_pipeline"]
             // Any other arguments should be passed as a comma-seperated-list
             // e.g "args": ["run", "--pipeline", "pipeline_name"]
         },
