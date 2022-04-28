@@ -9,6 +9,10 @@ import torch
 import torchvision
 import torchdata as td
 
+import copy
+
+import re
+
 data_transform = torchvision.transforms.Compose(
     [
         torchvision.transforms.RandomResizedCrop(224),
@@ -43,12 +47,12 @@ def tree_data_to_discriminator(
 ) -> Dict[str, np.ndarray]:
 
     # raise NotImplementedError("Sorry, not yet..")
-    nodes = list()
+    fsps = list()
     probabilities = list()
 
     def add_node(name):
         if name in allowed_fsps:
-            nodes.append(name)
+            fsps.append(name)
 
 
     def get_nodes(tree):
@@ -74,6 +78,7 @@ def tree_data_to_discriminator(
                     get_nodes(value)
 
     get_nodes(decay_tree_structure)
+    print(fsps)
     return decay_tree_structure
 
 def tree_data_to_generator(
@@ -81,6 +86,38 @@ def tree_data_to_generator(
 ) -> Dict[str, np.ndarray]:
 
     # raise NotImplementedError("Sorry, not yet..")
+
+    weights_and_particles = list()
+
+    def combine_weights_and_particles(weights, particles):
+        assert len(weights) == len(particles)
+
+        num_of_sets = len(particles)
+
+        empty_sets = list()
+
+        for set_i in range(num_of_sets):
+            particles_in_set = list(particles[set_i].keys())
+
+            for particle in particles_in_set:
+                try:
+                    idx = [f in particle for f in allowed_fsps].index(True)
+                except ValueError:
+                    idx = None
+                    particles[set_i].pop(particle)  #remove the particle from the set
+
+                if particles[set_i] == {}:
+                    empty_sets.append(set_i)
+
+        shifter = 0
+        for set_i in empty_sets:
+            particles.pop(set_i-shifter)
+            weights.pop(set_i-shifter)
+            shifter += 1
+
+            # weights_and_particles.append((particles[set_i], weights[set_i]))
+
+    combine_weights_and_particles(*decay_tree_events)
 
     return decay_tree_events
 
