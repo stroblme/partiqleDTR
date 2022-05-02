@@ -92,6 +92,7 @@ def tree_data_to_generator(
     def combine_weights_and_particles(weights, particles):
         assert len(weights) == len(particles)
 
+        nonlocal num_removed_particles
         num_of_sets = len(particles)
         empty_sets = list()
 
