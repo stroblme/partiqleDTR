@@ -78,7 +78,7 @@ def tree_data_to_discriminator(
                     get_nodes(value)
 
     get_nodes(decay_tree_structure)
-    print(fsps)
+    # print(fsps)
     return decay_tree_structure
 
 def tree_data_to_generator(
@@ -87,13 +87,12 @@ def tree_data_to_generator(
 
     # raise NotImplementedError("Sorry, not yet..")
 
-    weights_and_particles = list()
+    num_removed_particles = 0
 
     def combine_weights_and_particles(weights, particles):
         assert len(weights) == len(particles)
 
         num_of_sets = len(particles)
-
         empty_sets = list()
 
         for set_i in range(num_of_sets):
@@ -105,6 +104,7 @@ def tree_data_to_generator(
                 except ValueError:
                     idx = None
                     particles[set_i].pop(particle)  #remove the particle from the set
+                    num_removed_particles += 1
 
                 if particles[set_i] == {}:
                     empty_sets.append(set_i)
@@ -115,7 +115,7 @@ def tree_data_to_generator(
             weights.pop(set_i-shifter)
             shifter += 1
 
-            # weights_and_particles.append((particles[set_i], weights[set_i]))
+        print(f"Removed {num_removed_particles} particles from the events as they are not in the list of allowed fsps: {allowed_fsps}")
 
     combine_weights_and_particles(*decay_tree_events)
 
