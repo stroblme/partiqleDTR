@@ -44,6 +44,11 @@ data_transform = torchvision.transforms.Compose(
 allowed_fsps = ["e+", "e-", "pi+", "pi-", "gamma"]
 allowed_nodes = ["e+", "e-", "pi+", "pi-", "pi0", "gamma", "omega", "mu+", "mu-", "eta"]
 
+class particle_node():
+    def __init__(self, name):
+        self.name = name
+
+            
 
 def tree_data_to_discriminator(
     decay_tree_structure: Tuple[List, List]
@@ -53,16 +58,14 @@ def tree_data_to_discriminator(
     particles = list()
     probabilities = list()
 
-    def add_node(name, cur_adj_list):
-        # if name in allowed_fsps:
-            # fsps.append(name)
-        if name is not "":
-            particles.append(name)
+    # def add_node(name, cur_adj_list):
+    #     # if name in allowed_fsps:
+    #         # fsps.append(name)
+    #     if name is not "":
+    #         particles.append(name)
 
-            cur_adj_list.append(name)
+    #         cur_adj_list.append(name)
 
-
-    adjacency_list = list()
 
     # def get_nodes(tree, cur_adj_list):
     #     if type(tree) == str:
@@ -89,14 +92,15 @@ def tree_data_to_discriminator(
 
     def append_node(list_to_append, node_name):
         if node_name in allowed_nodes:
+            particle_instance = particle_node(node_name)
             list_to_append.append(node_name)
+            particles.append(node_name)
         else:
             print(f"{node_name} not in allowed_nodes")
 
     def append_list(list_to_append, other_list):
         list_to_append.append(other_list)
         return list_to_append[-1]
-    
     
 
     def create_adj_list_from_tree(tree, adj_list):
@@ -105,7 +109,10 @@ def tree_data_to_discriminator(
             if key == "fs":
                 # First, add a new list to which we will append any subsequent leaves
                 adj_list[-1].append(list())
-                for particle in value:
+
+                # strings are moved to the very end
+                type_sorted_values=sorted(value, key=lambda x: isinstance(x,str))
+                for particle in type_sorted_values:
                     # A string? add it directly to the list
                     if type(particle) == str:
                         append_node(adj_list[-1][-1], particle)
@@ -113,15 +120,17 @@ def tree_data_to_discriminator(
                     else:
                         # these are only 1 dim dicts, thus it's fair enough to just get the first key
                         append_node(adj_list[-1][-1], list(particle.keys())[0])
+                        create_adj_list_from_tree(particle, adj_list)
+
 
                 # This appears to be redundant, but is much easier than keeping track of indices in multi dimensional recursive calls
-                for particle in value:
-                    # This time we only go for the dicts
-                    if type(particle) == dict:
-                        # add a new entry to the overall adjacency list
-                        # current_adjacency_list.append(list())
-                        # remember, there is only one key in the dict
-                        create_adj_list_from_tree(particle, adj_list)
+                # for particle in value:
+                #     # This time we only go for the dicts
+                #     if type(particle) == dict:
+                #         # add a new entry to the overall adjacency list
+                #         # current_adjacency_list.append(list())
+                #         # remember, there is only one key in the dict
+                #         create_adj_list_from_tree(particle, adj_list)
 
             # key is an node
             elif key in allowed_nodes:
@@ -132,15 +141,19 @@ def tree_data_to_discriminator(
 
 
     def create_adj_mat_from_adj_list(adj_list):
-        adjacency_matrix = np.ndarray((len(particles), len(particles)))
+        adjacency_matrix = np.zeros((len(particles), len(particles)))
 
-        for part_r in particles:
-            for part_c in particles: 
+        for edge in adj_list:
+            pass
+
+        for part_r in range(len(particles)):
+            for part_c in range(len(particles)-part_r): 
 
                 adj_list[part_r]
 
+    adjacency_list = list()
     create_adj_list_from_tree(decay_tree_structure, adjacency_list)
-    create_adj_mat_from_adj_list(decay_tree_structure, adjacency_list)
+    adjacency_matrix = create_adj_mat_from_adj_list(adjacency_list)
     # print(fsps)
     return decay_tree_structure
 
