@@ -97,73 +97,22 @@ def tree_data_to_discriminator(
         list_to_append.append(other_list)
         return list_to_append[-1]
     
-    def recursive_add_dep(current_tree, current_adjacency_list, level=0):
-        if type(current_tree) == dict:
-            for key, value in current_tree.items():
-                # fsps
-                if key == "fs":
-                    # First, add a new list to which we will append any subsequent leaves
-                    current_adjacency_list[-1].append(list())
-                    for particle in value:
-                        # A string? add it directly to the list
-                        if type(particle) == str:
-                            append_node(current_adjacency_list[-1][-1], particle)
-                            # current_adjacency_list[-1].append(particle)
-                        # Special treating for the dicts
-                        else:
-                            # for key in list(particle.keys()):
-                                # append_node(current_adjacency_list[-1][-1], key)
-                            # these are only 1 dim dicts, thus it's fair enough to just get the first key
-                            append_node(current_adjacency_list[-1][-1], list(particle.keys())[0])
+    
 
-                    # This appears to be redundant, but is much easier than keeping track of indices in multi dimensional recursive calls
-                    for particle in value:
-                        # This time we only go for the dicts
-                        if type(particle) == dict:
-                            # add a new entry to the overall adjacency list
-                            current_adjacency_list.append(list())
-                            # remember, there is only one key in the dict
-                            recursive_add(particle, current_adjacency_list)
-
-                # key is an node
-                elif key in allowed_nodes:
-                    if type(value) == list:
-                        for entry in value:
-                            new_list = append_list(current_adjacency_list, list())
-                            append_node(current_adjacency_list[-1], key)
-                            # current_adjacency_list[-1].append(key)
-                            recursive_add(entry, new_list)
-                    else:
-                        pass
-        if type(current_tree) == list:
-            for entry in current_tree:
-                current_adjacency_list.append(list())
-
-                recursive_add(entry, current_adjacency_list)
-            # for particle in current_tree['fs']:
-            #     if type(particle) == str:
-            #         current_adjacency_list[-1].append(particle)
-            #     else:
-            #         current_adjacency_list.append(current_adjacency_list[-1])
-            #         recursive_add(value, current_adjacency_list)
-
-    def recursive_add(current_tree, current_adjacency_list):
-        for key, value in current_tree.items():
+    def create_adj_list_from_tree(tree, adj_list):
+        for key, value in tree.items():
             # fsps
             if key == "fs":
                 # First, add a new list to which we will append any subsequent leaves
-                current_adjacency_list[-1].append(list())
+                adj_list[-1].append(list())
                 for particle in value:
                     # A string? add it directly to the list
                     if type(particle) == str:
-                        append_node(current_adjacency_list[-1][-1], particle)
-                        # current_adjacency_list[-1].append(particle)
+                        append_node(adj_list[-1][-1], particle)
                     # Special treating for the dicts
                     else:
-                        # for key in list(particle.keys()):
-                            # append_node(current_adjacency_list[-1][-1], key)
                         # these are only 1 dim dicts, thus it's fair enough to just get the first key
-                        append_node(current_adjacency_list[-1][-1], list(particle.keys())[0])
+                        append_node(adj_list[-1][-1], list(particle.keys())[0])
 
                 # This appears to be redundant, but is much easier than keeping track of indices in multi dimensional recursive calls
                 for particle in value:
@@ -172,30 +121,14 @@ def tree_data_to_discriminator(
                         # add a new entry to the overall adjacency list
                         # current_adjacency_list.append(list())
                         # remember, there is only one key in the dict
-                        recursive_add(particle, current_adjacency_list)
+                        create_adj_list_from_tree(particle, adj_list)
 
             # key is an node
             elif key in allowed_nodes:
-                if type(value) == list:
-                    for entry in value:
-                        new_list = append_list(current_adjacency_list, list())
-                        append_node(new_list, key)
-                        # current_adjacency_list[-1].append(key)
-                        recursive_add(entry, current_adjacency_list)
-                else:
-                    raise NotImplementedError()
-        # if type(current_tree) == list:
-        #     for entry in current_tree:
-        #         current_adjacency_list.append(list())
-
-        #         recursive_add(entry, current_adjacency_list)
-
-
-
-    def create_adj_list_from_tree(tree):
-        nonlocal adjacency_list
-        # adjacency_list.append(list())
-        recursive_add(tree, adjacency_list)
+                for entry in value:
+                    new_list = append_list(adj_list, list())
+                    append_node(new_list, key)
+                    create_adj_list_from_tree(entry, adj_list)
 
 
     def create_adj_mat_from_adj_list(adj_list):
@@ -206,8 +139,8 @@ def tree_data_to_discriminator(
 
                 adj_list[part_r]
 
-    create_adj_list_from_tree(decay_tree_structure)
-    create_adj_mat_from_adj_list(adjacency_list)
+    create_adj_list_from_tree(decay_tree_structure, adjacency_list)
+    create_adj_mat_from_adj_list(decay_tree_structure, adjacency_list)
     # print(fsps)
     return decay_tree_structure
 
