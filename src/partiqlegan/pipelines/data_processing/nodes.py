@@ -104,42 +104,33 @@ def tree_data_to_discriminator(
     
 
     def create_adj_list_from_tree(tree, adj_list):
-        for key, value in tree.items():
-            # fsps
-            if key == "fs":
-                # First, add a new list to which we will append any subsequent leaves
-                adj_list[-1].append(list())
 
-                # strings are moved to the very end
-                type_sorted_values=sorted(value, key=lambda x: not isinstance(x,str))
-                for particle in type_sorted_values:
-                    # A string? add it directly to the list
-                    if type(particle) == str:
-                        append_node(adj_list[-1][-1], particle)
-                    # Special treating for the dicts
-                    else:
-                        # these are only 1 dim dicts, thus it's fair enough to just get the first key
-                        append_node(adj_list[-1][-1], list(particle.keys())[0])
-                        # a recursive call at this point is ok, since there should be no strings anymore due to the sorting prior to the iteration
-                        create_adj_list_from_tree(particle, adj_list)
+        first_key = list(tree.keys())[0]
 
+        # fsps
+        if "fs" and "bf" in tree.keys():
+            # First, add a new list to which we will append any subsequent leaves
+            adj_list[-1].append(list())
 
-                # This appears to be redundant, but is much easier than keeping track of indices in multi dimensional recursive calls
-                # for particle in value:
-                #     # This time we only go for the dicts
-                #     if type(particle) == dict:
-                #         # add a new entry to the overall adjacency list
-                #         # current_adjacency_list.append(list())
-                #         # remember, there is only one key in the dict
-                #         create_adj_list_from_tree(particle, adj_list)
+            # strings are moved to the very end
+            type_sorted_values=sorted(tree["fs"], key=lambda x: not isinstance(x,str))
+            for particle in type_sorted_values:
+                # A string? add it directly to the list
+                if type(particle) == str:
+                    append_node(adj_list[-1][-1], particle)
+                # Special treating for the dicts
+                else:
+                    # these are only 1 dim dicts, thus it's fair enough to just get the first key
+                    append_node(adj_list[-1][-1], list(particle.keys())[0])
+                    # a recursive call at this point is ok, since there should be no strings anymore due to the sorting prior to the iteration
+                    create_adj_list_from_tree(particle, adj_list)
 
-            # key is an node
-            elif key in allowed_nodes:
-                for entry in value:
-                    new_list = append_list(adj_list, list())
-                    append_node(new_list, key)
-                    create_adj_list_from_tree(entry, adj_list)
-
+        # key is an node
+        elif first_key in allowed_nodes:
+            for entry in tree[first_key]:
+                new_list = append_list(adj_list, list())
+                append_node(new_list, first_key)
+                create_adj_list_from_tree(entry, adj_list)
 
     def create_adj_mat_from_adj_list(adj_list):
         adjacency_matrix = np.zeros((len(particles), len(particles)))
