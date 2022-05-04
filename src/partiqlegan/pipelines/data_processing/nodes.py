@@ -111,7 +111,7 @@ def tree_data_to_discriminator(
                 adj_list[-1].append(list())
 
                 # strings are moved to the very end
-                type_sorted_values=sorted(value, key=lambda x: isinstance(x,str))
+                type_sorted_values=sorted(value, key=lambda x: not isinstance(x,str))
                 for particle in type_sorted_values:
                     # A string? add it directly to the list
                     if type(particle) == str:
@@ -120,6 +120,7 @@ def tree_data_to_discriminator(
                     else:
                         # these are only 1 dim dicts, thus it's fair enough to just get the first key
                         append_node(adj_list[-1][-1], list(particle.keys())[0])
+                        # a recursive call at this point is ok, since there should be no strings anymore due to the sorting prior to the iteration
                         create_adj_list_from_tree(particle, adj_list)
 
 
