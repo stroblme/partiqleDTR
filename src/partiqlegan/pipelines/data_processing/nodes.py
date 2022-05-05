@@ -45,8 +45,15 @@ allowed_fsps = ["e+", "e-", "pi+", "pi-", "gamma"]
 allowed_nodes = ["e+", "e-", "pi+", "pi-", "pi0", "gamma", "omega", "mu+", "mu-", "eta"]
 
 class particle_node():
-    def __init__(self, name):
+    def __init__(self, name, parent_node):
         self.name = name
+        self.parent_node = parent_node
+
+    def __eq__(self, __o: object) -> bool:
+        try:
+            return (self.name == __o.name) and (self.parent_node == __o.parent_node)
+        except:
+            return False
 
             
 
@@ -90,11 +97,12 @@ def tree_data_to_discriminator(
 
     # get_nodes(decay_tree_structure)
 
-    def append_node(list_to_append, node_name):
+    def append_node(list_to_append, node_name, parent_node_instance):
         if node_name in allowed_nodes:
-            particle_instance = particle_node(node_name)
-            list_to_append.append(node_name)
-            particles.append(node_name)
+            particle_instance = particle_node(node_name, parent_node_instance)
+            list_to_append.append(particle_instance)
+            particles.append(particle_instance)
+            return particle_instance
         else:
             print(f"{node_name} not in allowed_nodes")
 
@@ -103,7 +111,7 @@ def tree_data_to_discriminator(
         return list_to_append[-1]
     
 
-    def create_adj_list_from_tree(tree, adj_list):
+    def create_adj_list_from_tree(tree, adj_list, parent=None):
 
         first_key = list(tree.keys())[0]
 
@@ -112,25 +120,25 @@ def tree_data_to_discriminator(
             # First, add a new list to which we will append any subsequent leaves
             adj_list[-1].append(list())
 
-            # strings are moved to the very end
+            # strings are moved to the very beginning. This is important to not mixup with the [-1] calls
             type_sorted_values=sorted(tree["fs"], key=lambda x: not isinstance(x,str))
             for particle in type_sorted_values:
                 # A string? add it directly to the list
                 if type(particle) == str:
-                    append_node(adj_list[-1][-1], particle)
+                    append_node(adj_list[-1][-1], particle, parent)
                 # Special treating for the dicts
                 else:
                     # these are only 1 dim dicts, thus it's fair enough to just get the first key
-                    append_node(adj_list[-1][-1], list(particle.keys())[0])
+                    particle_instance = append_node(adj_list[-1][-1], list(particle.keys())[0], parent)
                     # a recursive call at this point is ok, since there should be no strings anymore due to the sorting prior to the iteration
-                    create_adj_list_from_tree(particle, adj_list)
+                    create_adj_list_from_tree(particle, adj_list, particle_instance)
 
-        # key is an node
+        # key is a node
         elif first_key in allowed_nodes:
             for entry in tree[first_key]:
                 new_list = append_list(adj_list, list())
-                append_node(new_list, first_key)
-                create_adj_list_from_tree(entry, adj_list)
+                particle_instance = append_node(new_list, first_key, parent)
+                create_adj_list_from_tree(entry, adj_list, particle_instance)
 
     def create_adj_mat_from_adj_list(adj_list):
         adjacency_matrix = np.zeros((len(particles), len(particles)))
