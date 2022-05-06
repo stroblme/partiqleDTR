@@ -55,7 +55,15 @@ class particle_node():
         except:
             return False
 
-            
+def tree_data_to_adjacency_list(
+    decay_tree_structure: Tuple[List, List]
+) -> List:
+    pass
+
+def adjacency_list_to_adjacency_matrix(
+    decay_tree_structure: Tuple[List, List]
+) -> List:
+    pass
 
 def tree_data_to_discriminator(
     decay_tree_structure: Tuple[List, List]
