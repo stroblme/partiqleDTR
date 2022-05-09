@@ -57,53 +57,9 @@ class particle_node():
 
 def tree_data_to_adjacency_list(
     decay_tree_structure: Tuple[List, List]
-) -> List:
-    pass
-
-def adjacency_list_to_adjacency_matrix(
-    decay_tree_structure: Tuple[List, List]
-) -> List:
-    pass
-
-def tree_data_to_discriminator(
-    decay_tree_structure: Tuple[List, List]
-) -> Dict[str, np.ndarray]:
-
-    # raise NotImplementedError("Sorry, not yet..")
+) -> Tuple[List, List]:
     particles = list()
-    probabilities = list()
-
-    # def add_node(name, cur_adj_list):
-    #     # if name in allowed_fsps:
-    #         # fsps.append(name)
-    #     if name is not "":
-    #         particles.append(name)
-
-    #         cur_adj_list.append(name)
-
-
-    # def get_nodes(tree, cur_adj_list):
-    #     if type(tree) == str:
-    #         add_node(tree, cur_adj_list)
-    #     elif type(tree) == list:
-    #         for sub_tree in tree:
-    #             get_nodes(sub_tree)
-                
-
-    #     elif type(tree) == dict:
-    #         for key, value in tree.items():
-    #             # fsps
-    #             if key == "fs":
-    #                 get_nodes(value)
-    #             # probabilities
-    #             elif key == "bf":
-    #                 probabilities.append(value)
-    #             # 1st gen particles
-    #             else:
-    #                 add_node(key)
-    #                 get_nodes(value)
-
-    # get_nodes(decay_tree_structure)
+    adjacency_list = list()
 
     def append_node(list_to_append, node, parent_node_instance):
         if type(node) == str:
@@ -156,24 +112,41 @@ def tree_data_to_discriminator(
                 node = append_node(new_list, node, parent_node.parent_node)
                 create_adj_list_from_tree(entry, adj_list, node)
 
-    def create_adj_mat_from_adj_list(adj_list):
-        adjacency_matrix = np.zeros((len(particles), len(particles)))
-        np.fill_diagonal(adjacency_matrix, 1)
+    create_adj_list_from_tree(decay_tree_structure, adjacency_list)
+
+    return (particles, adjacency_list)
+
+def adjacency_list_to_adjacency_matrix(
+    particles: List,
+    adjacency_list: List
+) -> List:
+    adjacency_matrix = np.zeros((len(particles), len(particles)))
+
+    def create_adj_mat_from_adj_list(adj_list, adj_matrix):
+        np.fill_diagonal(adj_matrix, 1)
         
         for edge in adj_list:
             idx_a = particles.index(edge[0])
             for set_of_childs in edge[1:]:
                 for child in set_of_childs:
                     idx_b = particles.index(child)
-                    adjacency_matrix[idx_a, idx_b] = 1
-                    adjacency_matrix[idx_b, idx_a] = 1
+                    adj_matrix[idx_a, idx_b] = 1
+                    adj_matrix[idx_b, idx_a] = 1
 
 
-    adjacency_list = list()
-    create_adj_list_from_tree(decay_tree_structure, adjacency_list)
-    adjacency_matrix = create_adj_mat_from_adj_list(adjacency_list)
-    # print(fsps)
-    return decay_tree_structure
+    create_adj_mat_from_adj_list(adjacency_list, adjacency_matrix)
+    
+    return adjacency_matrix
+
+def tree_data_to_discriminator(
+    decay_tree_structure: Tuple[List, List]
+) -> Dict[str, np.ndarray]:
+
+    # raise NotImplementedError("Sorry, not yet..")
+    probabilities = list()
+
+
+    
 
 def tree_data_to_generator(
     decay_tree_events: Dict
