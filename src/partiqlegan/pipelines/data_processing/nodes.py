@@ -119,7 +119,7 @@ def tree_data_to_adjacency_list(
 def adjacency_list_to_adjacency_matrix(
     particles: List,
     adjacency_list: List
-) -> List:
+) -> np.ndarray:
     adjacency_matrix = np.zeros((len(particles), len(particles)))
 
     def create_adj_mat_from_adj_list(adj_list, adj_matrix):
@@ -138,15 +138,34 @@ def adjacency_list_to_adjacency_matrix(
     
     return adjacency_matrix
 
+def adjacency_list_to_lca(
+    particles: List,
+    adjacency_list: List
+) -> np.ndarray:
+    pass
+
+def adjacency_list_to_lcas(
+    particles: List,
+    adjacency_list: List
+) -> np.ndarray:
+    pass
+
+def adjacency_list_to_lcag(
+    particles: List,
+    adjacency_list: List
+) -> np.ndarray:
+    pass
+
 def tree_data_to_discriminator(
     decay_tree_structure: Tuple[List, List]
 ) -> Dict[str, np.ndarray]:
 
     # raise NotImplementedError("Sorry, not yet..")
     probabilities = list()
+    particles, adjacency_list = tree_data_to_adjacency_list(decay_tree_structure)
+    adjacency_matrix = adjacency_list_to_adjacency_matrix(particles, adjacency_list)
+    lcas_matrix = adjacency_list_to_lcas()
 
-
-    
 
 def tree_data_to_generator(
     decay_tree_events: Dict
