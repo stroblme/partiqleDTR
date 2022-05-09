@@ -49,11 +49,11 @@ class particle_node():
         self.name = name
         self.parent_node = parent_node
 
-    def __eq__(self, __o: object) -> bool:
-        try:
-            return (self.name == __o.name) and (self.parent_node == __o.parent_node)
-        except:
-            return False
+    # def __eq__(self, __o: object) -> bool:
+    #     try:
+    #         return (self.name == __o.name) and (self.parent_node == __o.parent_node)
+    #     except:
+    #         return False
 
 def tree_data_to_adjacency_list(
     decay_tree_structure: Tuple[List, List]
@@ -158,14 +158,16 @@ def tree_data_to_discriminator(
 
     def create_adj_mat_from_adj_list(adj_list):
         adjacency_matrix = np.zeros((len(particles), len(particles)))
-
+        np.fill_diagonal(adjacency_matrix, 1)
+        
         for edge in adj_list:
-            pass
+            idx_a = particles.index(edge[0])
+            for set_of_childs in edge[1:]:
+                for child in set_of_childs:
+                    idx_b = particles.index(child)
+                    adjacency_matrix[idx_a, idx_b] = 1
+                    adjacency_matrix[idx_b, idx_a] = 1
 
-        for part_r in range(len(particles)):
-            for part_c in range(len(particles)-part_r): 
-
-                adj_list[part_r]
 
     adjacency_list = list()
     create_adj_list_from_tree(decay_tree_structure, adjacency_list)
