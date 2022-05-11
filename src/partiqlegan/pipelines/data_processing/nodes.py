@@ -45,9 +45,10 @@ allowed_fsps = ["e+", "e-", "pi+", "pi-", "gamma"]
 allowed_nodes = ["e+", "e-", "pi+", "pi-", "pi0", "gamma", "omega", "mu+", "mu-", "eta"]
 
 class particle_node():
-    def __init__(self, name, parent_node=None):
+    def __init__(self, name, parent_node=None, fsp=False):
         self.name = name
         self.parent_node = parent_node
+        self.fsp = fsp
 
     # def __eq__(self, __o: object) -> bool:
     #     try:
@@ -61,10 +62,10 @@ def tree_data_to_adjacency_list(
     particles = list()
     adjacency_list = list()
 
-    def append_node(list_to_append, node, parent_node_instance):
+    def append_node(list_to_append, node, parent_node_instance, fsp=False):
         if type(node) == str:
             if node in allowed_nodes:
-                particle_instance = particle_node(node, parent_node_instance)
+                particle_instance = particle_node(node, parent_node_instance, fsp=fsp)
             else:
                 print(f"{node} not in allowed_nodes")
         else:
@@ -93,7 +94,7 @@ def tree_data_to_adjacency_list(
             for node_name in type_sorted_values:
                 # A string? add it directly to the list
                 if type(node_name) == str:
-                    append_node(adj_list[-1][-1], node_name, parent_node)
+                    append_node(adj_list[-1][-1], node_name, parent_node, fsp=True)
                 # Special treating for the dicts
                 else:
                     # these are only 1 dim dicts, thus it's fair enough to just get the first key
@@ -130,19 +131,28 @@ def adjacency_list_to_adjacency_matrix(
             for set_of_childs in edge[1:]:
                 for child in set_of_childs:
                     idx_b = particles.index(child)
-                    adj_matrix[idx_a, idx_b] = 1
-                    adj_matrix[idx_b, idx_a] = 1
+                    adj_matrix[idx_a, idx_b] += 1
+                    adj_matrix[idx_b, idx_a] += 1
 
 
     create_adj_mat_from_adj_list(adjacency_list, adjacency_matrix)
     
     return adjacency_matrix
 
+def filter_fsps(
+    particles: List
+) -> List:
+    fsps = [particle for particle in particles if particle.fsp]
+
+    return fsps
+    
+
 def adjacency_list_to_lca(
     particles: List,
     adjacency_list: List
 ) -> np.ndarray:
-    pass
+    
+    fsps = filter_fsps(particles)
 
 def adjacency_list_to_lcas(
     particles: List,
