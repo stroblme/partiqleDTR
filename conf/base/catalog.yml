@@ -7,7 +7,11 @@
 #   type: pickle.PickleDataSet
 #   filepath: data/00_parameters/phasespace.pkl
 
-decaylanguage:
+simple_decay:
+  type: yaml.YAMLDataSet
+  filepath: data/00_parameters/simple_decay.yml
+  
+omega_decay:
   type: yaml.YAMLDataSet
   filepath: data/00_parameters/omega_decay.yml
   # filepath: data/00_parameters/decaylanguage.yml
