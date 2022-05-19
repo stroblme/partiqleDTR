@@ -129,25 +129,25 @@ def gen_nbody_decay_data(
     ISO_RETRIES = parameters["ISO_RETRIES"] if "ISO_RETRIES" in parameters else None
     GENERATE_UNKNOWN = parameters["GENERATE_UNKNOWN"] if "GENERATE_UNKNOWN" in parameters else None
 
-    generate_phasespace(MASSES,
-                        FSP_MASSES, 
-                        N_TOPOLOGIES, 
-                        MAX_DEPTH, 
-                        MAX_CHILDREN, 
-                        MIN_CHILDREN,
-                        ISP_WEIGHT,
-                        TRAIN_EVENTS_PER_TOP,
-                        VAL_EVENTS_PER_TOP,
-                        TEST_EVENTS_PER_TOP,
-                        SEED,
-                        ISO_RETRIES,
-                        GENERATE_UNKNOWN)
+    topologies = generate_phasespace(   MASSES,
+                                        FSP_MASSES, 
+                                        N_TOPOLOGIES, 
+                                        MAX_DEPTH, 
+                                        MAX_CHILDREN, 
+                                        MIN_CHILDREN,
+                                        ISP_WEIGHT,
+                                        TRAIN_EVENTS_PER_TOP,
+                                        VAL_EVENTS_PER_TOP,
+                                        TEST_EVENTS_PER_TOP,
+                                        SEED,
+                                        ISO_RETRIES,
+                                        GENERATE_UNKNOWN)
     
+    gen_train_data(parameters, topologies)
 
     return {
         "parameters": parameters,
-        "decay_tree_structure": decay_chain,
-        "decay_tree_events": (weights, events)
+        "topologies": topologies
     }
 
 
@@ -283,6 +283,8 @@ def generate_phasespace(
                 # continue
 
         topologies.append(root_node)
+
+
     return topologies
 
 def count_leaves(node):
@@ -308,6 +310,8 @@ def gen_train_data(parameters, topologies):
     if GENERATE_UNKNOWN:
         total_topologies = 3 * N_TOPOLOGIES
 
+    all_lca = {mode:list() for mode in modes}
+    all_leave = {mode:list() for mode in modes}
 
     for i, root_node in enumerate(topologies):
         # NOTE generate leaves and labels for training, validation, and testing
@@ -323,8 +327,6 @@ def gen_train_data(parameters, topologies):
             modes = ['test']
         # save_dir.mkdir(parents=True, exist_ok=True)
 
-        all_lca = dict()
-        all_leave = dict()
         lca, names = decay2lca(root_node)
 
         for mode in modes:
@@ -340,23 +342,17 @@ def gen_train_data(parameters, topologies):
             # NOTE shuffle leaves for each sample
             leaves, lca_shuffled = shuffle_leaves(leaves, lca)
 
-            all_lca[mode] = lca_shuffled
-            all_leave[mode] = leaves
+            all_lca[mode].append(lca_shuffled)
+            all_leave[mode].append(leaves)
             
-            # pad_len = len(str(total_topologies))
-            # leaves_file = save_dir / f'leaves_{mode}.{i:0{pad_len}}.npy'
-            # lcas_file = save_dir / f'lcas_{mode}.{i:0{pad_len}}.npy'
-            # np.save(leaves_file, leaves)
-            # np.save(lcas_file, lcas)
-
         del lca
         del names
 
-        return {
-            "parameters": parameters,
-            "all_lca": all_lca,
-            "all_leave": all_leave
-        }
+    return {
+        "parameters": parameters,
+        "all_lca": all_lca,
+        "all_leave": all_leave
+    }
 
 
 def shuffle_leaves(leaves, lca):
