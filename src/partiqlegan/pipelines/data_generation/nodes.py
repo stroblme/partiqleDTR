@@ -209,7 +209,6 @@ def generate_phasespace(
     if not set(masses).isdisjoint(set(fsp_masses)):
         raise ValueError("Particles are only identified by their masses. Final state particle masses can not occur in intermediate particle masses.")
 
-    events_per_mode = {'train': train_events_per_top, 'val': val_events_per_top, 'test': test_events_per_top}
 
     topology_isomorphism_invariates = []
 
@@ -287,31 +286,30 @@ def generate_phasespace(
 
     return topologies
 
-def count_leaves(node):
+def count_leaves(node,):
     num_leaves = 0
     if node.has_grandchildren:
-        for child in node.get_children():
+        for child in node.children:
             num_leaves += count_leaves(child)
+    elif node.has_children:
+        num_leaves += len(node.children)
     else:
-        num_leaves += len(child.get_children())
+        num_leaves += 1
 
     return num_leaves
 
 def gen_train_data(parameters, topologies):
     N_TOPOLOGIES = parameters["N_TOPOLOGIES"] if "N_TOPOLOGIES" in parameters else None
+    MODES_NAMES = parameters["MODES_NAMES"] if "MODES_NAMES" in parameters else None
     TRAIN_EVENTS_PER_TOP = parameters["TRAIN_EVENTS_PER_TOP"] if "TRAIN_EVENTS_PER_TOP" in parameters else None
     VAL_EVENTS_PER_TOP = parameters["VAL_EVENTS_PER_TOP"] if "VAL_EVENTS_PER_TOP" in parameters else None
     TEST_EVENTS_PER_TOP = parameters["TEST_EVENTS_PER_TOP"] if "TEST_EVENTS_PER_TOP" in parameters else None
     GENERATE_UNKNOWN = parameters["GENERATE_UNKNOWN"] if "GENERATE_UNKNOWN" in parameters else None
 
     events_per_mode = {'train': TRAIN_EVENTS_PER_TOP, 'val': VAL_EVENTS_PER_TOP, 'test': TEST_EVENTS_PER_TOP}
-    total_topologies = N_TOPOLOGIES
 
-    if GENERATE_UNKNOWN:
-        total_topologies = 3 * N_TOPOLOGIES
-
-    all_lca = {mode:list() for mode in modes}
-    all_leave = {mode:list() for mode in modes}
+    all_lca = {mode:list() for mode in MODES_NAMES}
+    all_leave = {mode:list() for mode in MODES_NAMES}
 
     for i, root_node in enumerate(topologies):
         # NOTE generate leaves and labels for training, validation, and testing
@@ -319,12 +317,12 @@ def gen_train_data(parameters, topologies):
         # For topologies not in the training set, save them to a different subdir
         # save_dir = Path(root, 'unknown')
         if i < N_TOPOLOGIES or not GENERATE_UNKNOWN:
-            modes = ['train', 'val', 'test']
+            modes = MODES_NAMES
             # save_dir = Path(root, 'known')
         elif i < (2 * N_TOPOLOGIES):
-            modes = ['val', 'test']
+            modes = MODES_NAMES[1:]
         else:
-            modes = ['test']
+            modes = MODES_NAMES[2:]
         # save_dir.mkdir(parents=True, exist_ok=True)
 
         lca, names = decay2lca(root_node)
