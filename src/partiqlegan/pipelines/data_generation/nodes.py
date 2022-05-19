@@ -74,40 +74,7 @@ def gen_decay_from_file(
 #         "decay_tree_events": (weights, events)
 #     }
 
-def gen_nbody_decay_data(
-    parameters: Dict[str, np.ndarray]
-) -> Dict[str, np.ndarray]:
 
-    particles = dict()
-    N_EVENTS = parameters["N_EVENTS"] if "N_EVENTS" in parameters else None
-
-
-    # Retrive particle masses and number of events
-    for key, value in parameters.items():
-        if "MASS" in key:
-            particleName = key.replace("_MASS","")
-            particles[f"{particleName}_0"] = GenParticle(particleName, value)
-
-    # Add some extra particles
-    particles["Pp_1"] = GenParticle("Pp_1", parameters["Pp_MASS"])
-    particles["Pm_1"] = GenParticle("Pm_1", parameters["Pm_MASS"])
-    particles["P0_1"] = GenParticle("P0_1", parameters["P0_MASS"])
-
-    # Build the decay tree
-    particles["D0_0"].set_children(particles["Kp_0"], particles["Pm_0"], particles["P0_0"])
-    particles["O_0"].set_children(particles["Pp_1"], particles["Pm_1"], particles["P0_1"])
-    particles["Bp_0"].set_children(particles["D0_0"], particles["O_0"], particles["Pp_0"])
-
-    # Generate a few events
-    weights, events = particles["Bp_0"].generate(n_events=N_EVENTS)
-
-    for i, p in enumerate(events):
-        events[p] = np.array(events[p]).reshape(4,N_EVENTS)
-
-    return {
-        "decay_tree_structure": decay_chain,
-        "decay_tree_events": (weights, events)
-    }
 
 def gen_nbody_decay_data(
     parameters: Dict[str, np.ndarray]
@@ -310,6 +277,8 @@ def gen_train_data(parameters, topologies):
 
     all_lca = {mode:list() for mode in MODES_NAMES}
     all_leave = {mode:list() for mode in MODES_NAMES}
+    all_weights = {mode:list() for mode in MODES_NAMES}
+    all_events = {mode:list() for mode in MODES_NAMES}
 
     for i, root_node in enumerate(topologies):
         # NOTE generate leaves and labels for training, validation, and testing
@@ -329,11 +298,11 @@ def gen_train_data(parameters, topologies):
 
         for mode in modes:
             num_events = events_per_mode[mode]
-            weights, particles = root_node.generate(
+            weights, events = root_node.generate(
                 num_events,
                 seed=np.random.randint(np.iinfo(np.int32).max),
             )
-            leaves = np.asarray([particles[name] for name in names])
+            leaves = np.asarray([events[name] for name in names])
             leaves = leaves.swapaxes(0, 1)
             assert leaves.shape == (num_events, count_leaves(root_node), 4)
 
@@ -342,6 +311,8 @@ def gen_train_data(parameters, topologies):
 
             all_lca[mode].append(lca_shuffled)
             all_leave[mode].append(leaves)
+            all_weights[mode].append(weights)
+            all_events[mode].append(weights)
             
         del lca
         del names
@@ -349,7 +320,8 @@ def gen_train_data(parameters, topologies):
     return {
         "parameters": parameters,
         "all_lca": all_lca,
-        "all_leave": all_leave
+        "all_leave": all_leave,
+        "decay_tree_events": (weights, events)
     }
 
 
