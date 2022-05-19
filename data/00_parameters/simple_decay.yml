@@ -1,6 +1,7 @@
 ---
 MASSES: [100, 90, 80, 70, 50, 20, 25, 10]
 FSP_MASSES: [1, 2, 3, 5, 12]
+MODES_NAMES: ['train', 'val', 'test']
 N_TOPOLOGIES: 10
 MAX_DEPTH: 8
 MAX_CHILDREN: 6
