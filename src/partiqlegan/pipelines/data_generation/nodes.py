@@ -302,17 +302,23 @@ def gen_train_data(parameters, topologies):
                 num_events,
                 seed=np.random.randint(np.iinfo(np.int32).max),
             )
-            leaves = np.asarray([events[name] for name in names])
-            leaves = leaves.swapaxes(0, 1)
-            assert leaves.shape == (num_events, count_leaves(root_node), 4)
 
-            # NOTE shuffle leaves for each sample
-            leaves, lca_shuffled = shuffle_leaves(leaves, lca)
-
-            all_lca[mode].append(lca_shuffled)
-            all_leave[mode].append(leaves)
             all_weights[mode].append(weights)
             all_events[mode].append(weights)
+
+
+def convert_to_lca(parameters, topologies, decay_tree_events):
+
+    
+        leaves = np.asarray([events[name] for name in names])
+        leaves = leaves.swapaxes(0, 1)
+        assert leaves.shape == (num_events, count_leaves(root_node), 4)
+
+        # NOTE shuffle leaves for each sample
+        leaves, lca_shuffled = shuffle_leaves(leaves, lca)
+
+        all_lca[mode].append(lca_shuffled)
+        all_leave[mode].append(leaves)
             
         del lca
         del names
