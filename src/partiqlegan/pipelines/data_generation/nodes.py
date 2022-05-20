@@ -96,45 +96,9 @@ def gen_nbody_decay_data(
     ISO_RETRIES = parameters["ISO_RETRIES"] if "ISO_RETRIES" in parameters else None
     GENERATE_UNKNOWN = parameters["GENERATE_UNKNOWN"] if "GENERATE_UNKNOWN" in parameters else None
 
-    topologies = generate_phasespace(   MASSES,
-                                        FSP_MASSES, 
-                                        N_TOPOLOGIES, 
-                                        MAX_DEPTH, 
-                                        MAX_CHILDREN, 
-                                        MIN_CHILDREN,
-                                        ISP_WEIGHT,
-                                        TRAIN_EVENTS_PER_TOP,
-                                        VAL_EVENTS_PER_TOP,
-                                        TEST_EVENTS_PER_TOP,
-                                        SEED,
-                                        ISO_RETRIES,
-                                        GENERATE_UNKNOWN)
-    
-    gen_train_data(parameters, topologies)
-
-    return {
-        "parameters": parameters,
-        "topologies": topologies
-    }
+   
 
 
-
-
-def generate_phasespace(
-        masses,
-        fsp_masses,
-        n_topologies=10,
-        max_depth=5,
-        max_children=6,
-        min_children=2,
-        isp_weight=1.,
-        train_events_per_top=5,
-        val_events_per_top=10,
-        test_events_per_top=10,
-        seed=None,
-        iso_retries=0,
-        generate_unknown=True,
-):
     """ Generate a PhaseSpace dataset
 
     Args:
@@ -156,38 +120,37 @@ def generate_phasespace(
                            if > 0 gives the number of retries to ensure non-isomorphic topologies before raising
     """
 
-    from phasespace import GenParticle
     # import tensorflow as tf
 
-    if seed is not None:
-        np.random.seed(seed)
+    if SEED is not None:
+        np.random.seed(SEED)
         # This is supposed to be supported as a global seed for Phasespace but doesn't work
         # Instead we set the seed below in the calls to generate()
         # tf.random.set_seed(np.random.randint(np.iinfo(np.int32).max))
 
-    if int(max_depth) <= 1:
+    if int(MAX_DEPTH) <= 1:
         raise ValueError("Tree needs to have at least two levels")
 
-    if int(min_children) < 2:
+    if int(MIN_CHILDREN) < 2:
         raise ValueError("min_children must be two or more")
 
-    masses = sorted(masses, reverse=True)
-    fsp_masses = sorted(fsp_masses, reverse=True)
+    masses = sorted(MASSES, reverse=True)
+    fsp_masses = sorted(FSP_MASSES, reverse=True)
     if not set(masses).isdisjoint(set(fsp_masses)):
         raise ValueError("Particles are only identified by their masses. Final state particle masses can not occur in intermediate particle masses.")
 
 
     topology_isomorphism_invariates = []
 
-    total_topologies = n_topologies
-    if generate_unknown:
-        total_topologies = 3 * n_topologies
+    total_topologies = N_TOPOLOGIES
+    if GENERATE_UNKNOWN:
+        total_topologies = 3 * N_TOPOLOGIES
 
     topologies = list()
     
     for i in range(total_topologies):
         # NOTE generate tree for a topology
-        for j in range(max(1, iso_retries)):
+        for j in range(max(1, ISO_RETRIES)):
             queue = []
             root_node = GenParticle('root', masses[0])
             queue.append((root_node, 1))
@@ -197,7 +160,7 @@ def generate_phasespace(
                 node, level = queue.pop(0)
                 if next_level <= level:
                     next_level = level + 1
-                num_children = np.random.randint(min_children, max_children + 1)
+                num_children = np.random.randint(MIN_CHILDREN, MAX_CHILDREN + 1)
 
                 total_child_mass = 0
                 children = []
@@ -218,9 +181,9 @@ def generate_phasespace(
 
                     # use fsps if last generation or at random determined by number of possible masses and isp weight
                     if (
-                        next_level == max_depth
+                        next_level == MAX_DEPTH
                         or avail_mass <= min(masses)
-                        or np.random.random() < (1. * len(fsp_masses)) / ((1. * len(fsp_masses)) + (isp_weight * len(masses)))
+                        or np.random.random() < (1. * len(fsp_masses)) / ((1. * len(fsp_masses)) + (ISP_WEIGHT * len(masses)))
                     ):
                         child_mass = np.random.choice([n for n in fsp_masses if (n < avail_mass)])
                     else:
@@ -240,18 +203,22 @@ def generate_phasespace(
 
             # NOTE if iso_retries given, check if topology already represented in dataset
             top_iso_invar = assign_parenthetical_weight_tuples(root_node)
-            if iso_retries <= 0 or top_iso_invar not in topology_isomorphism_invariates:
+            if ISO_RETRIES <= 0 or top_iso_invar not in topology_isomorphism_invariates:
                 topology_isomorphism_invariates.append(top_iso_invar)
                 break
-            if j == (iso_retries - 1):
+            if j == (ISO_RETRIES - 1):
                 raise RuntimeError("Could not find sufficient number of non-isomorphic topologies.")
                 # print("Could not find sufficient number of non-isomorphic topologies.")
                 # continue
 
         topologies.append(root_node)
 
+    event_data = gen_train_data(parameters, topologies)
+    convert_to_lca(parameters, topologies, event_data["decay_tree_events"])
 
-    return topologies
+    return {
+        "topologies": topologies
+    }
 
 def count_leaves(node,):
     num_leaves = 0
@@ -275,10 +242,52 @@ def gen_train_data(parameters, topologies):
 
     events_per_mode = {'train': TRAIN_EVENTS_PER_TOP, 'val': VAL_EVENTS_PER_TOP, 'test': TEST_EVENTS_PER_TOP}
 
-    all_lca = {mode:list() for mode in MODES_NAMES}
-    all_leave = {mode:list() for mode in MODES_NAMES}
+    
     all_weights = {mode:list() for mode in MODES_NAMES}
     all_events = {mode:list() for mode in MODES_NAMES}
+
+    for i, root_node in enumerate(topologies):
+        # NOTE generate leaves and labels for training, validation, and testing
+        modes = []
+        # For topologies not in the training set, save them to a different subdir
+        # save_dir = Path(root, 'unknown')
+        if i < N_TOPOLOGIES or not GENERATE_UNKNOWN:
+            modes = MODES_NAMES
+            # save_dir = Path(root, 'known')
+        elif i < (2 * N_TOPOLOGIES):
+            modes = MODES_NAMES[1:]
+        else:
+            modes = MODES_NAMES[2:]
+        # save_dir.mkdir(parents=True, exist_ok=True)
+
+        for mode in modes:
+            num_events = events_per_mode[mode]
+            weights, events = root_node.generate(
+                num_events,
+                seed=np.random.randint(np.iinfo(np.int32).max),
+            )
+
+            all_weights[mode].append(weights)
+            all_events[mode].append(events)
+    return {
+        "decay_tree_events": (all_weights, all_events)
+    }
+
+
+def convert_to_lca(parameters, topologies, decay_tree_events):
+    N_TOPOLOGIES = parameters["N_TOPOLOGIES"] if "N_TOPOLOGIES" in parameters else None
+    MODES_NAMES = parameters["MODES_NAMES"] if "MODES_NAMES" in parameters else None
+    TRAIN_EVENTS_PER_TOP = parameters["TRAIN_EVENTS_PER_TOP"] if "TRAIN_EVENTS_PER_TOP" in parameters else None
+    VAL_EVENTS_PER_TOP = parameters["VAL_EVENTS_PER_TOP"] if "VAL_EVENTS_PER_TOP" in parameters else None
+    TEST_EVENTS_PER_TOP = parameters["TEST_EVENTS_PER_TOP"] if "TEST_EVENTS_PER_TOP" in parameters else None
+    GENERATE_UNKNOWN = parameters["GENERATE_UNKNOWN"] if "GENERATE_UNKNOWN" in parameters else None
+
+    events_per_mode = {'train': TRAIN_EVENTS_PER_TOP, 'val': VAL_EVENTS_PER_TOP, 'test': TEST_EVENTS_PER_TOP}
+
+    _, all_events = decay_tree_events
+
+    all_lca = {mode:list() for mode in MODES_NAMES}
+    all_leave = {mode:list() for mode in MODES_NAMES}
 
     for i, root_node in enumerate(topologies):
         # NOTE generate leaves and labels for training, validation, and testing
@@ -298,38 +307,24 @@ def gen_train_data(parameters, topologies):
 
         for mode in modes:
             num_events = events_per_mode[mode]
-            weights, events = root_node.generate(
-                num_events,
-                seed=np.random.randint(np.iinfo(np.int32).max),
-            )
-
-            all_weights[mode].append(weights)
-            all_events[mode].append(weights)
-
-
-def convert_to_lca(parameters, topologies, decay_tree_events):
-
     
-        leaves = np.asarray([events[name] for name in names])
-        leaves = leaves.swapaxes(0, 1)
-        assert leaves.shape == (num_events, count_leaves(root_node), 4)
+            leaves = np.asarray([all_events[mode][i][name] for name in names])
+            leaves = leaves.swapaxes(0, 1)
+            assert leaves.shape == (num_events, count_leaves(root_node), 4)
 
-        # NOTE shuffle leaves for each sample
-        leaves, lca_shuffled = shuffle_leaves(leaves, lca)
+            # NOTE shuffle leaves for each sample
+            leaves, lca_shuffled = shuffle_leaves(leaves, lca)
 
-        all_lca[mode].append(lca_shuffled)
-        all_leave[mode].append(leaves)
-            
+            all_lca[mode].append(lca_shuffled)
+            all_leave[mode].append(leaves)
+                
         del lca
         del names
 
     return {
-        "parameters": parameters,
         "all_lca": all_lca,
-        "all_leave": all_leave,
-        "decay_tree_events": (weights, events)
+        "all_leave": all_leave
     }
-
 
 def shuffle_leaves(leaves, lca):
     """
