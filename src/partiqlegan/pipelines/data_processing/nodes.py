@@ -166,6 +166,196 @@ def adjacency_list_to_lcag(
 ) -> np.ndarray:
     pass
 
+
+
+
+def conv_structure_to_lca_and_names(parameters, decay_tree_structure):
+    N_TOPOLOGIES = parameters["N_TOPOLOGIES"] if "N_TOPOLOGIES" in parameters else None
+    MODES_NAMES = parameters["MODES_NAMES"] if "MODES_NAMES" in parameters else None
+    GENERATE_UNKNOWN = parameters["GENERATE_UNKNOWN"] if "GENERATE_UNKNOWN" in parameters else None
+
+
+
+    all_lca = list()
+    all_names = list()
+
+    for i, root_node in enumerate(decay_tree_structure):
+        lca, names = _conv_decay_to_lca(root_node)
+
+        all_lca.append(lca)
+        all_names.append(names)
+                
+
+    return {
+        "all_lca": all_lca,
+        "all_names": all_names
+    }
+
+def shuffle_lca_and_names(parameters, all_lca, all_names, decay_tree_events):
+    N_TOPOLOGIES = parameters["N_TOPOLOGIES"] if "N_TOPOLOGIES" in parameters else None
+    MODES_NAMES = parameters["MODES_NAMES"] if "MODES_NAMES" in parameters else None
+    TRAIN_EVENTS_PER_TOP = parameters["TRAIN_EVENTS_PER_TOP"] if "TRAIN_EVENTS_PER_TOP" in parameters else None
+    VAL_EVENTS_PER_TOP = parameters["VAL_EVENTS_PER_TOP"] if "VAL_EVENTS_PER_TOP" in parameters else None
+    TEST_EVENTS_PER_TOP = parameters["TEST_EVENTS_PER_TOP"] if "TEST_EVENTS_PER_TOP" in parameters else None
+    GENERATE_UNKNOWN = parameters["GENERATE_UNKNOWN"] if "GENERATE_UNKNOWN" in parameters else None
+
+    events_per_mode = {'train': TRAIN_EVENTS_PER_TOP, 'val': VAL_EVENTS_PER_TOP, 'test': TEST_EVENTS_PER_TOP}
+
+    _, all_events = decay_tree_events
+
+    all_lca_shuffled = {mode:list() for mode in MODES_NAMES}
+    all_leave_shuffled = {mode:list() for mode in MODES_NAMES}
+
+    for i, lca, names in enumerate(zip(all_lca, all_names)):
+        # NOTE generate leaves and labels for training, validation, and testing
+        modes = []
+        # For topologies not in the training set, save them to a different subdir
+        # save_dir = Path(root, 'unknown')
+        if i < N_TOPOLOGIES or not GENERATE_UNKNOWN:
+            modes = MODES_NAMES
+            # save_dir = Path(root, 'known')
+        elif i < (2 * N_TOPOLOGIES):
+            modes = MODES_NAMES[1:]
+        else:
+            modes = MODES_NAMES[2:]
+        # save_dir.mkdir(parents=True, exist_ok=True)
+
+
+        for mode in modes:
+            num_events = events_per_mode[mode]
+    
+            leaves = np.asarray([all_events[mode][i][name] for name in names])
+            leaves = leaves.swapaxes(0, 1)
+            # assert leaves.shape == (num_events, _count_leaves(root_node), 4)
+
+            # NOTE shuffle leaves for each sample
+            leaves, lca_shuffled = _shuffle_leaves(leaves, lca)
+
+            all_lca_shuffled[mode].append(lca_shuffled)
+            all_leave_shuffled[mode].append(leaves)
+                
+        del lca
+        del names
+
+    return {
+        "all_lca_shuffled": all_lca_shuffled,
+        "all_leave_shuffled": all_leave_shuffled
+    }
+
+def _conv_decay_to_lca(root):
+    ''' Return the LCA matrix of a decay
+
+    Args:
+        root (phasespace.GenParticle): the root particle of a decay tree
+
+    Returns:
+        numpy.ndarray, list: the lca matrix of the decay and the list of
+        GenParticle names corresponding to each row and column
+
+    '''
+    # NOTE find all leaf nodes
+    node_list = [root]
+    leaf_nodes = []
+    parents = {root.name: None, }
+    generations = {root.name: 0}
+    while len(node_list)>0:
+        node = node_list.pop(0)
+        # NOTE since there is no get parent
+        for c in node.children:
+            if c.name in parents: raise(ValueError('Node names have to be unique!'))
+            parents[c.name] = node
+            generations[c.name] = generations[node.name]+1
+        if len(node.children) == 0:
+            leaf_nodes.append(node)
+        else:
+            node_list = [c for c in node.children] + node_list
+    # NOTE init results
+    names = [l.name for l in leaf_nodes]
+    lca_mat = np.zeros((len(leaf_nodes), len(leaf_nodes)), dtype=int)
+
+    # NOTE fix skipped generations such that leaves are all in the same one
+    # NOTE and nodes can be "pulled down"
+    depth = max({generations[name] for name in names})
+    for name in names:
+        generations[name] = depth
+    node_list = [l for l in leaf_nodes]
+    while len(node_list)>0:
+        node = node_list.pop(0)
+        parent = parents[node.name]
+        if parent is not None:
+            node_list.append(parent)
+            if len(node.children)>0:
+                generations[node.name] = min({generations[n.name] for n in node.children})-1
+
+    # NOTE trace ancestry for all leaves to root
+    for i in range(len(leaf_nodes)):
+        for j in range(i+1, len(leaf_nodes)):
+            _lca = _find_lca(leaf_nodes[i], leaf_nodes[j], parents, generations)
+            lca_mat[i, j] = _lca
+            lca_mat[j, i] = _lca
+
+    return lca_mat, names
+
+def _shuffle_leaves(leaves, lca):
+    """
+    leaves (torch.Tensor): tensor containing leaves of shape (num_samples. num_leaves, num_features)
+    lca torch.Tensor): tensor containing lca matrix of simulated decay of shape (num_leaves, num_leaves)
+    """
+    assert leaves.shape[1] == lca.shape[0]
+    assert leaves.shape[1] == lca.shape[1]
+    d = lca.shape[1]
+
+    shuff_leaves = np.zeros(leaves.shape)
+    shuff_lca = np.zeros((leaves.shape[0], *(lca.shape)))
+
+    for idx in np.arange(leaves.shape[0]):
+        perms = np.random.permutation(d)
+        shuff_leaves[idx] = leaves[idx, perms]
+        shuff_lca[idx] = lca[perms][:, perms]
+
+    return shuff_leaves, shuff_lca
+
+
+def _count_leaves(node,):
+    num_leaves = 0
+    if node.has_grandchildren:
+        for child in node.children:
+            num_leaves += _count_leaves(child)
+    elif node.has_children:
+        num_leaves += len(node.children)
+    else:
+        num_leaves += 1
+
+    return num_leaves
+
+
+def _find_lca(node1, node2, parents, generations):
+    if node1.name == node2.name:
+        raise ValueError("{} and {} have to be different.".format(node1, node2))
+    ancestry1 = []
+    parent = node1
+    while parent is not None:
+        ancestry1.append(parent)
+        parent = parents[parent.name]
+
+    ancestry2 = []
+    parent = node2
+    while parent is not None:
+        ancestry2.append(parent)
+        parent = parents[parent.name]
+
+    ancestry1.reverse()
+    ancestry2.reverse()
+
+    # NOTE basically find common subroot
+    for i, x in enumerate(ancestry1):
+        if x.name != ancestry2[i].name:
+            subroot = parents[x.name]
+            g = generations[subroot.name]
+            return generations[node1.name] - generations[subroot.name]
+
+    return 0
+
 def tree_data_to_discriminator(
     decay_tree_structure: Tuple[List, List]
 ) -> Dict[str, np.ndarray]:
