@@ -13,11 +13,13 @@ def register_pipelines() -> Dict[str, Pipeline]:
         A mapping from a pipeline name to a ``Pipeline`` object.
     """
 
-    data_generation_pipeline = dg.create_pipeline()
+    data_generation_artificial_pipeline = dg.create_artificial_pipeline()
+    data_generation_belleII_pipeline = dg.create_belleII_pipeline()
     data_processing_pipeline = dp.create_pipeline()
 
     return {
-        "__default__": data_generation_pipeline+data_processing_pipeline,
-        "data_generation_pipeline": data_generation_pipeline,
+        "__default__": data_generation_artificial_pipeline+data_processing_pipeline,
+        "data_generation_artificial_pipeline": data_generation_artificial_pipeline,
+        "data_generation_belleII_pipeline": data_generation_belleII_pipeline,
         "data_processing_pipeline": data_processing_pipeline,
     }
