@@ -240,7 +240,7 @@ def assign_parenthetical_weight_tuples(node):
 
 
 
-def gen_events_from_topologies(parameters, decay_tree_structure):
+def gen_events_from_structure(parameters, decay_tree_structure):
     N_TOPOLOGIES = parameters["N_TOPOLOGIES"] if "N_TOPOLOGIES" in parameters else None
     MODES_NAMES = parameters["MODES_NAMES"] if "MODES_NAMES" in parameters else None
     TRAIN_EVENTS_PER_TOP = parameters["TRAIN_EVENTS_PER_TOP"] if "TRAIN_EVENTS_PER_TOP" in parameters else None
