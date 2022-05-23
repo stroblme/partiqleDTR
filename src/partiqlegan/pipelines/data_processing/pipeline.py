@@ -4,7 +4,7 @@ generated using Kedro 0.17.7
 """
 
 from kedro.pipeline import Pipeline, node, pipeline
-from .nodes import tree_data_to_generator, tree_data_to_discriminator, normalize
+from .nodes import tree_data_to_generator, tree_data_to_discriminator, normalize, conv_structure_to_lca_and_names, shuffle_lca_and_names
 
 def create_pipeline(**kwargs) -> Pipeline:
     return pipeline([
@@ -27,9 +27,21 @@ def create_pipeline(**kwargs) -> Pipeline:
                 name="normalize_generator"
         ),
         node(
-                func=normalize,
-                inputs="discriminator_input",
-                outputs="discriminator_input_normalized",
-                name="normalize_discriminator"
+                func=conv_structure_to_lca_and_names,
+                inputs=["artificial_decay", "decay_tree_structure"],
+                outputs={
+                    "all_lca":"all_lca",
+                    "all_names":"all_names"
+                },
+                name="conv_structure_to_lca_and_names"
+        ),
+        node(
+                func=shuffle_lca_and_names,
+                inputs=["artificial_decay", "all_lca", "all_names", "decay_tree_events"],
+                outputs={
+                    "all_lca_shuffled":"all_lca_shuffled",
+                    "all_leave_shuffled":"all_leave_shuffled"
+                },
+                name="shuffle_lca_and_names"
         )
     ])
