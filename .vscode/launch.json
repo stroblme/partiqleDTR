@@ -16,12 +16,32 @@
         //     // e.g "args": ["run", "--pipeline", "pipeline_name"]
         // },
         {
-            "name": "Python: Kedro Run - data generation",
+            "name": "Python: Kedro Run - data generation artificial",
             "type": "python",
             "request": "launch",
             "console": "integratedTerminal",
             "module": "kedro",
-            "args": ["run", "--pipeline", "data_generation_pipeline"]
+            "args": ["run", "--pipeline", "data_generation_artificial_pipeline"]
+            // Any other arguments should be passed as a comma-seperated-list
+            // e.g "args": ["run", "--pipeline", "pipeline_name"]
+        },
+        {
+            "name": "Python: Kedro Run - data generation belleII",
+            "type": "python",
+            "request": "launch",
+            "console": "integratedTerminal",
+            "module": "kedro",
+            "args": ["run", "--pipeline", "data_generation_belleII_pipeline"]
+            // Any other arguments should be passed as a comma-seperated-list
+            // e.g "args": ["run", "--pipeline", "pipeline_name"]
+        },
+        {
+            "name": "Python: Kedro Run - data processing artificial",
+            "type": "python",
+            "request": "launch",
+            "console": "integratedTerminal",
+            "module": "kedro",
+            "args": ["run", "--pipeline", "data_processing_pipeline"]
             // Any other arguments should be passed as a comma-seperated-list
             // e.g "args": ["run", "--pipeline", "pipeline_name"]
         },
