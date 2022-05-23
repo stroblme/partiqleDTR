@@ -4,16 +4,30 @@ generated using Kedro 0.17.7
 """
 
 from kedro.pipeline import Pipeline, node, pipeline
-from .nodes import gen_decay_from_file, gen_nbody_decay_data
+from .nodes import gen_decay_from_file, gen_structure_from_parameters, gen_events_from_topologies
 
-def create_pipeline(**kwargs) -> Pipeline:
+def create_artificial_pipeline(**kwargs) -> Pipeline:
     return pipeline([
         node(
-                func=gen_nbody_decay_data,
-                inputs="simple_decay",
-                outputs="nbody_decay_data",
-                name="gen_nbody_decay_data",
-            ),
+                func=gen_structure_from_parameters,
+                inputs="artificial_decay",
+                outputs={
+                    "decay_tree_structure":"decay_tree_structure"
+                },
+                name="gen_structure_from_parameters",
+        ),
+        node(
+                func=gen_events_from_topologies,
+                inputs=["artificial_decay", "decay_tree_structure"],
+                outputs={
+                    "decay_tree_events":"decay_tree_events"
+                },
+                name="gen_events_from_topologies",
+        )
+    ])
+
+def create_belleII_pipeline(**kwargs) -> Pipeline:
+    return pipeline([
         node(
                 func=gen_decay_from_file,
                 inputs="omega_decay",
