@@ -1,5 +1,38 @@
 # partiqlegan
 
+
+decayfile -> decaytree -> decayevents
+
+masses -> decaytopologies (containing decaytrees) -> decayevents
+
+
+
+
+
+## Notes
+
+changed module dependencies in phasespace:
+
+before:
+
+Requires-Dist: tensorflow (<2.8,>=2.6)
+Requires-Dist: tensorflow-probability (<0.14,>=0.11)
+Requires-Dist: keras (<2.7)
+
+after:
+
+Requires-Dist: tensorflow (>=2.6)
+Requires-Dist: tensorflow-probability (>=0.11)
+Requires-Dist: keras (<2.10)
+
+
+
+
+
+
+
+
+
 ## Overview
 
 This is your new Kedro project, which was generated using `Kedro 0.17.7`.
