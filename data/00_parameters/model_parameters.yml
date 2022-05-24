@@ -1,0 +1,30 @@
+---
+GPU         : '-1'
+N_FILES     : 100
+N_VALID     : 50
+N_TRAIN     : 50
+BATCH_SIZE  : 1 
+LR_C        : 0.01
+N_ITERS     : 3
+N_EPOCH     : 20
+TEST_EVERY  : 50
+HID_DIM     : 4
+NETWORK     : 'QGNN'
+OPTIMIZER: 'Adam'
+LOSS_FUNC: 'BinaryCrossentropy'
+N_THREAD    : 4
+LOG_VERBOSITY: 2
+EN_QC:
+  PQC_ID  : '10'
+  IEC_ID  : 'simple_encoding_y'
+  MC_ID   : 'measure_all'
+  N_LAYERS : 3
+  REPETITIONS: 0
+  N_QUBITS: 4
+NN_QC:
+  PQC_ID  : '10'
+  IEC_ID  : 'simple_encoding_y'
+  MC_ID   : 'measure_all'
+  N_LAYERS : 3
+  REPETITIONS: 0
+  N_QUBITS: 4
