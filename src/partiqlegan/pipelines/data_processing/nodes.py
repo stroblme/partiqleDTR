@@ -169,12 +169,15 @@ def adjacency_list_to_lcag(
 
 
 
-def conv_structure_to_lca_and_names(decay_tree_structure):
+def conv_structure_to_lca_and_names(decay_parameters, decay_tree_structure):
     all_lca = list()
     all_names = list()
 
+    PAD_TO = decay_parameters["PAD_TO"] if "PAD_TO" in decay_parameters else None
+
+
     for i, root_node in enumerate(decay_tree_structure):
-        lca, names = _conv_decay_to_lca(root_node)
+        lca, names = _conv_decay_to_lca(root_node, PAD_TO)
 
         all_lca.append(lca)
         all_names.append(names)
@@ -218,7 +221,7 @@ def shuffle_lca_and_leaves(decay_parameters, all_lca, all_names, decay_tree_even
         for mode in modes:
             num_events = events_per_mode[mode]
     
-            leaves = np.asarray([all_events[mode][i][name] for name in names])
+            leaves = np.asarray([all_events[mode][i][name] if name in all_events[mode][i] else np.zeros((num_events, 4)) for name in names])
             leaves = leaves.swapaxes(0, 1)
             # assert leaves.shape == (num_events, _count_leaves(root_node), 4)
 
@@ -234,7 +237,7 @@ def shuffle_lca_and_leaves(decay_parameters, all_lca, all_names, decay_tree_even
         "all_leaves_shuffled": all_leaves_shuffled
     }
 
-def _conv_decay_to_lca(root):
+def _conv_decay_to_lca(root, pad_to=None):
     ''' Return the LCA matrix of a decay
 
     Args:
@@ -285,6 +288,11 @@ def _conv_decay_to_lca(root):
             _lca = _find_lca(leaf_nodes[i], leaf_nodes[j], parents, generations)
             lca_mat[i, j] = _lca
             lca_mat[j, i] = _lca
+
+    if pad_to != None:
+        lca_res = np.pad(lca_mat, [(0,pad_to-lca_mat.shape[0]), (0,pad_to-lca_mat.shape[1])], 'constant')
+        names_res = np.pad(names, (0, pad_to-len(names)), 'constant')
+        return lca_res, names_res
 
     return lca_mat, names
 
@@ -401,21 +409,38 @@ def tree_data_to_generator(
     return decay_tree_events
 
 
-def normalize(
-    data: np.ndarray
-) -> np.ndarray:
+def normalize_event(
+    decay_parameters: Dict,
+    data: Dict
+) -> Dict:
+
+    MODES_NAMES = decay_parameters["MODES_NAMES"] if "MODES_NAMES" in decay_parameters else None
+
+    for mode in MODES_NAMES:
+        for i_topology in range(len(data[mode])):
+            data[mode][i_topology] = data[mode][i_topology]/max(data[mode][i_topology].max(), abs(data[mode][i_topology].min()))
 
     return data
 
 
-def conv_to_gnn_input(model_parameters, all_lca_shuffled, all_leaves_shuffled):
-    pass
+# def pad_lca(
+#     decay_parameters: Dict,
+#     data: Dict
+# ) -> Dict:
 
+#     MODES_NAMES = decay_parameters["MODES_NAMES"] if "MODES_NAMES" in decay_parameters else None
+#     PAD_TO = decay_parameters["PAD_TO"] if "PAD_TO" in decay_parameters else None
 
+#     for mode in MODES_NAMES:
+#         for i in range(len(data[mode])):
+#             for j in range(len(data[mode][i])):
+#                 shape = data[mode][i][j].shape
+#                 if shape[0] > PAD_TO:
+#                     raise RuntimeError(f"Padding not sufficient. Is {PAD_TO} but requires {shape[0]}")
+#                 elif shape[0] < PAD_TO:
+#                     padded = np.pad(data[mode][i][j], [(0,PAD_TO-shape[0]), (0,PAD_TO-shape[1])], mode="constant")
+#                     data[mode][i][j].resize((PAD_TO, PAD_TO), refcheck=False)
+#                     data[mode][i][j] = padded
+                
 
-    # return{
-    #     "X":X,
-    #     "R_i":R_i,
-    #     "R_o":R_o,
-    #     "Y":Y,
-    # }
+#     return data
