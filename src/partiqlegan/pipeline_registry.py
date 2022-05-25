@@ -19,7 +19,7 @@ def register_pipelines() -> Dict[str, Pipeline]:
     data_processing_belleII_pipeline = dp.create_belleII_pipeline()
 
     return {
-        "__default__": data_generation_artificial_pipeline+data_generation_artificial_pipeline,
+        "__default__": data_generation_artificial_pipeline+data_processing_artificial_pipeline,
         "data_generation_artificial_pipeline": data_generation_artificial_pipeline,
         "data_generation_belleII_pipeline": data_generation_belleII_pipeline,
         "data_processing_artificial_pipeline": data_processing_artificial_pipeline,
