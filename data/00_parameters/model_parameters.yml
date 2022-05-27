@@ -1,30 +1,44 @@
 ---
-GPU         : '-1'
-N_FILES     : 100
-N_VALID     : 50
-N_TRAIN     : 50
-BATCH_SIZE  : 1 
-LR_C        : 0.01
-N_ITERS     : 3
-N_EPOCH     : 20
-TEST_EVERY  : 50
-HID_DIM     : 4
-NETWORK     : 'QGNN'
-OPTIMIZER: 'Adam'
-LOSS_FUNC: 'BinaryCrossentropy'
-N_THREAD    : 4
-LOG_VERBOSITY: 2
-EN_QC:
-  PQC_ID  : '10'
-  IEC_ID  : 'simple_encoding_y'
-  MC_ID   : 'measure_all'
-  N_LAYERS : 3
-  REPETITIONS: 0
-  N_QUBITS: 4
-NN_QC:
-  PQC_ID  : '10'
-  IEC_ID  : 'simple_encoding_y'
-  MC_ID   : 'measure_all'
-  N_LAYERS : 3
-  REPETITIONS: 0
-  N_QUBITS: 4
+EPOCHS: 4
+BATCH: 2**7
+REDUCE: "CNN"
+ENC: "GNNENC"
+DEC: "GNNDEC"
+
+SIZE: 10
+# 3 for kuramoto and 4 for spring and charged.
+DIM: 4
+EDGE_TYPE: 2
+
+N_HID: 2 ** 8
+INPUT_EMB_HID: 2 ** 7
+# Dimension of hidden layers of attention mechanisms.
+EMB_HID: 2 ** 8
+ATT_HID: 2 ** 8
+SKIP: False
+# Soft constraint for symmetry.
+REG: 0.
+NO_REG: False
+# Hard constraint for symmetry.
+SYM: False
+
+'''Hyperparameters for training.'''
+# Scale the loss to avoid gradient explosion.
+SCALE: 1e-5
+EPOCHS: 500
+LR: 2.5e-4
+LR_DECAY: 200
+GAMMA: 0.5
+BATCH_SIZE: 2 ** 7
+M: 10
+
+TIMESTEPS: 50
+TRAIN_STEPS: 49
+TEST_STEPS: 99
+TEMP: 0.5
+# NOTE: 10 for kuramoto, 100 for spring and charged.
+INTERVAL: 10 ** 1
+SAMPLES: 10 ** 2
+
+# Run n rounds of the code.
+ROUNDS: 1
