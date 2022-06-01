@@ -1,9 +1,9 @@
 import torch
 from torch import Tensor
-import config as cfg
+# import config as cfg
 from torch.nn.functional import cross_entropy
-from utils.torch_extension import edge_accuracy, asym_rate
-from instructors.base import Instructor
+from ..utils.torch_extension import edge_accuracy, asym_rate
+from .base import Instructor
 from torch.utils.data.dataset import TensorDataset
 from torch import optim
 from torch.optim.lr_scheduler import StepLR
@@ -14,7 +14,7 @@ class XNRIENCIns(Instructor):
     """
     Train the encoder in an supervised manner given the ground truth relations.
     """
-    def __init__(self, model: torch.nn.DataParallel, data: dict, es: np.ndarray, cmd):
+    def __init__(self, model_parameters, model: torch.nn.DataParallel, data: dict,  es: np.ndarray, cmd):
         """
         Args:
             model: an auto-encoder
@@ -22,35 +22,46 @@ class XNRIENCIns(Instructor):
             es: edge list
             cmd: command line parameters
         """
+        LR = model_parameters["LR"] if "LR" in model_parameters else None
+        LR_DECAY = model_parameters["LR_DECAY"] if "LR_DECAY" in model_parameters else None
+        GAMMA = model_parameters["GAMMA"] if "GAMMA" in model_parameters else None
+        SIZE = model_parameters["SIZE"] if "SIZE" in model_parameters else None
+        BATCH_SIZE = model_parameters["BATCH_SIZE"] if "BATCH_SIZE" in model_parameters else None
+        EPOCHS = model_parameters["EPOCHS"] if "EPOCHS" in model_parameters else None
+
+
         super(XNRIENCIns, self).__init__(cmd)
         self.model = model
-        self.data = {key: TensorDataset(value[0], value[1])
+        
+        self.data = {key: TensorDataset(*value)
                      for key, value in data.items()}
+        # self.data = data
         self.es = torch.LongTensor(es)
         # number of nodes
-        self.size = cmd.size
-        self.batch_size = cmd.batch
+        self.size = SIZE
+        self.epochs = EPOCHS
+        self.batch_size = BATCH_SIZE
         # optimizer
-        self.opt = optim.Adam(self.model.parameters(), lr=cfg.lr)
+        self.opt = optim.Adam(self.model.parameters(), lr=LR)
         # learning rate scheduler, same as in NRI
-        self.scheduler = StepLR(self.opt, step_size=cfg.lr_decay, gamma=cfg.gamma)
+        self.scheduler = StepLR(self.opt, step_size=LR_DECAY, gamma=GAMMA)
 
     def train(self):
         # use the accuracy as the metric for model selection, default: 0
         val_best = 0
         # path to save the current best model
-        prefix = '/'.join(cfg.log.split('/')[:-1])
-        name = '{}/best.pth'.format(prefix)
-        for epoch in range(1, 1 + self.cmd.epochs):
+        # prefix = '/'.join(cfg.log.split('/')[:-1])
+        # name = '{}/best.pth'.format(prefix)
+        for epoch in range(1, 1 + self.epochs):
             self.model.train()
             # shuffle the data at each epoch
             data = self.load_data(self.data['train'], self.batch_size)
             loss_a = 0.
             N = 0.
             for adj, states in data:
-                if cfg.gpu:
-                    adj = adj.cuda()
-                    states = states.cuda()
+                # if cfg.gpu:
+                #     adj = adj.cuda()
+                #     states = states.cuda()
                 scale = len(states) / self.batch_size
                 # N: number of samples, equal to the batch size with possible exception for the last batch
                 N += scale
@@ -63,12 +74,12 @@ class XNRIENCIns(Instructor):
             if val_cur > val_best:
                 # update the current best model when approaching a higher accuray
                 val_best = val_cur
-                torch.save(self.model.module.state_dict(), name)
+                # torch.save(self.model.module.state_dict(), name)
 
             self.scheduler.step()
         # learning rate scheduling
-        if self.cmd.epochs > 0:
-            self.model.module.load_state_dict(torch.load(name))
+        # if self.cmd.epochs > 0:
+            # self.model.module.load_state_dict(torch.load(name))
         _ = self.report('test')
 
     def report(self, name: str) -> float:
