@@ -1,7 +1,6 @@
 from torch import nn
 import torch.nn.functional as F
-from utils.general import prod
-from utils.torch_extension import my_bn
+from ..utils.general import prod
 from torch import Tensor
 import math
 
@@ -17,10 +16,10 @@ class MLP(nn.Module):
             do_prob: rate of dropout
         """
         super(MLP, self).__init__()
-        self.fc1 = nn.Linear(n_in, n_hid)
-        self.fc2 = nn.Linear(n_hid, n_out)
-        self.bn = nn.BatchNorm1d(n_out)
-        self.bn2 = nn.BatchNorm1d(n_hid)
+        self.fc_hid = nn.Linear(n_in, n_hid)
+        self.fc_out = nn.Linear(n_hid, n_out)
+        self.bn_out = nn.BatchNorm1d(n_out)
+        self.bn_hid = nn.BatchNorm1d(n_hid)
         self.dropout_prob = do_prob
         # self.init_weights()
 
@@ -33,20 +32,20 @@ class MLP(nn.Module):
                 m.weight.data.fill_(1)
                 m.bias.data.zero_()
 
-    def batch_norm(self, inputs: Tensor) -> Tensor:
+    def batch_norm(self, inputs: Tensor, bn: nn.BatchNorm1d) -> Tensor:
         """
         Batch normzalization for multi-dimensional tensor.
         """
         x = inputs.view(prod(inputs.shape[:-1]), -1)
-        x = self.bn(x)
+        x = bn(x)
         return x.view(*inputs.shape[:-1], -1)
 
     def forward(self, inputs: Tensor) -> Tensor:
-        x = F.elu(self.fc1(inputs))
-        x = my_bn(x, self.bn2)
+        x = F.elu(self.fc_hid(inputs))
+        x = self.batch_norm(x, self.bn_hid)
         x = F.dropout(x, self.dropout_prob, training=self.training)
-        x = F.elu(self.fc2(x))
-        return self.batch_norm(x)
+        x = F.elu(self.fc_out(x))
+        return self.batch_norm(x, self.bn_out)
 
 
 class LinAct(nn.Module):
