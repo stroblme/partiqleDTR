@@ -5,10 +5,10 @@ generated using Kedro 0.17.7
 
 from kedro.pipeline import Pipeline, node, pipeline
 
-from .nodes_bak import train_qgnn
+from .nodes import train_qgnn
 
 
-def create_pipeline(**kwargs) -> Pipeline:
+def create_training_qgnn_pipeline(**kwargs) -> Pipeline:
     return pipeline([
         node(
                 func=train_qgnn,
