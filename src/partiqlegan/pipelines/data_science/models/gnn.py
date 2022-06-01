@@ -77,8 +77,8 @@ class GNN(nn.Module):
         else:
             raise ValueError('i2o or o2i')
         x_i, x_o = x[row], x[col]
-        msg = self.node2edge(x_i, x_o, f_e)
-        return msg, col, len(x)
+        z = self.node2edge(x_i, x_o, f_e)
+        return z, col, len(x)
 
     def update(self, x):
         return x
