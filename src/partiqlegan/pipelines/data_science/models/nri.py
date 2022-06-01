@@ -1,6 +1,6 @@
 from torch import Tensor, nn
-from utils.torch_extension import gumbel_softmax, sym_hard
-import config as cfg
+from ..utils.torch_extension import gumbel_softmax, sym_hard
+# import config as cfg
 import torch
 
 
@@ -17,7 +17,7 @@ class NRIModel(nn.Module):
         super(NRIModel, self).__init__()
         self.enc = encoder
         self.dec = decoder
-        self.es = torch.LongTensor(es)
+        self.es = es
         self.size = size
 
     def predict_relations(self, states: Tensor) -> Tensor:
@@ -52,7 +52,7 @@ class NRIModel(nn.Module):
             self.es = self.es.cuda(states.device)
         return self.dec(states, edges, self.es, M)
 
-    def forward(self, states_enc: Tensor, states_dec: Tensor, hard: bool=False, p: bool=False, M: int=1, tosym: bool=False):
+    def forward(self, states_enc: Tensor, states_dec: Tensor, hard: bool=False, p: bool=False, M: int=1, tosym: bool=False, temp: float=0.5):
         """
         Args:
             states_enc: [batch, step_enc, node, dim], input node states for the encoder
@@ -71,7 +71,7 @@ class NRIModel(nn.Module):
         logits = self.enc(states_enc, self.es)
         if tosym:
             logits = sym_hard(logits, self.size)
-        edges = gumbel_softmax(logits, tau=cfg.temp, hard=hard)
+        edges = gumbel_softmax(logits, tau=temp, hard=hard)
         output = self.dec(states_dec, edges, self.es, M)
         if p:
             prob = logits.softmax(-1)
