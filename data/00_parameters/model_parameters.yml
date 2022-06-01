@@ -1,20 +1,19 @@
 ---
-EPOCHS: 4
-BATCH: 2**7
-REDUCE: "CNN"
+EPOCHS: 1
+REDUCE: "MLP"
 ENC: "GNNENC"
 DEC: "GNNDEC"
 
-SIZE: 10
+SIZE: 14
 # 3 for kuramoto and 4 for spring and charged.
 DIM: 4
 EDGE_TYPE: 2
 
-N_HID: 2 ** 8
-INPUT_EMB_HID: 2 ** 7
+N_HID: 256
+INPUT_EMB_HID: 128
 # Dimension of hidden layers of attention mechanisms.
-EMB_HID: 2 ** 8
-ATT_HID: 2 ** 8
+EMB_HID: 256
+ATT_HID: 256
 SKIP: False
 # Soft constraint for symmetry.
 REG: 0.
@@ -22,23 +21,23 @@ NO_REG: False
 # Hard constraint for symmetry.
 SYM: False
 
-'''Hyperparameters for training.'''
 # Scale the loss to avoid gradient explosion.
-SCALE: 1e-5
+SCALE: 0.00005
 EPOCHS: 500
-LR: 2.5e-4
+LR: 0.00025
 LR_DECAY: 200
 GAMMA: 0.5
-BATCH_SIZE: 2 ** 7
+BATCH_SIZE: 1
 M: 10
 
-TIMESTEPS: 50
-TRAIN_STEPS: 49
-TEST_STEPS: 99
+TIMESTEPS: 1
+TRAIN_STEPS: 1
+TEST_STEPS: 1
 TEMP: 0.5
 # NOTE: 10 for kuramoto, 100 for spring and charged.
-INTERVAL: 10 ** 1
-SAMPLES: 10 ** 2
+INTERVAL: 10
+SAMPLES: 100
 
 # Run n rounds of the code.
 ROUNDS: 1
+TEMP: 0.5
