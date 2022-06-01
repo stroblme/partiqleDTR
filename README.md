@@ -8,8 +8,9 @@ masses -> decaytopologies (containing decaytrees) -> decayevents
 
 
 
-
 ## Notes
+
+torch_scatter needs gcc-c++ and python3-devel packages to build successfully.
 
 changed module dependencies in phasespace:
 
