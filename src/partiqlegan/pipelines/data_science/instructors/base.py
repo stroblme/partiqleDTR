@@ -1,9 +1,9 @@
 import logging
 import os
-import config as cfg
+# import config as cfg
 import torch
 from torch.utils.data import Dataset, DataLoader
-from utils.log import create_logger
+from ..utils.log import create_logger
 from torch.optim.optimizer import Optimizer
 
 
@@ -32,7 +32,7 @@ class Instructor:
         """
         self.log = create_logger(
             __name__, silent=False,
-            to_disk=True, log_file=cfg.log)
+            to_disk=True, log_file="./log.txt")
         self.cmd = cmd
         self.log.info(str(cmd))
 
@@ -41,7 +41,7 @@ class Instructor:
         Renaming the log file.
         """
         logging.shutdown()
-        os.rename(cfg.log, filename)
+        os.rename("./log.txt", filename)
 
     @staticmethod
     def optimize(opt: Optimizer, loss: torch.Tensor):
