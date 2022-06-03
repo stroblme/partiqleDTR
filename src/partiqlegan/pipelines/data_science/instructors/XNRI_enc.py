@@ -110,6 +110,7 @@ class XNRIENCIns(Instructor):
         loss = cross_entropy(prob.view(-1, prob.shape[-1]), adj.transpose(0, 1).flatten())
         
         self.optimize(self.opt, loss)
+        print(loss)
         return loss
 
     def evaluate(self, test):
