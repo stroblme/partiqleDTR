@@ -2,8 +2,61 @@ from .base import MLP
 from torch import nn
 import torch
 from torch import Tensor
+import math
 from .gnn import GNN
+class CNN(nn.Module):
+    """
+    CNN from https://github.com/ethanfetaya/NRI/modules.py.
+    """
+    def __init__(self, n_in: int, n_hid: int, n_out: int, do_prob: float=0.):
+        """
+        Args:
+            n_in: input dimension
+            n_hid: dimension of hidden layers
+            n_out: output dimension
+        """
+        super(CNN, self).__init__()
+        self.cnn = nn.Sequential(
+            nn.Conv1d(n_in, n_hid, kernel_size=5, stride=1, padding=0),
+            nn.ReLU(),
+            nn.BatchNorm1d(n_hid),
+            nn.Dropout(do_prob),
+            nn.MaxPool1d(kernel_size=2, stride=None, padding=0,
+                         dilation=1, return_indices=False,
+                         ceil_mode=False),
+            nn.Conv1d(n_hid, n_hid, kernel_size=5, stride=1, padding=0),
+            nn.ReLU(),
+            nn.BatchNorm1d(n_hid)
+        )
+        self.out = nn.Conv1d(n_hid, n_out, kernel_size=1)
+        self.att = nn.Conv1d(n_hid, 1, kernel_size=1)
 
+        self.init_weights()
+
+    def init_weights(self):
+        for m in self.modules():
+            if isinstance(m, nn.Conv1d):
+                n = m.kernel_size[0] * m.out_channels
+                m.weight.data.normal_(0, math.sqrt(2. / n))
+                m.bias.data.fill_(0.1)
+            elif isinstance(m, nn.BatchNorm1d):
+                m.weight.data.fill_(1)
+                m.bias.data.zero_()
+
+    def forward(self, inputs: Tensor) -> Tensor:
+        """
+        Args:
+            inputs: [batch * E, dim, step], raw edge representations at each step
+
+        Return:
+            edge_prob: [batch * E, dim], edge representations over all steps with the step-dimension reduced
+        """
+        x = self.cnn(inputs)
+        pred = self.out(x)
+        attention = self.att(x).softmax(2)
+
+        edge_prob = (pred * attention).mean(dim=2)
+        return edge_prob
 
 class GNNENC(GNN):
     """
