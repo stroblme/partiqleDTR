@@ -14,7 +14,7 @@ INPUT_EMB_HID: 128
 # Dimension of hidden layers of attention mechanisms.
 EMB_HID: 256
 ATT_HID: 256
-SKIP: True
+# SKIP: True
 # Soft constraint for symmetry.
 REG: 0.
 NO_REG: False
