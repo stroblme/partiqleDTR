@@ -17,7 +17,6 @@ def train_qgnn(model_parameters, all_leaves_shuffled, all_lca_shuffled):
     EDGE_TYPE = model_parameters["EDGE_TYPE"] if "EDGE_TYPE" in model_parameters else None
     SIZE = model_parameters["SIZE"] if "SIZE" in model_parameters else None
     REDUCE = model_parameters["REDUCE"] if "REDUCE" in model_parameters else None
-    SKIP = model_parameters["SKIP"] if "SKIP" in model_parameters else None
     N_HID = model_parameters["N_HID"] if "N_HID" in model_parameters else None
     DIM = model_parameters["DIM"] if "DIM" in model_parameters else None
 
@@ -40,8 +39,7 @@ def train_qgnn(model_parameters, all_leaves_shuffled, all_lca_shuffled):
         data[mode] = (LongTensor(y_data), FloatTensor(x_data))
 
     encoder = GNNENC(DIM, N_HID, EDGE_TYPE, reducer=REDUCE)
-    decoder = GNNDEC(DIM, EDGE_TYPE, N_HID, N_HID, N_HID, skip_first=SKIP)
-    model = NRIModel(encoder, decoder, es, SIZE)
+    model = NRIModel(encoder, es, SIZE)
     model = DataParallel(model)
     ins = XNRIENCIns(model_parameters, model, data, es, model_parameters)
     ins.train()
