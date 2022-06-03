@@ -1,5 +1,5 @@
 ---
-EPOCHS: 1
+EPOCHS: 10
 REDUCE: "MLP"
 ENC: "GNNENC"
 DEC: "GNNDEC"
@@ -7,14 +7,14 @@ DEC: "GNNDEC"
 SIZE: 14
 # 3 for kuramoto and 4 for spring and charged.
 DIM: 4
-EDGE_TYPE: 2
+EDGE_TYPE: 6
 
 N_HID: 256
 INPUT_EMB_HID: 128
 # Dimension of hidden layers of attention mechanisms.
 EMB_HID: 256
 ATT_HID: 256
-SKIP: False
+SKIP: True
 # Soft constraint for symmetry.
 REG: 0.
 NO_REG: False
@@ -27,7 +27,7 @@ EPOCHS: 500
 LR: 0.00025
 LR_DECAY: 200
 GAMMA: 0.5
-BATCH_SIZE: 1
+BATCH_SIZE: 10
 M: 10
 
 TIMESTEPS: 1
