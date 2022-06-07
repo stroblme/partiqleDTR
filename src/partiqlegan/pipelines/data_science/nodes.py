@@ -38,7 +38,7 @@ def train_qgnn(model_parameters, all_leaves_shuffled, all_lca_shuffled):
                 y_data.append(all_lca_shuffled[mode][topology_it][i])
         data[mode] = (LongTensor(y_data), FloatTensor(x_data))
 
-    EDGE_TYPE = np.array(y_data).max() # get the num of childs from the label list
+    EDGE_TYPE = int(np.array(y_data).max())+1 # get the num of childs from the label list
 
     encoder = GNNENC(DIM, N_HID, EDGE_TYPE, reducer=REDUCE)
     model = NRIModel(encoder, es, SIZE)
