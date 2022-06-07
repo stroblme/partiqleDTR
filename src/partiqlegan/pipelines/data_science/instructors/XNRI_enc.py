@@ -28,6 +28,7 @@ class XNRIENCIns(Instructor):
         SIZE = model_parameters["SIZE"] if "SIZE" in model_parameters else None
         BATCH_SIZE = model_parameters["BATCH_SIZE"] if "BATCH_SIZE" in model_parameters else None
         EPOCHS = model_parameters["EPOCHS"] if "EPOCHS" in model_parameters else None
+        TRAIN_STEPS = model_parameters["TRAIN_STEPS"] if "TRAIN_STEPS" in model_parameters else None
 
 
         super(XNRIENCIns, self).__init__(cmd)
@@ -45,6 +46,7 @@ class XNRIENCIns(Instructor):
         self.opt = optim.Adam(self.model.parameters(), lr=LR)
         # learning rate scheduler, same as in NRI
         self.scheduler = StepLR(self.opt, step_size=LR_DECAY, gamma=GAMMA)
+        self.train_steps = TRAIN_STEPS
 
     def train(self):
         # use the accuracy as the metric for model selection, default: 0
@@ -131,10 +133,7 @@ class XNRIENCIns(Instructor):
         N = 0.
         with torch.no_grad():
             for adj, states in data:
-                if cfg.gpu:
-                    adj = adj.cuda()
-                    states = states.cuda()
-                states_enc = states[:, :cfg.train_steps, :, :]
+                states_enc = states[:, :self.train_steps, :, :]
                 prob = self.model.module.predict_relations(states_enc)
 
                 scale = len(states) / self.batch_size
