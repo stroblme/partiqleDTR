@@ -5,7 +5,7 @@ generated using Kedro 0.17.7
 
 from kedro.pipeline import Pipeline, node
 from kedro.pipeline.modular_pipeline import pipeline
-from .nodes import tree_data_to_generator, tree_data_to_discriminator, normalize_event, conv_structure_to_lca_and_names, shuffle_lca_and_leaves, normalize_event
+from .nodes import tree_data_to_generator, tree_data_to_discriminator, conv_structure_to_lca_and_names, shuffle_lca_and_leaves
 
 def create_belleII_pipeline(**kwargs) -> Pipeline:
     return pipeline(
@@ -69,14 +69,14 @@ def create_artificial_pipeline(**kwargs) -> Pipeline:
                 },
                 name="shuffle_lca_and_leaves"
         ),
-        node(
-                func=normalize_event,
-                inputs=["artificial_decay", "all_leaves_shuffled"],
-                outputs={
-                    "all_leaves_shuffled_normalized":"all_leaves_shuffled_normalized"
-                },
-                name="normalize_event"
-        ),
+        # node(
+        #         func=normalize_event,
+        #         inputs=["artificial_decay", "all_leaves_shuffled"],
+        #         outputs={
+        #             "all_leaves_shuffled_normalized":"all_leaves_shuffled_normalized"
+        #         },
+        #         name="normalize_event"
+        # ),
         # node(
         #         func=pad_lca,
         #         inputs=["artificial_decay", "all_lca_shuffled"],
