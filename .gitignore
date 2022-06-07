@@ -1,6 +1,7 @@
 venv
 *.pdf
 .ipython
+slurm*.out
 
 ##########################
 # KEDRO PROJECT
