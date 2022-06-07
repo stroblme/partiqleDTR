@@ -6,9 +6,10 @@ import numpy as np
 from typing import Dict, Tuple, List
 from sqlalchemy import desc
 
-import torch
+# import torch
 import torchvision
 import torchdata as td
+from torch import LongTensor, FloatTensor
 
 import copy
 
@@ -188,7 +189,12 @@ def conv_structure_to_lca_and_names(decay_parameters, decay_tree_structure):
         "all_names": all_names
     }
 
-def shuffle_lca_and_leaves(decay_parameters, all_lca, all_names, decay_tree_events):
+def shuffle_lca_and_leaves(
+    decay_parameters: List,
+    all_lca: List,
+    all_names: List,
+    decay_tree_events: Tuple[List, List]):
+    
     N_TOPOLOGIES = decay_parameters["N_TOPOLOGIES"] if "N_TOPOLOGIES" in decay_parameters else None
     MODES_NAMES = decay_parameters["MODES_NAMES"] if "MODES_NAMES" in decay_parameters else None
     TRAIN_EVENTS_PER_TOP = decay_parameters["TRAIN_EVENTS_PER_TOP"] if "TRAIN_EVENTS_PER_TOP" in decay_parameters else None
@@ -355,6 +361,35 @@ def _find_lca(node1, node2, parents, generations):
             return generations[node1.name] - generations[subroot.name]
 
     return 0
+
+def merge_topologies(
+    all_lca_shuffled, all_leaves_shuffled
+) -> Dict[str, Tuple[List, List]]:
+
+    modes = all_lca_shuffled.keys()
+    dataset = dict()
+
+    for mode in modes:
+        x_data = []
+        y_data = []
+        for topology_it in range(len(all_lca_shuffled[mode])):
+            for i in range(len(all_lca_shuffled[mode][topology_it])):
+                x_data.append(all_leaves_shuffled[mode][topology_it][i])
+                y_data.append(all_lca_shuffled[mode][topology_it][i])
+        dataset[mode] = (y_data, x_data)
+
+    return dataset
+
+def tuple_dataset_to_torch_tensor(
+    datset: Dict[str, Tuple[List, List]]
+) -> Dict[str, Tuple[LongTensor, FloatTensor]]:
+    torch_dataset = dict()
+
+    for key, value in datset.iteritems():
+        torch_dataset[key] = (LongTensor(value[0], value[1]))
+
+    return torch_dataset
+
 
 def tree_data_to_discriminator(
     decay_tree_structure: Tuple[List, List]
