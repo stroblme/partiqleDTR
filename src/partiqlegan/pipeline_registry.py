@@ -22,6 +22,7 @@ def register_pipelines() -> Dict[str, Pipeline]:
 
     return {
         "__default__": data_generation_artificial_pipeline+data_processing_artificial_pipeline+training_qgnn_pipeline,
+        "default": data_generation_artificial_pipeline+data_processing_artificial_pipeline+training_qgnn_pipeline,
         "data_generation_artificial_pipeline": data_generation_artificial_pipeline,
         "data_generation_belleII_pipeline": data_generation_belleII_pipeline,
         "data_processing_artificial_pipeline": data_processing_artificial_pipeline,
