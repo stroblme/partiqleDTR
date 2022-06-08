@@ -7,7 +7,22 @@ from .base import Instructor
 from torch.utils.data.dataset import TensorDataset
 from torch import optim
 from torch.optim.lr_scheduler import StepLR
+from torch.optim.optimizer import Optimizer
+from torch.utils.data import Dataset, DataLoader
 import numpy as np
+
+class DataWrapper(Dataset):
+    """
+    A wrapper for torch.utils.data.Dataset.
+    """
+    def __init__(self, data):
+        self.data = data
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, i):
+        return self.data[i]
 
 
 class XNRIENCIns(Instructor):
@@ -47,6 +62,31 @@ class XNRIENCIns(Instructor):
         # learning rate scheduler, same as in NRI
         self.scheduler = StepLR(self.opt, step_size=LR_DECAY, gamma=GAMMA)
         self.train_steps = TRAIN_STEPS
+
+    @staticmethod
+    def optimize(opt: Optimizer, loss: torch.Tensor):
+        """
+        Optimize the parameters based on the loss and the optimizer.
+
+        Args:
+            opt: optimizer
+            loss: loss, a scalar
+        """
+        opt.zero_grad()
+        loss.backward()
+        opt.step()
+
+    @staticmethod
+    def load_data(inputs, batch_size: int, shuffle: bool=True):
+        """
+        Return a dataloader given the input and the batch size.
+        """
+        data = DataWrapper(inputs)
+        batches = DataLoader(
+            data,
+            batch_size=batch_size,
+            shuffle=shuffle)
+        return batches
 
     def train(self):
         # use the accuracy as the metric for model selection, default: 0
