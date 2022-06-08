@@ -1,7 +1,5 @@
 import torch
-from .instructors.XNRI_enc import XNRIENCIns
 from .models.encoder import GNNENC
-from .models.decoder import GNNDEC
 from .models.nri import NRIModel
 from torch.nn.parallel import DataParallel
 # from generate.load import load_nri
@@ -23,6 +21,8 @@ from torch.optim.optimizer import Optimizer
 from torch.utils.data import Dataset, DataLoader
 import numpy as np
 
+import logging
+log = logging.getLogger(__name__)
 
 def train_qgnn(model_parameters, all_leaves_shuffled, all_lca_shuffled):
     # load data
@@ -158,7 +158,7 @@ class XNRIENCIns():
                 N += scale
                 loss_a += scale * self.train_nri(states, adj)
             loss_a /= N 
-            self.log.info('epoch {:03d} loss {:.3e}'.format(epoch, loss_a))
+            log.info('epoch {:03d} loss {:.3e}'.format(epoch, loss_a))
             acc = self.report('val')
 
             val_cur = max(acc, 1 - acc)
@@ -184,7 +184,7 @@ class XNRIENCIns():
             acc: accuracy of relation reconstruction
         """
         loss, acc, rate, sparse = self.evaluate(self.data[name])
-        self.log.info('{} acc {:.4f} _acc {:.4f} rate {:.4f} sparse {:.4f}'.format(
+        log.info('{} acc {:.4f} _acc {:.4f} rate {:.4f} sparse {:.4f}'.format(
             name, acc, 1 - acc, rate, sparse))
         return acc
 
