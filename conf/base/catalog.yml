@@ -50,3 +50,10 @@ all_leaves_shuffled:
   type: pickle.PickleDataSet
   filepath: data/03_primary/all_leaves_shuffled.pkl
 
+dataset_lca_and_leaves:
+  type: pickle.PickleDataSet
+  filepath: data/04_feature/dataset_lca_and_leaves.pkl
+
+torch_dataset_lca_and_leaves:
+  type: pickle.PickleDataSet
+  filepath: data/04_feature/torch_dataset_lca_and_leaves.pkl
