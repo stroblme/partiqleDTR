@@ -55,7 +55,7 @@ def train_qgnn(model_parameters, all_leaves_shuffled, all_lca_shuffled):
     encoder = GNNENC(DIM, N_HID, EDGE_TYPE, reducer=REDUCE)
     model = NRIModel(encoder, es, SIZE)
     model = DataParallel(model)
-    ins = XNRIENCIns(model_parameters, model, data, es, model_parameters)
+    ins = XNRIENCIns(model_parameters, model, data, es)
     ins.train()
 
 
@@ -78,7 +78,7 @@ class XNRIENCIns():
     """
     Train the encoder in an supervised manner given the ground truth relations.
     """
-    def __init__(self, model_parameters, model: torch.nn.DataParallel, data: dict,  es: np.ndarray, cmd):
+    def __init__(self, model_parameters, model: torch.nn.DataParallel, data: dict,  es: np.ndarray):
         """
         Args:
             model: an auto-encoder
@@ -95,7 +95,7 @@ class XNRIENCIns():
         TRAIN_STEPS = model_parameters["TRAIN_STEPS"] if "TRAIN_STEPS" in model_parameters else None
 
 
-        super(XNRIENCIns, self).__init__(cmd)
+        # super(XNRIENCIns, self).__init__(cmd)
         self.model = model
         
         self.data = {key: TensorDataset(*value)
@@ -222,7 +222,7 @@ class XNRIENCIns():
         N = 0.
         with torch.no_grad():
             for adj, states in data:
-                states_enc = states[:, :self.train_steps, :, :]
+                states_enc = states[:, :self.train_steps, :]
                 prob = self.model.module.predict_relations(states_enc)
 
                 scale = len(states) / self.batch_size
