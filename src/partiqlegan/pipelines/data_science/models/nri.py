@@ -1,7 +1,5 @@
 from torch import Tensor, nn
-from ..utils.torch_extension import gumbel_softmax, sym_hard
 # import config as cfg
-import torch
 
 
 class NRIModel(nn.Module):
