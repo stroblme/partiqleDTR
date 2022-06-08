@@ -31,7 +31,7 @@ BATCH_SIZE: 10
 M: 10
 
 TIMESTEPS: 1
-TRAIN_STEPS: 1
+TRAIN_STEPS: 13
 TEST_STEPS: 1
 TEMP: 0.5
 # NOTE: 10 for kuramoto, 100 for spring and charged.
