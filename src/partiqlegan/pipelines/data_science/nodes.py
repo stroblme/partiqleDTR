@@ -142,13 +142,14 @@ class XNRIENCIns():
         val_best = 0
         # path to save the current best model
         # prefix = '/'.join(cfg.log.split('/')[:-1])
-        # name = '{}/best.pth'.format(prefix)
+        # name = '{}/best.pth'.format(prefix)train_steps
         for epoch in range(1, 1 + self.epochs):
             self.model.train()
             # shuffle the data at each epoch
             data = self.load_data(self.data['train'], self.batch_size)
             loss_a = 0.
             N = 0.
+            log.info(f'Training started with a batch size of {self.batch_size}')
             for adj, states in data:
                 # if cfg.gpu:
                 #     adj = adj.cuda()
@@ -158,7 +159,7 @@ class XNRIENCIns():
                 N += scale
                 loss_a += scale * self.train_nri(states, adj)
             loss_a /= N 
-            log.info('epoch {:03d} loss {:.3e}'.format(epoch, loss_a))
+            log.info(f'Epoch {epoch:03d} finished with a loss of {loss_a:.3e}')
             acc = self.report('val')
 
             val_cur = max(acc, 1 - acc)
@@ -201,7 +202,6 @@ class XNRIENCIns():
         loss = cross_entropy(prob.view(-1, prob.shape[-1]), adj.transpose(0, 1).flatten())
         
         self.optimize(self.opt, loss)
-        print(loss)
         return loss
 
     def evaluate(self, test):
