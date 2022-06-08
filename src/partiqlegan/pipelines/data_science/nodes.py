@@ -24,7 +24,7 @@ import numpy as np
 import logging
 log = logging.getLogger(__name__)
 
-def train_qgnn(model_parameters, all_leaves_shuffled, all_lca_shuffled):
+def train_qgnn(model_parameters, torch_dataset_lca_and_leaves):
     # load data
     EDGE_TYPE = model_parameters["EDGE_TYPE"] if "EDGE_TYPE" in model_parameters else None
     SIZE = model_parameters["SIZE"] if "SIZE" in model_parameters else None
@@ -39,23 +39,25 @@ def train_qgnn(model_parameters, all_leaves_shuffled, all_lca_shuffled):
 
     # dim = 4
 
-    modes = all_lca_shuffled.keys()
-    data = dict()
-    for mode in modes:
-        x_data = []
-        y_data = []
-        for topology_it in range(len(all_lca_shuffled[mode])):
-            for i in range(len(all_lca_shuffled[mode][topology_it])):
-                x_data.append(all_leaves_shuffled[mode][topology_it][i])
-                y_data.append(all_lca_shuffled[mode][topology_it][i])
-        data[mode] = (LongTensor(y_data), FloatTensor(x_data))
+    # modes = all_lca_shuffled.keys()
+    # data = dict()
+    # for mode in modes:
+    #     x_data = []
+    #     y_data = []
+    #     for topology_it in range(len(all_lca_shuffled[mode])):
+    #         for i in range(len(all_lca_shuffled[mode][topology_it])):
+    #             x_data.append(all_leaves_shuffled[mode][topology_it][i])
+    #             y_data.append(all_lca_shuffled[mode][topology_it][i])
+    #     data[mode] = (LongTensor(y_data), FloatTensor(x_data))
 
-    EDGE_TYPE = int(np.array(y_data).max())+1 # get the num of childs from the label list
+    
+
+    EDGE_TYPE = int(np.array(torch_dataset_lca_and_leaves).max())+1 # get the num of childs from the label list
 
     encoder = GNNENC(DIM, N_HID, EDGE_TYPE, reducer=REDUCE)
     model = NRIModel(encoder, es, SIZE)
     model = DataParallel(model)
-    ins = Instructor(model_parameters, model, data, es)
+    ins = Instructor(model_parameters, model, torch_dataset_lca_and_leaves, es)
     ins.train()
 
 
@@ -137,7 +139,7 @@ class Instructor():
 
     def train(self):
         # use the accuracy as the metric for model selection, default: 0
-        val_best = 0
+        # val_best = 0
         # path to save the current best model
         # prefix = '/'.join(cfg.log.split('/')[:-1])
         # name = '{}/best.pth'.format(prefix)train_steps

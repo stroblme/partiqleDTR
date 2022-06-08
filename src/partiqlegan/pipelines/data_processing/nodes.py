@@ -367,7 +367,7 @@ def merge_topologies(
 ) -> Dict[str, Tuple[List, List]]:
 
     modes = all_lca_shuffled.keys()
-    dataset = dict()
+    dataset_lca_and_leaves = dict()
 
     for mode in modes:
         x_data = []
@@ -376,19 +376,23 @@ def merge_topologies(
             for i in range(len(all_lca_shuffled[mode][topology_it])):
                 x_data.append(all_leaves_shuffled[mode][topology_it][i])
                 y_data.append(all_lca_shuffled[mode][topology_it][i])
-        dataset[mode] = (y_data, x_data)
+        dataset_lca_and_leaves[mode] = (y_data, x_data)
 
-    return dataset
+    return {
+        "dataset_lca_and_leaves":dataset_lca_and_leaves
+    }
 
 def tuple_dataset_to_torch_tensor(
-    datset: Dict[str, Tuple[List, List]]
+    tuple_dataset: Dict[str, Tuple[List, List]]
 ) -> Dict[str, Tuple[LongTensor, FloatTensor]]:
-    torch_dataset = dict()
+    torch_dataset_lca_and_leaves = dict()
 
-    for key, value in datset.iteritems():
-        torch_dataset[key] = (LongTensor(value[0], value[1]))
+    for key, value in tuple_dataset.items():
+        torch_dataset_lca_and_leaves[key] = (LongTensor(value[0]), FloatTensor(value[1]))
 
-    return torch_dataset
+    return {
+        "torch_dataset_lca_and_leaves":torch_dataset_lca_and_leaves
+    }
 
 
 def tree_data_to_discriminator(

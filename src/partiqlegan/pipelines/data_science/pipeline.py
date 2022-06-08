@@ -12,7 +12,7 @@ def create_training_qgnn_pipeline(**kwargs) -> Pipeline:
     return pipeline([
         node(
                 func=train_qgnn,
-                inputs=["model_parameters", "all_leaves_shuffled", "all_lca_shuffled"],
+                inputs=["model_parameters", "torch_dataset_lca_and_leaves"],
                 outputs={
                     "model":"model"
                 },
