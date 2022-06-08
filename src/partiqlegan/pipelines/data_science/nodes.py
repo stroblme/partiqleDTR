@@ -26,8 +26,7 @@ log = logging.getLogger(__name__)
 
 def train_qgnn(model_parameters, torch_dataset_lca_and_leaves):
     # load data
-    EDGE_TYPE = model_parameters["EDGE_TYPE"] if "EDGE_TYPE" in model_parameters else None
-    SIZE = model_parameters["SIZE"] if "SIZE" in model_parameters else None
+    # SIZE = model_parameters["SIZE"] if "SIZE" in model_parameters else None
     REDUCE = model_parameters["REDUCE"] if "REDUCE" in model_parameters else None
     N_HID = model_parameters["N_HID"] if "N_HID" in model_parameters else None
     DIM = model_parameters["DIM"] if "DIM" in model_parameters else None
@@ -37,22 +36,8 @@ def train_qgnn(model_parameters, torch_dataset_lca_and_leaves):
     # generate edge list of a fully connected graph
     es = LongTensor(np.array(list(permutations(range(SIZE), 2))).T)
 
-    # dim = 4
-
-    # modes = all_lca_shuffled.keys()
-    # data = dict()
-    # for mode in modes:
-    #     x_data = []
-    #     y_data = []
-    #     for topology_it in range(len(all_lca_shuffled[mode])):
-    #         for i in range(len(all_lca_shuffled[mode][topology_it])):
-    #             x_data.append(all_leaves_shuffled[mode][topology_it][i])
-    #             y_data.append(all_lca_shuffled[mode][topology_it][i])
-    #     data[mode] = (LongTensor(y_data), FloatTensor(x_data))
-
-    
-
-    EDGE_TYPE = int(np.array(torch_dataset_lca_and_leaves).max())+1 # get the num of childs from the label list
+    EDGE_TYPE = int(max([np.array(subset[0]).max() for _, subset in torch_dataset_lca_and_leaves.items()]))+1 # get the num of childs from the label list
+    SIZE = int(max([np.array(subset[0]).shape[1] for _, subset in torch_dataset_lca_and_leaves.items()]))
 
     encoder = GNNENC(DIM, N_HID, EDGE_TYPE, reducer=REDUCE)
     model = NRIModel(encoder, es, SIZE)
