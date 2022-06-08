@@ -4,7 +4,7 @@ REDUCE: "MLP"
 ENC: "GNNENC"
 DEC: "GNNDEC"
 
-SIZE: 14
+SIZE: 16
 # 3 for kuramoto and 4 for spring and charged.
 DIM: 4
 EDGE_TYPE: 6
@@ -31,7 +31,6 @@ BATCH_SIZE: 10
 M: 10
 
 TIMESTEPS: 1
-TEST_STEPS: 1
 TEMP: 0.5
 # NOTE: 10 for kuramoto, 100 for spring and charged.
 INTERVAL: 10
