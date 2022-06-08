@@ -220,6 +220,7 @@ class Instructor():
         N = 0.
         with torch.no_grad():
             for adj, states in data:
+                print(states.shape)
                 prob = self.model.module.predict_relations(states)
 
                 scale = len(states) / self.batch_size
