@@ -55,7 +55,7 @@ def train_qgnn(model_parameters, all_leaves_shuffled, all_lca_shuffled):
     encoder = GNNENC(DIM, N_HID, EDGE_TYPE, reducer=REDUCE)
     model = NRIModel(encoder, es, SIZE)
     model = DataParallel(model)
-    ins = XNRIENCIns(model_parameters, model, data, es)
+    ins = Instructor(model_parameters, model, data, es)
     ins.train()
 
 
@@ -74,7 +74,7 @@ class DataWrapper(Dataset):
         return self.data[i]
 
 
-class XNRIENCIns():
+class Instructor():
     """
     Train the encoder in an supervised manner given the ground truth relations.
     """
