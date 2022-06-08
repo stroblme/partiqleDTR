@@ -20,7 +20,7 @@
 #SBATCH --mem=64000MB
 #
 # output path
-#SBATCH --output="slurm_log/%j.out"
+#SBATCH --output="logs/slurm/%j.out"
 
 ./venv/bin/python -m kedro run --pipeline $1
 
