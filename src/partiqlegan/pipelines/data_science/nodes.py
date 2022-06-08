@@ -74,7 +74,7 @@ class DataWrapper(Dataset):
         return self.data[i]
 
 
-class XNRIENCIns(Instructor):
+class XNRIENCIns():
     """
     Train the encoder in an supervised manner given the ground truth relations.
     """
