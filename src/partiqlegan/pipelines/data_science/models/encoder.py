@@ -17,16 +17,16 @@ class CNN(nn.Module):
         """
         super(CNN, self).__init__()
         self.cnn = nn.Sequential(
-            nn.Conv1d(n_in, n_hid, kernel_size=5, stride=1, padding=0),
+            nn.Conv1d(n_in, n_hid, kernel_size=3, stride=1, padding=1),
             nn.ReLU(),
             nn.BatchNorm1d(n_hid),
             nn.Dropout(do_prob),
-            nn.MaxPool1d(kernel_size=2, stride=None, padding=0,
-                         dilation=1, return_indices=False,
-                         ceil_mode=False),
-            nn.Conv1d(n_hid, n_hid, kernel_size=5, stride=1, padding=0),
-            nn.ReLU(),
-            nn.BatchNorm1d(n_hid)
+            # nn.MaxPool1d(kernel_size=2, stride=None, padding=0,
+                        #  dilation=1, return_indices=False,
+                        #  ceil_mode=False),
+            # nn.Conv1d(n_hid, n_hid, kernel_size=5, stride=1, padding=0),
+            # nn.ReLU(),
+            # nn.BatchNorm1d(n_hid)
         )
         self.out = nn.Conv1d(n_hid, n_out, kernel_size=1)
         self.att = nn.Conv1d(n_hid, 1, kernel_size=1)
@@ -80,10 +80,11 @@ class GNNENC(GNN):
         self.reducer = reducer.lower()
 
         self.emb = MLP(n_in=n_in, n_hid=n_hid, n_out=2*n_hid, do_prob=do_prob)
+        self.cnn = CNN(2*n_in, n_hid, n_hid, do_prob)
         
         self.e2n = MLP(n_hid, n_hid, n_hid, do_prob)
 
-        self.n2e_i = MLP(n_hid * 2, n_hid, n_hid, do_prob)
+        self.n2e_i = MLP(n_hid, n_hid, n_hid, do_prob)
         self.n2e_o = MLP(n_hid * 2, n_hid, n_hid, do_prob)
         
         self.fc_out = nn.Linear(n_hid, n_out)
@@ -112,15 +113,37 @@ class GNNENC(GNN):
         n_cat = x_emb.shape[0]
         x_0 = x_emb
         for i in range(n_cat-1):
-            x_emb = torch.cat([x_emb, x_0], dim=0)
+            x_emb = torch.cat([x_emb, x_0], dim=-1)
         z = x_emb
         # z = self.message(x_emb, es)
         return z
 
+    def reduce_cnn(self, x, es):
+        """
+        Args:
+            x: [node, batch, step, dim]
+            es: [2, E]
+        
+        Return:
+            z: [E, batch, dim]
+            col: [E]
+            size: int
+        """
+        # z: [E, batch, step, dim * 2]
+        # x = x.view(x.size(0), x.size(2), x.size(1))
+        z, col, size = self.message(x, es)
+        z = z.transpose(3, 2).contiguous()
+        # z: [E * batch, dim * 2, step]
+        z = z.view(-1, z.size(2), z.size(3))
+        # z = x.view(x.size(0), x.size(1), -1)
+
+        z = self.cnn(z)
+        z = z.view(len(col), x.size(1), -1)
+        return z, col, size
 
     def forward(self, x: Tensor, es: Tensor) -> Tensor:
         """
-        Given the historical node states, output the K-dimension edge representations ready for relation prediction.
+        Given the historical node states, output the K-dimensionz.shape edge representations ready for relation prediction.
 
         Args:
             x: [batch, step, node, dim], node representations
@@ -129,10 +152,12 @@ class GNNENC(GNN):
         Return:
             z: [E, batch, dim], edge representations
         """
-        x = x.permute(1, 0, -1).contiguous()
+        # x = x.permute(1, 0, -1).contiguous()
+        x = x.view(x.size(1), x.size(0), 1, x.size(-1))
         # x: [batch, step, node, dim] -> [node, batch, step, dim]
 
-        z = self.reduce_mlp(x, es)
+        # z = self.reduce_mlp(x, es)
+        z = self.reduce_cnn(x, es)[0]
         # z = self.emb(x.view(x.size(0), x.size(1), -1))
 
         z = self.n2e_i(z)
