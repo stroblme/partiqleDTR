@@ -9,7 +9,7 @@ SIZE: 16
 DIM: 4
 EDGE_TYPE: 6
 
-N_HID: 256
+N_HID: 120
 INPUT_EMB_HID: 128
 # Dimension of hidden layers of attention mechanisms.
 EMB_HID: 256
@@ -27,7 +27,7 @@ EPOCHS: 500
 LR: 0.00025
 LR_DECAY: 200
 GAMMA: 0.5
-BATCH_SIZE: 10
+BATCH_SIZE: 1
 M: 10
 
 TIMESTEPS: 1
