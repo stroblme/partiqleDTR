@@ -34,10 +34,15 @@ def train_qgnn(model_parameters, torch_dataset_lca_and_leaves):
 
     # data, es, _ = load_nri(all_leaves_shuffled, num_of_leaves)
     # generate edge list of a fully connected graph
-    es = LongTensor(np.array(list(permutations(range(SIZE), 2))).T)
 
     EDGE_TYPE = int(max([np.array(subset[0]).max() for _, subset in torch_dataset_lca_and_leaves.items()]))+1 # get the num of childs from the label list
     SIZE = int(max([np.array(subset[0]).shape[1] for _, subset in torch_dataset_lca_and_leaves.items()]))
+
+    # es = LongTensor(np.array(list(permutations(range(SIZE), 2))).T)
+    es = list(permutations(range(SIZE), 2))
+    es.sort(key=lambda es: sum(es))
+    es = es[1::2]
+    es = LongTensor(np.array(es).T)
 
     encoder = GNNENC(DIM, N_HID, EDGE_TYPE, reducer=REDUCE)
     model = NRIModel(encoder, es, SIZE)
@@ -184,7 +189,20 @@ class Instructor():
             loss: cross-entropy of edge classification
         """
         prob = self.model.module.predict_relations(states)
-        loss = cross_entropy(prob.view(-1, prob.shape[-1]), adj.transpose(0, 1).flatten())
+
+        adj_ut = []
+        for batch in range(adj.shape[0]):
+            adj_ut_batch = []
+            for row in range(adj.shape[1]):
+                for col in range(adj.shape[2]):
+                    if row < col:
+                        # adj_ut_batch.append(adj[batch][row][col])
+                        adj_ut.append(adj[batch][row][col])
+            # adj_ut.append(adj_ut_batch)
+        adj_ut = LongTensor(adj_ut)
+
+        # loss = cross_entropy(prob.view(-1, prob.shape[-1]), adj.transpose(0, 1).flatten())
+        loss = cross_entropy(prob.view(-1, prob.shape[-1]), adj_ut)
         
         self.optimize(self.opt, loss)
         return loss
