@@ -6,7 +6,7 @@
     "configurations": [
 
         // {
-        //     "name": "Python: Kedro Run - gen_nbody_decay_data",
+        //     "name": "KR: - gen_nbody_decay_data",
         //     "type": "python",
         //     "request": "launch",
         //     "console": "integratedTerminal",
@@ -16,7 +16,7 @@
         //     // e.g "args": ["run", "--pipeline", "pipeline_name"]
         // },
         {
-            "name": "Python: Kedro Run - data generation artificial",
+            "name": "KR: - data generation artificial",
             "type": "python",
             "request": "launch",
             "console": "integratedTerminal",
@@ -26,7 +26,7 @@
             // e.g "args": ["run", "--pipeline", "pipeline_name"]
         },
         {
-            "name": "Python: Kedro Run - data generation belleII",
+            "name": "KR: - data generation belleII",
             "type": "python",
             "request": "launch",
             "console": "integratedTerminal",
@@ -36,7 +36,7 @@
             // e.g "args": ["run", "--pipeline", "pipeline_name"]
         },
         {
-            "name": "Python: Kedro Run - data processing artificial",
+            "name": "KR: - data processing artificial",
             "type": "python",
             "request": "launch",
             "console": "integratedTerminal",
@@ -46,7 +46,7 @@
             // e.g "args": ["run", "--pipeline", "pipeline_name"]
         },
         {
-            "name": "Python: Kedro Run - data processing",
+            "name": "KR: - data processing",
             "type": "python",
             "request": "launch",
             "console": "integratedTerminal",
@@ -56,7 +56,7 @@
             // e.g "args": ["run", "--pipeline", "pipeline_name"]
         },
         {
-            "name": "Python: Kedro Run - training QGNN",
+            "name": "KR: - training QGNN",
             "type": "python",
             "request": "launch",
             "console": "integratedTerminal",
@@ -66,7 +66,7 @@
             // e.g "args": ["run", "--pipeline", "pipeline_name"]
         },
         {
-            "name": "Python: Kedro Run - default",
+            "name": "KR: - default",
             "type": "python",
             "request": "launch",
             "console": "integratedTerminal",
