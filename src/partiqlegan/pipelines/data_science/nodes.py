@@ -133,13 +133,14 @@ class Instructor():
         # path to save the current best model
         # prefix = '/'.join(cfg.log.split('/')[:-1])
         # name = '{}/best.pth'.format(prefix)train_steps
+        log.info(f'Training started with a batch size of {self.batch_size}')
         for epoch in range(1, 1 + self.epochs):
-            self.model.train()
+
+            self.model.train() # set the module in training mode
             # shuffle the data at each epoch
             data = self.load_data(self.data['train'], self.batch_size)
             loss_a = 0.
             N = 0.
-            log.info(f'Training started with a batch size of {self.batch_size}')
             for adj, states in data:
                 # if cfg.gpu:
                 #     adj = adj.cuda()
@@ -197,11 +198,12 @@ class Instructor():
             adj_ut_batch = []
             for row in range(adj.shape[1]):
                 for col in range(adj.shape[2]):
-                    if row < col:
+                    if row > col:
                         adj_ut_batch.append(adj[batch][row][col])
                         # adj_ut.append(adj[batch][row][col])
             adj_ut.append(adj_ut_batch)
         adj_ut = LongTensor(adj_ut)
+
 
         # loss = cross_entropy(prob.view(-1, prob.shape[-1]), adj.transpose(0, 1).flatten())
         loss = cross_entropy(prob.view(-1, prob.shape[-1]), adj_ut.view(-1))
