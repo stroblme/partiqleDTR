@@ -79,12 +79,25 @@ class GNNENC(GNN):
         assert reducer.lower() in {'mlp', 'cnn'}
         self.reducer = reducer.lower()
 
-        self.emb = MLP(n_in=n_in, n_hid=n_hid, n_out=2*n_hid, do_prob=do_prob)
-        self.cnn = CNN(2*n_in, n_hid, n_hid, do_prob)
+
+        #-- CNN
+        # self.cnn = CNN(2*n_in, n_hid, n_hid, do_prob)
+        
+        # self.e2n = MLP(n_hid, n_hid, n_hid, do_prob)
+
+        # self.n2e_i = MLP(n_hid*2, n_hid, n_hid, do_prob) #mlp
+
+
+
+        #-- MLP
+        self.emb = MLP(n_in=n_in, n_hid=n_hid, n_out=n_hid, do_prob=do_prob)
         
         self.e2n = MLP(n_hid, n_hid, n_hid, do_prob)
 
-        self.n2e_i = MLP(n_hid, n_hid, n_hid, do_prob)
+        self.n2e_i = MLP(2*n_hid, n_hid, n_hid, do_prob) #cnn
+
+
+
         self.n2e_o = MLP(n_hid * 2, n_hid, n_hid, do_prob)
         
         self.fc_out = nn.Linear(n_hid, n_out)
@@ -107,16 +120,21 @@ class GNNENC(GNN):
             col: [E]
             size: int
         """
-        # x = x.view(x.size(0), x.size(1), -1)
-        x_emb = self.emb(x)
+        x = x.view(x.size(0), x.size(1), -1)
+        x = self.emb(x)
+        z, col, size = self.message(x, es)
+        return z, col, size
 
-        n_cat = x_emb.shape[0]
-        x_0 = x_emb
-        for i in range(n_cat-1):
-            x_emb = torch.cat([x_emb, x_0], dim=-1)
-        z = x_emb
-        # z = self.message(x_emb, es)
-        return z
+        # # x = x.view(x.size(0), x.size(1), -1)
+        # x_emb = self.emb(x)
+
+        # n_cat = x_emb.shape[0]
+        # x_0 = x_emb
+        # for i in range(n_cat-1):
+        #     x_emb = torch.cat([x_emb, x_0], dim=-1)
+        # z = x_emb
+        # # z = self.message(x_emb, es)
+        # return z
 
     def reduce_cnn(self, x, es):
         """
@@ -131,7 +149,7 @@ class GNNENC(GNN):
         """
         # z: [E, batch, step, dim * 2]
         # x = x.view(x.size(0), x.size(2), x.size(1))
-        z, col, size = self.message(x, es)
+        z, col, size = self.message(x, es, option="i2o")
         z = z.transpose(3, 2).contiguous()
         # z: [E * batch, dim * 2, step]
         z = z.view(-1, z.size(2), z.size(3))
@@ -156,8 +174,8 @@ class GNNENC(GNN):
         x = x.view(x.size(1), x.size(0), 1, x.size(-1))
         # x: [batch, step, node, dim] -> [node, batch, step, dim]
 
-        # z = self.reduce_mlp(x, es)
-        z = self.reduce_cnn(x, es)[0]
+        z = self.reduce_mlp(x, es)[0]
+        # z = self.reduce_cnn(x, es)[0]
         # z = self.emb(x.view(x.size(0), x.size(1), -1))
 
         z = self.n2e_i(z)
