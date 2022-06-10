@@ -170,18 +170,13 @@ class GNNENC(GNN):
         # z = self.reduce_cnn(x, es)[0]
         # z = self.emb(x.view(x.size(0), x.size(1), -1))
 
-        z = self.n2e_i(z)
-        z_skip = z
-        # if self.factor:
-        #     h = self.aggregate(z, col, size)
-        #     h = self.e2n(h)
-        #     z, _, __ = self.message(h, es)
-        #     # skip connection
-        #     z = torch.cat((z, z_skip), dim=2)
-        #     z = self.n2e_o(z)
-        # else:
-        z = self.e2n(z)
-        z = torch.cat((z, z_skip), dim=2)
+
+        for i in range(3):
+            z = self.n2e_i(z)
+            z_skip = z
+            z = self.e2n(z)
+            z = torch.cat((z, z_skip), dim=2)
+
         z = self.n2e_o(z)
 
 
