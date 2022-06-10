@@ -164,6 +164,8 @@ class Instructor():
             # self.model.module.load_state_dict(torch.load(name))
         # _ = self.report('test')
 
+        return self.model
+
     def report(self, name: str) -> float:
         """
         Evaluate the accuracy.
