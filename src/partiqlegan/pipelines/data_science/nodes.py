@@ -151,19 +151,19 @@ class Instructor():
                 loss_a += scale * self.train_nri(states, adj)
             loss_a /= N 
             log.info(f'Epoch {epoch:03d} finished with an average loss of {loss_a:.3e}')
-            # acc = self.report('val')
+            acc = self.report('val')
 
-            # val_cur = max(acc, 1 - acc)
-            # if val_cur > val_best:
+            val_cur = max(acc, 1 - acc)
+            if val_cur > val_best:
                 # update the current best model when approaching a higher accuray
-                # val_best = val_cur
+                val_best = val_cur
                 # torch.save(self.model.module.state_dict(), name)
 
             self.scheduler.step()
         # learning rate scheduling
         # if self.cmd.epochs > 0:
             # self.model.module.load_state_dict(torch.load(name))
-        # _ = self.report('test')
+        _ = self.report('test')
 
         return self.model
 
@@ -252,7 +252,7 @@ class Instructor():
                 loss = loss * scale
                 losses.append(loss)
 
-                acc.append(scale * edge_accuracy(prob, adj))
+                acc.append(scale * edge_accuracy(prob, adj_ut))
                 _, p = prob.max(-1)
                 rate.append(scale * asym_rate(p.t(), self.size))
                 sparse.append(prob.max(-1)[1].float().mean() * scale)
