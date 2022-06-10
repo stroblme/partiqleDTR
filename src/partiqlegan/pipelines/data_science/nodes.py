@@ -198,7 +198,7 @@ class Instructor():
             adj_ut_batch = []
             for row in range(adj.shape[1]):
                 for col in range(adj.shape[2]):
-                    if row > col:
+                    if row < col:
                         adj_ut_batch.append(adj[batch][row][col])
                         # adj_ut.append(adj[batch][row][col])
             adj_ut.append(adj_ut_batch)
