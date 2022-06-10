@@ -72,7 +72,7 @@ class GNN(nn.Module):
         """
         if option == 'i2o':
             row, col = es
-        if option == 'o2i':
+        elif option == 'o2i':
             col, row = es
         else:
             raise ValueError('i2o or o2i')
