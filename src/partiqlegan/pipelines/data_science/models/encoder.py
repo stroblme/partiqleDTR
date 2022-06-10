@@ -63,7 +63,7 @@ class GNNENC(GNN):
     Encoder of NRI. A combination of MLPEncoder and CNNEncoder from https://github.com/ethanfetaya/NRI/modules.py.
     """
     def __init__(self, n_in: int, n_hid: int, n_out: int,
-                 do_prob: float=0., factor: bool=False,#was true in original papaer
+                 dropout_rate: float=0., factor: bool=False,#was true in original papaer
                  reducer: str='mlp'):
         """
         Args:
@@ -90,15 +90,15 @@ class GNNENC(GNN):
 
 
         #-- MLP
-        self.emb = MLP(n_in=n_in, n_hid=n_hid, n_out=n_hid, do_prob=do_prob)
+        self.emb = MLP(n_in=n_in, n_hid=n_hid, n_out=n_hid, do_prob=dropout_rate)
         
-        self.e2n = MLP(n_hid, n_hid, n_hid, do_prob)
+        self.e2n = MLP(n_hid, n_hid, n_hid, dropout_rate)
 
-        self.n2e_i = MLP(2*n_hid, n_hid, n_hid, do_prob) #cnn
+        self.n2e_i = MLP(2*n_hid, n_hid, n_hid, dropout_rate) #cnn
 
 
 
-        self.n2e_o = MLP(n_hid * 2, n_hid, n_hid, do_prob)
+        self.n2e_o = MLP(n_hid * 2, n_hid, n_hid, dropout_rate)
         
         self.fc_out = nn.Linear(n_hid, n_out)
         self.init_weights()
@@ -120,21 +120,13 @@ class GNNENC(GNN):
             col: [E]
             size: int
         """
+        # infer the step and dim size (which is equal to just the dim in our case)
         x = x.view(x.size(0), x.size(1), -1)
+
+        # apply the embedding (MLP, transforming n_in into n_hid)
         x = self.emb(x)
         z, col, size = self.message(x, es)
         return z, col, size
-
-        # # x = x.view(x.size(0), x.size(1), -1)
-        # x_emb = self.emb(x)
-
-        # n_cat = x_emb.shape[0]
-        # x_0 = x_emb
-        # for i in range(n_cat-1):
-        #     x_emb = torch.cat([x_emb, x_0], dim=-1)
-        # z = x_emb
-        # # z = self.message(x_emb, es)
-        # return z
 
     def reduce_cnn(self, x, es):
         """
