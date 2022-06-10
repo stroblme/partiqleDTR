@@ -233,8 +233,19 @@ class Instructor():
                 scale = len(states) / self.batch_size
                 N += scale
 
+                adj_ut = []
+                for batch in range(adj.shape[0]):
+                    adj_ut_batch = []
+                    for row in range(adj.shape[1]):
+                        for col in range(adj.shape[2]):
+                            if row < col:
+                                adj_ut_batch.append(adj[batch][row][col])
+                                # adj_ut.append(adj[batch][row][col])
+                    adj_ut.append(adj_ut_batch)
+                adj_ut = LongTensor(adj_ut)
+
                 # use loss as the validation metric
-                loss = cross_entropy(prob.view(-1, prob.shape[-1]), adj.transpose(0, 1).flatten())
+                loss = cross_entropy(prob.view(-1, prob.shape[-1]), adj_ut.view(-1))
                 # scale all metrics to match the batch size
                 loss = loss * scale
                 losses.append(loss)
