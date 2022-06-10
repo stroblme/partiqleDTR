@@ -17,10 +17,10 @@
 #SBATCH --partition single
 # 
 # expected memory requirements
-#SBATCH --mem=64000MB
+#SBATCH --mem=16000MB
 #
 # output path
-#SBATCH --output="logs/slurm/%j.out"
+#SBATCH --output="logs/slurm/slurm-%j.out"
 
 ./venv/bin/python -m kedro run --pipeline $1
 
