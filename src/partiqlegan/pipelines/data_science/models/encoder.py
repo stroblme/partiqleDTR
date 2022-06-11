@@ -100,7 +100,7 @@ class GNNENC(GNN):
 
         self.n2e_o = MLP(n_hid * 2, n_hid, n_hid, dropout_rate)
         
-        self.fc_out = nn.Linear(n_hid, n_out)
+        self.fc_out = nn.Linear(n_hid * 3, n_out)
         self.init_weights()
 
     def init_weights(self):
@@ -178,9 +178,9 @@ class GNNENC(GNN):
             z = self.e2n(z)
             z = torch.cat((z, z_skip), dim=2)
 
+        z = self.n2e_o(z)
         z = torch.cat((z, z_skip_g), dim=2)
 
-        z = self.n2e_o(z)
 
 
         z = self.fc_out(z)
