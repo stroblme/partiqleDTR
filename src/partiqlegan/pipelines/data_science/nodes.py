@@ -178,8 +178,8 @@ class Instructor():
             acc: accuracy of relation reconstruction
         """
         loss, acc, rate, sparse = self.evaluate(self.data[name])
-        log.info('{} acc {:.4f} _acc {:.4f} rate {:.4f} sparse {:.4f}'.format(
-            name, acc, 1 - acc, rate, sparse))
+        # log.info('{} acc {:.4f} _acc {:.4f} rate {:.4f} sparse {:.4f}'.format(name, acc, 1 - acc, rate, sparse))
+        log.info(f"acc: {acc}, loss: {loss}")
         return acc
 
     def train_nri(self, states: Tensor, adj: Tensor) -> Tensor:
@@ -229,7 +229,6 @@ class Instructor():
         N = 0.
         with torch.no_grad():
             for adj, states in data:
-                print(states.shape)
                 prob = self.model.module.predict_relations(states)
 
                 scale = len(states) / self.batch_size
