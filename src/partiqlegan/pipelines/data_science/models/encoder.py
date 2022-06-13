@@ -81,20 +81,20 @@ class GNNENC(GNN):
 
 
         #-- CNN
-        # self.cnn = CNN(2*n_in, n_hid, n_hid, do_prob)
+        self.cnn = CNN(2*n_in, n_hid, n_hid*2, dropout_rate)
         
-        # self.e2n = MLP(n_hid, n_hid, n_hid, do_prob)
-
-        # self.n2e_i = MLP(n_hid*2, n_hid, n_hid, do_prob) #mlp
+        self.e2n_s = [MLP(n_hid, n_hid, n_hid, dropout_rate) for i in range(3)]
 
 
+        #n_in=4, n_hid=1024
 
         #-- MLP
-        self.emb = MLP(n_in=n_in, n_hid=n_hid, n_out=n_hid, do_prob=dropout_rate)
+        # self.emb = MLP(n_in=n_in, n_hid=n_hid, n_out=n_hid, do_prob=dropout_rate)
         
-        self.e2n = MLP(n_hid, n_hid, n_hid, dropout_rate)
+        # self.e2n = MLP(n_hid, n_hid, n_hid, dropout_rate)
 
-        self.n2e_i = MLP(2*n_hid, n_hid, n_hid, dropout_rate) #cnn
+        self.n2e_i_s = [MLP(2*n_hid, n_hid, n_hid, dropout_rate) for i in range(3)]
+
 
 
 
@@ -166,16 +166,18 @@ class GNNENC(GNN):
         x = x.view(x.size(1), x.size(0), 1, x.size(-1))
         # x: [batch, step, node, dim] -> [node, batch, step, dim]
 
-        z = self.reduce_mlp(x, es)[0]
-        # z = self.reduce_cnn(x, es)[0]
+        # z = self.reduce_mlp(x, es)[0]
+        z = self.reduce_cnn(x, es)[0]
+
+
         # z = self.emb(x.view(x.size(0), x.size(1), -1))
 
         z_skip_g = z
 
         for i in range(3):
-            z = self.n2e_i(z)
+            z = self.n2e_i_s[i](z)
             z_skip = z
-            z = self.e2n(z)
+            z = self.e2n_s[i](z)
             z = torch.cat((z, z_skip), dim=2)
 
         z = self.n2e_o(z)
