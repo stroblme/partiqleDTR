@@ -254,10 +254,10 @@ class Instructor():
 
                 acc.append(scale * edge_accuracy(prob, adj_ut))
                 _, p = prob.max(-1)
-                rate.append(scale * asym_rate(p.t(), self.size))
-                sparse.append(prob.max(-1)[1].float().mean() * scale)
+                # rate.append(scale * asym_rate(p.t(), self.size))
+                # sparse.append(prob.max(-1)[1].float().mean() * scale)
         loss = sum(losses) / N
         acc = sum(acc) / N
-        rate = sum(rate) / N
-        sparse = sum(sparse) / N
+        # rate = sum(rate) / N
+        # sparse = sum(sparse) / N
         return loss, acc, rate, sparse
