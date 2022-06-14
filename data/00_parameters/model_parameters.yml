@@ -10,7 +10,7 @@ DIM: 4
 EDGE_TYPE: 6
 
 # N_HID: 120
-N_HID: 1024
+N_HID: 512
 INPUT_EMB_HID: 128
 # Dimension of hidden layers of attention mechanisms.
 EMB_HID: 256
