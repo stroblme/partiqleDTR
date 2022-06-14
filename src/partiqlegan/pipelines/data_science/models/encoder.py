@@ -83,7 +83,6 @@ class GNNENC(GNN):
         #-- CNN
         self.cnn = CNN(2*n_in, n_hid, n_hid*2, dropout_rate)
         
-        self.e2n_s = [MLP(n_hid, n_hid, n_hid, dropout_rate) for i in range(3)]
 
 
         #n_in=4, n_hid=1024
@@ -93,18 +92,19 @@ class GNNENC(GNN):
         
         # self.e2n = MLP(n_hid, n_hid, n_hid, dropout_rate)
 
-        self.n2e_i_s = [MLP(2*n_hid, n_hid, n_hid, dropout_rate) for i in range(3)]
+        self.n2e_i = MLP(2*n_hid, n_hid, n_hid, dropout_rate)
+
+        self.interm_mlp_a = [MLP(n_hid, n_hid, n_hid, dropout_rate) for i in range(3)] #cnn
+        self.e2n_s = [MLP(2*n_hid, n_hid, n_hid, dropout_rate) for i in range(3)]
+
+        self.interm_mlp_b = [MLP(n_hid, n_hid, n_hid, dropout_rate) for i in range(3)] #cnn
+        self.n2e_s = [MLP(n_hid * 2, n_hid, n_hid, dropout_rate) for i in range(3)]
 
 
 
-        self.interm_mlp_a = [MLP(2*n_hid, n_hid, n_hid, dropout_rate) for i in range(3)] #cnn
-        self.interm_mlp_b = [MLP(2*n_hid, n_hid, n_hid, dropout_rate) for i in range(3)] #cnn
 
-
-
-        self.n2e_o = MLP(n_hid * 2, n_hid, n_hid, dropout_rate)
         
-        self.fc_out = nn.Linear(n_hid * 3, n_out)
+        self.fc_out = nn.Linear(n_hid * 2, n_out)
         self.init_weights()
 
     def init_weights(self):
@@ -179,12 +179,16 @@ class GNNENC(GNN):
         z = self.n2e_i(z)
         z_skip_g = z
 
+            # z = self.n2e_i_s[i](z)
         for i in range(3):
-            z = self.n2e_i_s[i](z)
             z_skip = z
-            z = self.e2n_s[i](z)
+            z = self.interm_mlp_a[i](z)
             z = torch.cat((z, z_skip), dim=2)
-            z = self.n2e_o(z)
+            z = self.e2n_s[i](z)
+            z_skip = z
+            z = self.interm_mlp_b[i](z)
+            z = torch.cat((z, z_skip), dim=2)
+            z = self.n2e_s[i](z)
 
         z = torch.cat((z, z_skip_g), dim=2)
 
