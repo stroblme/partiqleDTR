@@ -3,10 +3,10 @@ MASSES: [100, 90, 80, 70, 50, 20, 25, 10]
 FSP_MASSES: [1, 2, 3, 5, 12]
 MODES_NAMES: ['train', 'val', 'test']
 N_TOPOLOGIES: 10
-MAX_DEPTH: 8
-MAX_CHILDREN: 6
+MAX_DEPTH: 8 # this will control the dimensionality of the classes
+MAX_CHILDREN: 6 # careful, this only controls how many children a single particle can have
 MIN_CHILDREN: 2
-PAD_TO: 16
+PAD_TO: 16 # this should be the max number of fsps
 ISP_WEIGHT: 1.0
 TRAIN_EVENTS_PER_TOP: 1000
 VAL_EVENTS_PER_TOP: 1000
