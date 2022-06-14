@@ -7,8 +7,6 @@ from typing import Dict, Tuple, Any, List
 from phasespace import GenParticle, nbody_decay
 from phasespace.fromdecay import GenMultiDecay
 from decaylanguage import DecFileParser, DecayChainViewer 
-from pathlib import Path
-import torch
 
 
 def gen_decay_from_file(
