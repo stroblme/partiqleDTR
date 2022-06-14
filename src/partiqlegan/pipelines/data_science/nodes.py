@@ -129,7 +129,7 @@ class Instructor():
 
     def train(self):
         # use the accuracy as the metric for model selection, default: 0
-        # val_best = 0
+        val_best = 0
         # path to save the current best model
         # prefix = '/'.join(cfg.log.split('/')[:-1])
         # name = '{}/best.pth'.format(prefix)train_steps
@@ -141,14 +141,14 @@ class Instructor():
             data = self.load_data(self.data['train'], self.batch_size)
             loss_a = 0.
             N = 0.
-            for adj, states in data:
+            for lca, states in data:
                 # if cfg.gpu:
-                #     adj = adj.cuda()
+                #     lca = lca.cuda()
                 #     states = states.cuda()
                 scale = len(states) / self.batch_size
                 # N: number of samples, equal to the batch size with possible exception for the last batch
                 N += scale
-                loss_a += scale * self.train_nri(states, adj)
+                loss_a += scale * self.train_nri(states, lca)
             loss_a /= N 
             log.info(f'Epoch {epoch:03d} finished with an average loss of {loss_a:.3e}')
             acc = self.report('val')
@@ -159,8 +159,8 @@ class Instructor():
                 val_best = val_cur
                 # torch.save(self.model.module.state_dict(), name)
 
+            # learning rate scheduling
             self.scheduler.step()
-        # learning rate scheduling
         # if self.cmd.epochs > 0:
             # self.model.module.load_state_dict(torch.load(name))
         _ = self.report('test')
@@ -178,35 +178,35 @@ class Instructor():
             acc: accuracy of relation reconstruction
         """
         loss, acc, rate, sparse = self.evaluate(self.data[name])
-        log.info('{} acc {:.4f} _acc {:.4f} rate {:.4f} sparse {:.4f}'.format(
-            name, acc, 1 - acc, rate, sparse))
+        # log.info('{} acc {:.4f} _acc {:.4f} rate {:.4f} sparse {:.4f}'.format(name, acc, 1 - acc, rate, sparse))
+        log.info(f"acc: {acc}, loss: {loss}")
         return acc
 
-    def train_nri(self, states: Tensor, adj: Tensor) -> Tensor:
+    def train_nri(self, states: Tensor, lca: Tensor) -> Tensor:
         """
         Args:
             states: [batch, step, node, dim], observed node states
-            adj: [batch, E, K], ground truth interacting relations
+            lca: [batch, E, K], ground truth interacting relations
 
         Return:
             loss: cross-entropy of edge classification
         """
         prob = self.model.module.predict_relations(states)
 
-        adj_ut = []
-        for batch in range(adj.shape[0]):
-            adj_ut_batch = []
-            for row in range(adj.shape[1]):
-                for col in range(adj.shape[2]):
+        lca_ut = []
+        for batch in range(lca.shape[0]):
+            lca_ut_batch = []
+            for row in range(lca.shape[1]):
+                for col in range(lca.shape[2]):
                     if row < col:
-                        adj_ut_batch.append(adj[batch][row][col])
-                        # adj_ut.append(adj[batch][row][col])
-            adj_ut.append(adj_ut_batch)
-        adj_ut = LongTensor(adj_ut)
+                        lca_ut_batch.append(lca[batch][row][col])
+                        # lca_ut.append(lca[batch][row][col])
+            lca_ut.append(lca_ut_batch)
+        lca_ut = LongTensor(lca_ut)
 
 
-        # loss = cross_entropy(prob.view(-1, prob.shape[-1]), adj.transpose(0, 1).flatten())
-        loss = cross_entropy(prob.view(-1, prob.shape[-1]), adj_ut.view(-1))
+        # loss = cross_entropy(prob.view(-1, prob.shape[-1]), lca.transpose(0, 1).flatten())
+        loss = cross_entropy(prob.view(-1, prob.shape[-1]), lca_ut.view(-1))
         
         self.optimize(self.opt, loss)
         return loss
@@ -228,36 +228,35 @@ class Instructor():
         data = self.load_data(test, self.batch_size)
         N = 0.
         with torch.no_grad():
-            for adj, states in data:
-                print(states.shape)
+            for lca, states in data:
                 prob = self.model.module.predict_relations(states)
 
                 scale = len(states) / self.batch_size
                 N += scale
 
-                adj_ut = []
-                for batch in range(adj.shape[0]):
-                    adj_ut_batch = []
-                    for row in range(adj.shape[1]):
-                        for col in range(adj.shape[2]):
+                lca_ut = []
+                for batch in range(lca.shape[0]):
+                    lca_ut_batch = []
+                    for row in range(lca.shape[1]):
+                        for col in range(lca.shape[2]):
                             if row < col:
-                                adj_ut_batch.append(adj[batch][row][col])
-                                # adj_ut.append(adj[batch][row][col])
-                    adj_ut.append(adj_ut_batch)
-                adj_ut = LongTensor(adj_ut)
+                                lca_ut_batch.append(lca[batch][row][col])
+                                # lca_ut.append(lca[batch][row][col])
+                    lca_ut.append(lca_ut_batch)
+                lca_ut = LongTensor(lca_ut)
 
                 # use loss as the validation metric
-                loss = cross_entropy(prob.view(-1, prob.shape[-1]), adj_ut.view(-1))
+                loss = cross_entropy(prob.view(-1, prob.shape[-1]), lca_ut.view(-1))
                 # scale all metrics to match the batch size
                 loss = loss * scale
                 losses.append(loss)
 
-                acc.append(scale * edge_accuracy(prob, adj_ut))
+                acc.append(scale * edge_accuracy(prob, lca_ut))
                 _, p = prob.max(-1)
-                rate.append(scale * asym_rate(p.t(), self.size))
-                sparse.append(prob.max(-1)[1].float().mean() * scale)
+                # rate.append(scale * asym_rate(p.t(), self.size))
+                # sparse.append(prob.max(-1)[1].float().mean() * scale)
         loss = sum(losses) / N
         acc = sum(acc) / N
-        rate = sum(rate) / N
-        sparse = sum(sparse) / N
+        # rate = sum(rate) / N
+        # sparse = sum(sparse) / N
         return loss, acc, rate, sparse
