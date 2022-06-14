@@ -97,6 +97,9 @@ class GNNENC(GNN):
         self.n2e_i = MLP(2*n_hid, n_hid, n_hid, dropout_rate) #cnn
 
 
+        self.interm_mlp = MLP(2*n_hid, n_hid, n_hid, dropout_rate) #cnn
+
+
 
         self.n2e_o = MLP(n_hid * 2, n_hid, n_hid, dropout_rate)
         
@@ -170,15 +173,17 @@ class GNNENC(GNN):
         # z = self.reduce_cnn(x, es)[0]
         # z = self.emb(x.view(x.size(0), x.size(1), -1))
 
+        z = self.n2e_i(z)
         z_skip_g = z
 
         for i in range(3):
-            z = self.n2e_i(z)
             z_skip = z
-            z = self.e2n(z)
             z = torch.cat((z, z_skip), dim=2)
+            z = self.e2n(z)
+            z_skip = z
+            z = torch.cat((z, z_skip), dim=2)
+            z = self.n2e_o(z)
 
-        z = self.n2e_o(z)
         z = torch.cat((z, z_skip_g), dim=2)
 
 
