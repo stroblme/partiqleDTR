@@ -63,8 +63,8 @@ class GNNENC(GNN):
     Encoder of NRI. A combination of MLPEncoder and CNNEncoder from https://github.com/ethanfetaya/NRI/modules.py.
     """
     def __init__(self, n_in: int, n_hid: int, n_out: int,
-                 dropout_rate: float=0., factor: bool=False,#was true in original papaer
-                 reducer: str='mlp'):
+                 dropout_rate: float=0., factor: bool=False#was true in original papaer
+                ):
         """
         Args:
             n_in: input dimension
@@ -76,8 +76,6 @@ class GNNENC(GNN):
         """
         super(GNNENC, self).__init__()
         self.factor = factor
-        assert reducer.lower() in {'mlp', 'cnn'}
-        self.reducer = reducer.lower()
 
 
         #-- CNN
