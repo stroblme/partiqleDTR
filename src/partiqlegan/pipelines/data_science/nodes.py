@@ -284,35 +284,82 @@ class Instructor():
                     elif row == col:
                         lca[batch][row][col] = -0.5 # so that after transpose and add it will sum up to -1
 
-        lca = lca + lca.transpose(1, 2)
+        lca_sym = lca + lca.transpose(1, 2)
 
-        return lca                
+        return lca_sym                
 
-    def lca2adj(self, lca, graph):
+    def lca2graph(self, lca, graph):
 
-        nodes = [i for i in range(int(lca.max()))]
+        nodes = [i for i in range(lca.size(0))]
         last_new_node = None
         processed = []
-        while lca.max() >= 0:
-            nodes.append(max(nodes)+1)
+        while lca.max() > 0:
             directPairs = (lca==1.0).nonzero()
 
+
+            connectParent = False
+
+            def convToEdge(pair):
+                return (int(pair[0]), int(pair[1]))
+
+            def getOverlap(edge, ref):
+                return list(set(edge) & set(ref))
+
+            def addEdgeNotInSet(edge, ovSet):
+                if edge[0] == edge[1]:
+                    return ovSet
+
+                for node in edge:
+                    if node not in ovSet:
+                        graph.addEdge(node, ancestor)
+                        ovSet.append(node)
+                return ovSet
+
             for pair in directPairs:
-                for node in pair:
-                    if node not in processed:
-                        graph.addEdge(nodes[-1], node)
-                        processed.append(node)
+                edge = convToEdge(pair)
+                overlap = getOverlap(edge, processed)
+
+                # no overlap -> create new ancestor
+                if len(overlap) == 0:
+                    nodes.append(max(nodes)+1)
+                    ancestor = nodes[-1]
+
+                    processed = addEdgeNotInSet(edge, processed)
+
+                # full overlap -> meaning they share the same ancestor
+                elif len(overlap) == 2:
+                    ancestor_a = graph.parentOf(overlap[0])
+                    ancestor_b = graph.parentOf(overlap[1])
+
+                    # cancel if they have the same ancestor
+                    if ancestor_a == ancestor_b:
+                        continue
+
+                    edge = (ancestor_a, ancestor_b)
+
+                    # create a new parent
+                    nodes.append(max(nodes)+1)
+                    ancestor = nodes[-1]
+
+                    processed = addEdgeNotInSet(edge, processed)
+                # only 1 common node -> set the ancestor to this overlap
+                else:
+                    ancestor = graph.parentOf(overlap[0])
+
+                    processed = addEdgeNotInSet(edge, processed)
             
-            if last_new_node != None and last_new_node != nodes[-1]:
-                graph.addEdge(last_new_node, nodes[-1])
-                
-            last_new_node = nodes[-1]
+            # if last_new_node != None and last_new_node != ancestor and connectParent:
+            #     graph.addEdge(last_new_node, ancestor)
+            # elif last_new_node == ancestor and connectParent:
+            #     raise Exception("last_new_node == ancestor")
+
+            # last_new_node = ancestor
 
             lca = lca-1
 
     def generateGraph(self, lca):
         graph = GraphVisualization()
-        self.lca2adj(lca[0], graph)
+        self.lca2graph(lca[0], graph)
 
         return graph
 
@@ -324,11 +371,18 @@ class Instructor():
         return graph, graph_ref
 
     def view(self, prob, lca_ref):
+        lca = torch.Tensor([[0,2,2,2,1,1],[2,0,1,1,2,2],[2,1,0,1,2,2], [2,1,1,0,2,2], [1,2,2,2,0,1], [1,2,2,2,1,0]])
+        graph = GraphVisualization()
+        self.lca2graph(lca, graph)
+        graph.visualize()
+        
         graph, graph_ref = self.generateGraphsFromProbAndRef(prob, lca_ref)
 
         graph.visualize()
+        plt.show()
         graph_ref.visualize()
         plt.show()
+        pass
 
 
     def save(self, prob, lca_ref, postfix):
@@ -353,6 +407,13 @@ class GraphVisualization:
         temp = [a, b]
         self.visual.append(temp)
           
+    def parentOf(self, node):
+        for edge in self.visual:
+            # childs are always in [0]
+            if node == edge[0]:
+                return edge[1]
+        return node
+
     # In visualize function G is an object of
     # class Graph given by networkx G.add_edges_from(visual)
     # creates a graph with a given list
@@ -361,7 +422,12 @@ class GraphVisualization:
     def visualize(self):
         G = nx.Graph()
         G.add_edges_from(self.visual)
-        nx.draw_networkx(G)
+        pos = None
+        try:
+            pos = self.hierarchy_pos(G, max(max(self.visual)))
+        except TypeError:
+            log.warning("Provided LCA is not a tree. Will use default graph style for visualization")
+        nx.draw_networkx(G, pos)
         # plt.show()
 
 
@@ -371,3 +437,67 @@ class GraphVisualization:
         nx.draw_networkx(G)
         plt.save(filename)
   
+    def hierarchy_pos(self, G, root=None, width=1., vert_gap = 0.2, vert_loc = 0, xcenter = 0.5):
+
+        '''
+        From Joel's answer at https://stackoverflow.com/a/29597209/2966723.  
+        Licensed under Creative Commons Attribution-Share Alike 
+        
+        If the graph is a tree this will return the positions to plot this in a 
+        hierarchical layout.
+        
+        G: the graph (must be a tree)
+        
+        root: the root node of current branch 
+        - if the tree is directed and this is not given, 
+        the root will be found and used
+        - if the tree is directed and this is given, then 
+        the positions will be just for the descendants of this node.
+        - if the tree is undirected and not given, 
+        then a random choice will be used.
+        
+        width: horizontal space allocated for this branch - avoids overlap with other branches
+        
+        vert_gap: gap between levels of hierarchy
+        
+        vert_loc: vertical location of root
+        
+        xcenter: horizontal location of root
+        '''
+        if not nx.is_tree(G):
+            raise TypeError('cannot use hierarchy_pos on a graph that is not a tree')
+
+        # if root is None:
+        #     if isinstance(G, nx.DiGraph):
+        #         root = next(iter(nx.topological_sort(G)))  #allows back compatibility with nx version 1.11
+        #     else:
+        #         root = random.choice(list(G.nodes))
+
+        def _hierarchy_pos(G, root, width=1., vert_gap = 0.2, vert_loc = 0, xcenter = 0.5, pos = None, parent = None):
+            '''
+            see hierarchy_pos docstring for most arguments from https://stackoverflow.com/questions/29586520/can-one-get-hierarchical-graphs-from-networkx-with-python-3/29597209#29597209
+
+            pos: a dict saying where all nodes go if they have been assigned
+            parent: parent of this branch. - only affects it if non-directed
+
+            '''
+        
+            if pos is None:
+                pos = {root:(xcenter,vert_loc)}
+            else:
+                pos[root] = (xcenter, vert_loc)
+            children = list(G.neighbors(root))
+            if not isinstance(G, nx.DiGraph) and parent is not None:
+                children.remove(parent)  
+            if len(children)!=0:
+                dx = width/len(children) 
+                nextx = xcenter - width/2 - dx/2
+                for child in children:
+                    nextx += dx
+                    pos = _hierarchy_pos(G,child, width = dx, vert_gap = vert_gap, 
+                                        vert_loc = vert_loc-vert_gap, xcenter=nextx,
+                                        pos=pos, parent = root)
+            return pos
+
+                
+        return _hierarchy_pos(G, root, width, vert_gap, vert_loc, xcenter)
