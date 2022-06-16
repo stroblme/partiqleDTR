@@ -204,7 +204,7 @@ class Instructor():
             lca_ut_batch = []
             for row in range(lca.shape[1]):
                 for col in range(lca.shape[2]):
-                    if row < col:
+                    if self.sideSelect(row, col):
                         lca_ut_batch.append(lca[batch][row][col])
                         # lca_ut.append(lca[batch][row][col])
             lca_ut.append(lca_ut_batch)
