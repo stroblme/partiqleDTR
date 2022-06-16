@@ -1,3 +1,4 @@
+from ordered_set import T
 import torch
 from .models.encoder import GNNENC
 from .models.nri import NRIModel
@@ -24,6 +25,8 @@ import numpy as np
 
 import networkx as nx
 import matplotlib.pyplot as plt
+
+from typing import Tuple, List
 
 import logging
 log = logging.getLogger(__name__)
@@ -210,7 +213,6 @@ class Instructor():
 
         # loss = cross_entropy(prob.view(-1, prob.shape[-1]), lca.transpose(0, 1).flatten())
         loss = cross_entropy(prob.view(-1, prob.shape[-1]), lca_ut.view(-1))
-        self.view(prob, lca)
         self.optimize(self.opt, loss)
         return loss
 
@@ -237,6 +239,7 @@ class Instructor():
         with torch.no_grad():
             for lca, states in data:
                 prob = self.model.module.predict_relations(states)
+                # self.view(prob, lca)
 
                 scale = len(states) / self.batch_size
                 N += scale
@@ -290,70 +293,66 @@ class Instructor():
 
     def lca2graph(self, lca, graph):
 
-        nodes = [i for i in range(lca.size(0))]
-        last_new_node = None
-        processed = []
+        nodes = [i for i in range(lca.size(0))] # first start with all nodes available directly from the lca
+        processed = [] # keeps track of all nodes which are somehow used to create an edge
+
         while lca.max() > 0:
             directPairs = (lca==1.0).nonzero()
 
-
-            connectParent = False
-
-            def convToEdge(pair):
+            def convToPair(pair:torch.Tensor) -> Tuple[int,int]:
                 return (int(pair[0]), int(pair[1]))
 
-            def getOverlap(edge, ref):
+            def getOverlap(edge:Tuple[int,int], ref:List[Tuple[int,int]]) -> List[Tuple[int,int]]:
                 return list(set(edge) & set(ref))
 
-            def addEdgeNotInSet(edge, ovSet):
-                if edge[0] == edge[1]:
+            def addPairNotInSet(pair:Tuple[int,int], parent:int, ovSet:List[Tuple[int,int]]) -> List[Tuple[int,int]]:
+                if pair[0] == pair[1]:
                     return ovSet
 
-                for node in edge:
+                for node in pair:
                     if node not in ovSet:
-                        graph.addEdge(node, ancestor)
+                        graph.addEdge(node, parent)
                         ovSet.append(node)
                 return ovSet
 
-            for pair in directPairs:
-                edge = convToEdge(pair)
-                overlap = getOverlap(edge, processed)
+            for tensor_pair in directPairs:
+                pair = convToPair(tensor_pair)
 
-                # no overlap -> create new ancestor
-                if len(overlap) == 0:
-                    nodes.append(max(nodes)+1)
-                    ancestor = nodes[-1]
+                while(True):
+                    overlap = getOverlap(pair, processed)
 
-                    processed = addEdgeNotInSet(edge, processed)
+                    # no overlap -> create new ancestor
+                    if len(overlap) == 0:
+                        # create a new parent and set ancestor accordingly
+                        nodes.append(max(nodes)+1)
+                        ancestor = nodes[-1]
 
-                # full overlap -> meaning they share the same ancestor
-                elif len(overlap) == 2:
-                    ancestor_a = graph.parentOf(overlap[0])
-                    ancestor_b = graph.parentOf(overlap[1])
+                        # found two new edged, cancel this subroutine and  process next pair
+                        processed = addPairNotInSet(pair, ancestor, processed)
+                        break
 
-                    # cancel if they have the same ancestor
-                    if ancestor_a == ancestor_b:
-                        continue
+                    # only 1 common node -> set the ancestor to the parent of this overlap
+                    elif len(overlap) == 1:
+                        # overlap has only one element here
+                        ancestor = graph.parentOf(overlap[0])
 
-                    edge = (ancestor_a, ancestor_b)
+                        processed = addPairNotInSet(pair, ancestor, processed)
+                        # found a new edge, cancel this subroutine and process next pair
+                        break
 
-                    # create a new parent
-                    nodes.append(max(nodes)+1)
-                    ancestor = nodes[-1]
+                    # full overlap -> meaning they were both processed previously
+                    else:
+                        ancestor_a = graph.parentOf(overlap[0])
+                        ancestor_b = graph.parentOf(overlap[1])
 
-                    processed = addEdgeNotInSet(edge, processed)
-                # only 1 common node -> set the ancestor to this overlap
-                else:
-                    ancestor = graph.parentOf(overlap[0])
+                        # cancel if they have the same parent
+                        if ancestor_a == ancestor_b:
+                            break
 
-                    processed = addEdgeNotInSet(edge, processed)
-            
-            # if last_new_node != None and last_new_node != ancestor and connectParent:
-            #     graph.addEdge(last_new_node, ancestor)
-            # elif last_new_node == ancestor and connectParent:
-            #     raise Exception("last_new_node == ancestor")
+                        # overwrite edge by new set of parents
+                        pair = (ancestor_a, ancestor_b)
 
-            # last_new_node = ancestor
+                        # don't cancel here, process this set instead again (calc overlap...)
 
             lca = lca-1
 
@@ -371,18 +370,23 @@ class Instructor():
         return graph, graph_ref
 
     def view(self, prob, lca_ref):
-        lca = torch.Tensor([[0,2,2,2,1,1],[2,0,1,1,2,2],[2,1,0,1,2,2], [2,1,1,0,2,2], [1,2,2,2,0,1], [1,2,2,2,1,0]])
-        graph = GraphVisualization()
-        self.lca2graph(lca, graph)
-        graph.visualize()
+        # lca = torch.Tensor([[0,2,2,2,1,1],[2,0,1,1,2,2],[2,1,0,1,2,2], [2,1,1,0,2,2], [1,2,2,2,0,1], [1,2,2,2,1,0]])
+        # graph = GraphVisualization()
+        # self.lca2graph(lca, graph)
+        # graph.visualize()
         
         graph, graph_ref = self.generateGraphsFromProbAndRef(prob, lca_ref)
-
-        graph.visualize()
-        plt.show()
+        plt.figure(1)
+        plt.title("Reference")
         graph_ref.visualize()
+        plt.figure(2)
+        plt.title("Prediction")
+        graph.visualize()
+
         plt.show()
-        pass
+
+        input()
+        del graph, graph_ref
 
 
     def save(self, prob, lca_ref, postfix):
