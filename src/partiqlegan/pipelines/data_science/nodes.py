@@ -304,17 +304,22 @@ class Instructor():
             def convToPair(pair:torch.Tensor) -> Tuple[int,int]:
                 return (int(pair[0]), int(pair[1]))
 
-            def getOverlap(edge:Tuple[int,int], ref:List[Tuple[int,int]]) -> List[Tuple[int,int]]:
+            def getOverlap(edge:Tuple[int,int], ref:List[int]) -> List[Tuple[int,int]]:
                 return list(set(edge) & set(ref))
 
-            def addPairNotInSet(pair:Tuple[int,int], parent:int, ovSet:List[Tuple[int,int]]) -> List[Tuple[int,int]]:
+            def addNodeNotInSet(node:int, parent:int, ovSet:List[Tuple[int,int]], appendSet:bool) -> List[Tuple[int,int]]:
+                if node not in ovSet:
+                        graph.addEdge(node, parent)
+                        if appendSet:
+                            ovSet.append(node)
+                return ovSet
+
+            def addPairNotInSet(pair:Tuple[int,int], parent:int, ovSet:List[Tuple[int,int]], appendSet:bool=True) -> List[Tuple[int,int]]:
                 if pair[0] == pair[1]:
                     return ovSet
 
                 for node in pair:
-                    if node not in ovSet:
-                        graph.addEdge(node, parent)
-                        ovSet.append(node)
+                    ovSet = addNodeNotInSet(node, parent, ovSet, appendSet)
                 return ovSet
 
             for tensor_pair in directPairs:
