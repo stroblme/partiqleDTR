@@ -387,7 +387,11 @@ class Instructor():
 
                         # don't cancel here, process this set instead again (calc overlap...)
 
-            lca = lca-1
+            lca -= 1
+            if len(directPairs) == 0:
+                lca += torch.diag(torch.ones(lca.size(0), dtype=torch.long))
+            # processed = []
+
 
     def generateGraph(self, lca):
         graph = GraphVisualization()
