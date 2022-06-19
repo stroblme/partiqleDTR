@@ -343,6 +343,20 @@ class Instructor():
                         # overlap has only one element here
                         ancestor = graph.parentOf(overlap[0])
 
+                        generation = -1
+                        while True:
+                            if graph.parentOf(ancestor) == ancestor:
+                                break
+                            ancestor = graph.parentOf(ancestor)
+                            generation -= 1
+
+                        if lca[0][0] <= generation:
+                            nodes.append(max(nodes)+1)
+
+                            addNodeNotInSet(ancestor, nodes[-1], processed, True)
+
+                            ancestor = nodes[-1]
+
                         processed = addPairNotInSet(pair, ancestor, processed)
                         # found a new edge, cancel this subroutine and process next pair
                         break
@@ -350,11 +364,23 @@ class Instructor():
                     # full overlap -> meaning they were both processed previously
                     else:
                         ancestor_a = graph.parentOf(overlap[0])
+                        while True:
+                            if graph.parentOf(ancestor_a) == ancestor_a:
+                                break
+                            ancestor_a = graph.parentOf(ancestor_a)
+
                         ancestor_b = graph.parentOf(overlap[1])
+                        while True:
+                            if graph.parentOf(ancestor_b) == ancestor_b:
+                                break
+                            ancestor_b = graph.parentOf(ancestor_b)
 
                         # cancel if they have the same parent
                         if ancestor_a == ancestor_b:
                             break
+                        # cancel if they are already connected (cause this would happen again in the next round)
+                        elif graph.parentOf(ancestor_a) == ancestor_b:
+                            break # TODO check here if this break is ok
 
                         # overwrite edge by new set of parents
                         pair = (ancestor_a, ancestor_b)
