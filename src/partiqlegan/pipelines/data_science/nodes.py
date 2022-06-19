@@ -285,7 +285,7 @@ class Instructor():
                         lca[batch][row][col] = particle_idx
                         prob_idx += 1 # use seperate indexing to ensure that we don't fall in this matrix scheme
                     elif row == col:
-                        lca[batch][row][col] = -0.5 # so that after transpose and add it will sum up to -1
+                        lca[batch][row][col] = 0 # so that after transpose and add it will sum up to -1
 
         lca_sym = lca + lca.transpose(1, 2)
 
