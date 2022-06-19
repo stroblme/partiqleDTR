@@ -297,7 +297,9 @@ class Instructor():
         processed = [] # keeps track of all nodes which are somehow used to create an edge
 
         while lca.max() > 0:
-            directPairs = (lca==1.0).nonzero()
+            directPairs = list((lca==1.0).nonzero())
+            directPairs.sort(key=lambda dp: sum(dp))
+            directPairs = directPairs[1::2]
 
             def convToPair(pair:torch.Tensor) -> Tuple[int,int]:
                 return (int(pair[0]), int(pair[1]))
