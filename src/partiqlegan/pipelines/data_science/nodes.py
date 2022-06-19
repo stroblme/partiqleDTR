@@ -393,7 +393,153 @@ class Instructor():
             # processed = []
 
 
-    def generateGraph(self, lca):
+    def testLca2Graph(self):
+        """
+                       +---+
+                       | a |
+                       ++-++
+                        | |
+                +-------+ +------+
+                |                |
+              +-+-+            +-+-+
+              | b |            | c |
+              +++++            ++-++
+               |||              | |
+          +----+|+----+     +---+ +---+
+          |     |     |     |         |
+        +-+-+ +-+-+ +-+-+ +-+-+     +-+-+
+        | d | | e | | f | | g |     | h |
+        +---+ +---+ +---+ +---+     +---+
+        """
+        example_1 = torch.tensor([
+            #d  g  f  h  e
+            [0, 2, 1, 2, 1], # d
+            [2, 0, 2, 1, 2], # g
+            [1, 2, 0, 2, 1], # f
+            [2, 1, 2, 0, 2], # h
+            [1, 2, 1, 2, 0], # e
+        ])
+        """ Testing with disjointed levels
+
+                       +---+
+                       | a |
+                       ++-++
+                        | |
+                +-------+ +------+
+                |                |
+              +-+-+            +-+-+
+              | b |            | c |
+              +++++            ++-++
+               |||              | |
+          +----+|+----+     +---+ +---+
+          |     |     |     |         |
+        +-+-+ +-+-+ +-+-+ +-+-+     +-+-+
+        | d | | e | | f | | g |     | h |
+        +---+ +---+ +---+ +---+     +---+
+        """
+        example_2 = torch.tensor([
+            #d  g  f  h  e
+            [0, 5, 2, 5, 2], # d
+            [5, 0, 5, 2, 5], # g
+            [2, 5, 0, 5, 2], # f
+            [5, 2, 5, 0, 5], # h
+            [2, 5, 2, 5, 0], # e
+        ])
+        """
+                   +---+
+                   | a |
+                   ++-++
+                    | |
+             +------+ +------+
+             |               |
+             |             +-+-+
+             |             | b |
+             |             ++-++
+             |              | |
+             |           +--+ +---+
+             |           |        |
+           +-+-+       +-+-+      |
+           | c |       | d |      |
+           ++-++       ++-++      |
+            | |         | |       |
+          +-+ +-+     +-+ +-+     |
+          |     |     |     |     |
+        +-+-+ +-+-+ +-+-+ +-+-+ +-+-+
+        | e | | f | | g | | h | | i |
+        +---+ +---+ +---+ +---+ +---+
+        """
+        example_3 = torch.tensor([
+            #e  f  g  h  i
+            [0, 1, 3, 3, 3],  # e
+            [1, 0, 3, 3, 3],  # f
+            [3, 3, 0, 1, 2],  # g
+            [3, 3, 1, 0, 2],  # h
+            [3, 3, 2, 2, 0]   # i
+        ])
+        """
+                         +---+
+                         | a |
+                         ++-++
+                          | |
+                     +----+ +----+
+                     |           |
+                   +-+-+         |
+                   | b |         |
+                   +++++         |
+                    |||          |
+            +-------+|+----+     |
+            |        |     |     |
+          +---+      |     |     |
+          | c |      |     |     |
+          ++-++      |     |     |
+           | |       |     |     |
+         +-+ +-+     |     |     |
+         |     |     |     |     |
+        +-+-+ +-+-+ +-+-+ +-+-+ +-+-+
+        | d | | e | | f | | g | | h |
+        +---+ +---+ +---+ +---+ +---+
+        """
+        example_4 = torch.tensor([
+            #g  h  d  f  c
+            [0, 1, 2, 2, 3],  # g
+            [1, 0, 2, 2, 3],  # h
+            [2, 2, 0, 2, 3],  # d
+            [2, 2, 2, 0, 3],  # f
+            [3, 3, 3, 3, 0]   # c
+        ])
+
+        graph = GraphVisualization()
+        self.lca2graph(example_1, graph)
+        plt.figure(1)
+        graph.visualize("max")
+        plt.show()
+
+        graph = GraphVisualization()
+        self.lca2graph(example_2, graph)
+        plt.figure(2)
+        graph.visualize("max")
+        plt.show()
+        
+        graph = GraphVisualization()
+        self.lca2graph(example_3, graph)
+        plt.figure(3)
+        graph.visualize("max")
+        plt.show()
+
+        # pruned_lca_ref = self.prune_lca(example_4)
+
+        # adj_ref = lca2adjacency(pruned_lca_ref)
+
+        # graph_ref =self.generateGraphFromAdj(adj_ref)
+        # graph_ref.visualize()
+        
+        graph = GraphVisualization()
+        self.lca2graph(example_4, graph)
+        plt.figure(4)
+        graph.visualize("max")
+        plt.show()
+        pass
+
         graph = GraphVisualization()
         self.lca2graph(lca[0], graph)
 
