@@ -7,6 +7,10 @@
 #   type: pickle.PickleDataSet
 #   filepath: data/00_parameters/phasespace.pkl
 
+# ----------------------------------------------------------------
+# 00_parameters
+# ----------------------------------------------------------------
+
 circuits_metadata:
   type: pandas.JSONDataSet
   filepath: data/00_parameters/circuits_metadata.pkl
@@ -20,21 +24,27 @@ artificial_decay:
   filepath: data/00_parameters/artificial_decay_small.yml
   # filepath: data/00_parameters/artificial_decay.yml
 
-  
 omega_decay:
   type: yaml.YAMLDataSet
   filepath: data/00_parameters/omega_decay.yml
   # filepath: data/00_parameters/decaylanguage.yml
 
+# ----------------------------------------------------------------
+# 02_intermediate
+# ----------------------------------------------------------------
+
 decay_tree_structure:
   type: pickle.PickleDataSet
-  filepath: data/02_intermediate/decay_tree_structure_omega.pkl
+  filepath: data/02_intermediate/decay_tree_structure_small.pkl
+  # filepath: data/02_intermediate/decay_tree_structure_omega.pkl
   # filepath: data/02_intermediate/decay_tree_structure.pkl
 
 decay_tree_events:
   type: pickle.PickleDataSet
-  filepath: data/02_intermediate/decay_tree_events_omega.pkl
+  filepath: data/02_intermediate/decay_tree_events_small.pkl
   # filepath: data/02_intermediate/decay_tree_events.pkl
+
+# --------------------------------
 
 all_lca:
   type: pickle.PickleDataSet
@@ -43,6 +53,9 @@ all_lca:
 all_names:
   type: pickle.PickleDataSet
   filepath: data/02_intermediate/all_names.pkl
+
+# ----------------------------------------------------------------
+
 
 all_lca_shuffled:
   type: pickle.PickleDataSet
