@@ -585,11 +585,14 @@ class Instructor():
         graph_ref.visualize()
         plt.figure(2)
         plt.title("Prediction")
+        try:
         graph.visualize()
+        except:
+            lca = self.prob2lca(prob, lca_ref.size(1))
+            graph = self.generateGraphFromLca(lca)
+        # plt.show()
 
-        plt.show()
-
-        input()
+        # input()
         del graph, graph_ref
 
 
