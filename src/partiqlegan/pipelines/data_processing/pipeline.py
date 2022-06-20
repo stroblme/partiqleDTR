@@ -5,7 +5,7 @@ generated using Kedro 0.17.7
 
 from kedro.pipeline import Pipeline, node
 from kedro.pipeline.modular_pipeline import pipeline
-from .nodes import tree_data_to_generator, tree_data_to_discriminator, conv_structure_to_lca_and_names, shuffle_lca_and_leaves, merge_topologies, tuple_dataset_to_torch_tensor
+from .nodes import tree_data_to_generator, tree_data_to_discriminator, conv_structure_to_lca_and_names, lca_and_leaves_sort_into_modes, shuffle_lca_and_leaves_in_mode, lca_and_leaves_to_tuple_dataset, tuple_dataset_to_torch_tensor_dataset
 
 def create_belleII_pipeline(**kwargs) -> Pipeline:
     return pipeline(
@@ -38,14 +38,23 @@ def create_belleII_pipeline(**kwargs) -> Pipeline:
                     name="conv_structure_to_lca_and_names"
             ),
             node(
-                    func=shuffle_lca_and_leaves,
-                    inputs=["artificial_decay", "all_lca", "all_names", "decay_tree_events"],
+                func=lca_and_leaves_sort_into_modes,
+                inputs=["artificial_decay", "all_lca", "all_names", "decay_tree_events"],
+                outputs={
+                    "all_lca_mode_sorted":"all_lca_mode_sorted",
+                    "all_leaves_mode_sorted":"all_leaves_mode_sorted"
+                },
+                name="lca_and_leaves_sort_into_modes"
+            ),
+            node(
+                    func=shuffle_lca_and_leaves_in_mode,
+                    inputs=["artificial_decay", "all_lca_mode_sorted", "all_leaves_mode_sorted"],
                     outputs={
                         "all_lca_shuffled":"all_lca_shuffled",
-                        "all_leave_shuffled":"all_leave_shuffled"
+                        "all_leaves_shuffled":"all_leaves_shuffled"
                     },
-                    name="shuffle_lca_and_leaves"
-            )
+                    name="shuffle_lca_and_leaves_in_mode"
+            ),
         ]
     )
 
@@ -95,6 +104,7 @@ def create_artificial_pipeline(**kwargs) -> Pipeline:
                 name="tuple_dataset_to_torch_tensor_dataset"
         )
     ])
+
 
 def create_artificial_pipeline_no_shuffle(**kwargs) -> Pipeline:
     return pipeline([
