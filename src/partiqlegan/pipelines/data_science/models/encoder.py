@@ -95,8 +95,9 @@ class GNNENC(GNN):
         self.interm_mlp_a = [MLP(n_hid, n_hid, n_hid, dropout_rate) for i in range(3)] #cnn
         self.e2n_s = [MLP(2*n_hid, n_hid, n_hid, dropout_rate) for i in range(3)]
 
-        self.interm_mlp_b = [MLP(n_hid, n_hid, n_hid, dropout_rate) for i in range(3)] #cnn
-        self.n2e_s = [MLP(n_hid * 2, n_hid, n_hid, dropout_rate) for i in range(3)]
+        # self.interm_mlp_b = [MLP(n_hid, n_hid, n_hid, dropout_rate) for i in range(3)] #cnn
+        self.interm_mlp_b = [MLP(4*n_hid, n_hid, n_hid, dropout_rate) for i in range(3)] #cnn #factor
+        self.n2e_s = [MLP(5*n_hid, n_hid, n_hid, dropout_rate) for i in range(3)]
 
 
 
@@ -142,15 +143,17 @@ class GNNENC(GNN):
             size: int
         """
         # z: [E, batch, step, dim * 2]
-        # x = x.view(x.size(0), x.size(2), x.size(1))
-        z, col, size = self.message(x, es, option="i2o")
-        z = z.transpose(3, 2).contiguous()
+        # x = x.view(x.size(0), x.size(2), x.size(1)) 
+        #x: node, batch, 1, dim
+        z, col, size = self.message(x, es, option="i2o")    #z: node*(node-1)/2, batch, 1, 2*dim
+                                                            #size: node
+        z = z.transpose(3, 2).contiguous()                  #z: node*(node-1)/2, batch, 2*dim, 1
         # z: [E * batch, dim * 2, step]
-        z = z.view(-1, z.size(2), z.size(3))
+        z = z.view(-1, z.size(2), z.size(3))                #z: node*(node-1)/2*batch, 2*dim, 1
         # z = x.view(x.size(0), x.size(1), -1)
 
-        z = self.cnn(z)
-        z = z.view(len(col), x.size(1), -1)
+        z = self.cnn(z)                                     #z: node*(node-1)/2*batch, 2*n_hid
+        z = z.view(len(col), x.size(1), -1)                 #z: node*(node-1)/2, batch, 2*n_hid
         return z, col, size
 
     def forward(self, x: Tensor, es: Tensor) -> Tensor:
@@ -169,7 +172,7 @@ class GNNENC(GNN):
         # x: [batch, step, node, dim] -> [node, batch, step, dim]
 
         # z = self.reduce_mlp(x, es)[0]
-        z = self.reduce_cnn(x, es)[0]
+        z, col, size = self.reduce_cnn(x, es)
 
 
         # z = self.emb(x.view(x.size(0), x.size(1), -1))
@@ -179,14 +182,23 @@ class GNNENC(GNN):
 
             # z = self.n2e_i_s[i](z)
         for i in range(3):
+
             z_skip = z
-            z = self.interm_mlp_a[i](z)
-            z = torch.cat((z, z_skip), dim=2)
-            z = self.e2n_s[i](z)
+            z = self.interm_mlp_a[i](z)         #z: node*(node-1)/2, batch, n_hid
+            z = torch.cat((z, z_skip), dim=2)   #z: node*(node-1)/2, batch, 2*n_hid
+
             z_skip = z
-            z = self.interm_mlp_b[i](z)
-            z = torch.cat((z, z_skip), dim=2)
-            z = self.n2e_s[i](z)
+            # factor graph
+            h = self.aggregate(z, col, size)    #h: node, batch, 2*n_hid
+            h = self.e2n_s[i](h)                #z: node*(node-1)/2, batch, n_hid
+            # factor graph
+            z, _, __ = self.message(h, es)      #z: node*(node-1)/2, batch, 4*n_hid
+            z = torch.cat((z, z_skip), dim=2)   #z: node*(node-1)/2, batch, 2*n_hid
+
+            z_skip = z
+            z = self.interm_mlp_b[i](z)         #z: node*(node-1)/2, batch, n_hid
+            z = torch.cat((z, z_skip), dim=2)   #z: node*(node-1)/2, batch, 5*n_hid
+            z = self.n2e_s[i](z)                #z: node*(node-1)/2, batch, n_hid
 
         z = torch.cat((z, z_skip_g), dim=2)
 
