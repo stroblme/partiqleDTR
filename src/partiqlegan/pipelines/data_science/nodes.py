@@ -607,14 +607,18 @@ class GraphVisualization:
     # creates a graph with a given list
     # nx.draw_networkx(G) - plots the graph
     # plt.show() - displays the graph
-    def visualize(self):
+    def visualize(self, opt="min"):
         G = nx.Graph()
         G.add_edges_from(self.visual)
         pos = None
         try:
+            if opt=="min":
+                pos = self.hierarchy_pos(G, min(min(self.visual)))
+            elif opt=="max":
             pos = self.hierarchy_pos(G, max(max(self.visual)))
         except TypeError:
             log.warning("Provided LCA is not a tree. Will use default graph style for visualization")
+            # raise RuntimeError
         nx.draw_networkx(G, pos)
         # plt.show()
 
