@@ -602,6 +602,13 @@ class GraphVisualization:
                 return edge[1]
         return node
 
+    def childOf(self, node):
+        childs = []
+        for edge in self.visual:
+            # childs are always in [0]
+            if node == edge[1]:
+                childs.append(edge[1])
+        return childs
     # In visualize function G is an object of
     # class Graph given by networkx G.add_edges_from(visual)
     # creates a graph with a given list
