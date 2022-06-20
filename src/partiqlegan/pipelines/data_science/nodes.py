@@ -550,6 +550,8 @@ class Instructor():
                     graph.addEdge(row, col)
 
         return graph
+
+    def generateGraphFromLca(self, lca):
         graph = GraphVisualization()
         self.lca2graph(lca[0], graph)
 
