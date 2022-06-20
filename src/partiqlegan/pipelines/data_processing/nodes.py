@@ -376,6 +376,7 @@ def _conv_decay_to_lca(root, pad_to=None):
             lca_mat[j, i] = _lca
 
     if pad_to != None:
+        #increase pad_to parameter if an error occurs here
         lca_res = np.pad(lca_mat, [(0,pad_to-lca_mat.shape[0]), (0,pad_to-lca_mat.shape[1])], 'constant')
         names_res = np.pad(names, (0, pad_to-len(names)), 'constant')
         return lca_res, names_res
