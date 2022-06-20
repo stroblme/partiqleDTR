@@ -554,8 +554,13 @@ class Instructor():
 
     def generateGraphsFromProbAndRef(self, prob, lca_ref):
         lca = self.prob2lca(prob, lca_ref.size(1))
-        graph = self.generateGraph(lca)
-        graph_ref =self.generateGraph(lca_ref)
+        # pruned_lca = self.prune_lca(lca[0])
+        # pruned_lca_ref = self.prune_lca(lca_ref[0])
+
+        graph = GraphVisualization()
+        self.lca2graph(lca, graph)
+        graph_ref = GraphVisualization() 
+        self.lca2graph(lca_ref, graph_ref)
 
         return graph, graph_ref
 
