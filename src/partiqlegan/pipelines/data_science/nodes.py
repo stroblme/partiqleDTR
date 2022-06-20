@@ -199,7 +199,7 @@ class Instructor():
         """
         prob = self.model.module.predict_relations(states)
 
-        lca_ut = []
+        lca_filtered = []
         for batch in range(lca.shape[0]):
             lca_ut_batch = []
             for row in range(lca.shape[1]):
@@ -207,12 +207,12 @@ class Instructor():
                     if self.sideSelect(row, col):
                         lca_ut_batch.append(lca[batch][row][col])
                         # lca_ut.append(lca[batch][row][col])
-            lca_ut.append(lca_ut_batch)
-        lca_ut = LongTensor(lca_ut)
+            lca_filtered.append(lca_ut_batch)
+        lca_filtered = LongTensor(lca_filtered)
 
 
         # loss = cross_entropy(prob.view(-1, prob.shape[-1]), lca.transpose(0, 1).flatten())
-        loss = cross_entropy(prob.view(-1, prob.shape[-1]), lca_ut.view(-1))
+        loss = cross_entropy(prob.view(-1, prob.shape[-1]), lca_filtered.view(-1))
         self.optimize(self.opt, loss)
         return loss
 
