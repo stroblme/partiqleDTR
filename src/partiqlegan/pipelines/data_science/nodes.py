@@ -541,6 +541,15 @@ class Instructor():
         plt.show()
         pass
 
+
+    def generateGraphFromAdj(self, adj):
+        graph = GraphVisualization()
+        for row in range(len(adj)):
+            for col in range(len(adj)):
+                if adj[row][col] and self.sideSelect(row, col):
+                    graph.addEdge(row, col)
+
+        return graph
         graph = GraphVisualization()
         self.lca2graph(lca[0], graph)
 
