@@ -17,6 +17,7 @@ def register_pipelines() -> Dict[str, Pipeline]:
     data_generation_artificial_pipeline = dg.create_artificial_pipeline()
     data_generation_belleII_pipeline = dg.create_belleII_pipeline()
     data_processing_artificial_pipeline = dp.create_artificial_pipeline()
+    data_processing_artificial_pipeline_no_shuffle = dp.create_artificial_pipeline_no_shuffle()
     data_processing_belleII_pipeline = dp.create_belleII_pipeline()
     training_qgnn_pipeline = ds.create_training_qgnn_pipeline()
 
@@ -26,6 +27,7 @@ def register_pipelines() -> Dict[str, Pipeline]:
         "data_generation_artificial_pipeline": data_generation_artificial_pipeline,
         "data_generation_belleII_pipeline": data_generation_belleII_pipeline,
         "data_processing_artificial_pipeline": data_processing_artificial_pipeline,
+        "data_processing_artificial_pipeline_no_shuffle": data_processing_artificial_pipeline_no_shuffle,
         "data_processing_belleII_pipeline": data_processing_belleII_pipeline,
         "training_qgnn_pipeline": training_qgnn_pipeline,
     }
