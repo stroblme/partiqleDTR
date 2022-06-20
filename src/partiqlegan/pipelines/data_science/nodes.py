@@ -217,8 +217,9 @@ class Instructor():
         return loss
 
     def sideSelect(self, row, col):
-        # return row < col
-        return row > col
+        # return row < col # lower (results in node*(node-1)/2)
+        # return row > col # upper (results in node*(node-1)/2)
+        return row != col # all but diagonal (results in node*(node-1))
 
     def evaluate(self, test):
         """
