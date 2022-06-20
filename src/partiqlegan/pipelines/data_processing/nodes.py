@@ -189,6 +189,86 @@ def conv_structure_to_lca_and_names(decay_parameters, decay_tree_structure):
         "all_names": all_names
     }
 
+
+def lca_and_leaves_sort_into_modes(
+    decay_parameters: List,
+    all_lca: List,
+    all_names: List,
+    decay_tree_events: Tuple[List, List]):
+    
+    N_TOPOLOGIES = decay_parameters["N_TOPOLOGIES"] if "N_TOPOLOGIES" in decay_parameters else None
+    MODES_NAMES = decay_parameters["MODES_NAMES"] if "MODES_NAMES" in decay_parameters else None
+    TRAIN_EVENTS_PER_TOP = decay_parameters["TRAIN_EVENTS_PER_TOP"] if "TRAIN_EVENTS_PER_TOP" in decay_parameters else None
+    VAL_EVENTS_PER_TOP = decay_parameters["VAL_EVENTS_PER_TOP"] if "VAL_EVENTS_PER_TOP" in decay_parameters else None
+    TEST_EVENTS_PER_TOP = decay_parameters["TEST_EVENTS_PER_TOP"] if "TEST_EVENTS_PER_TOP" in decay_parameters else None
+    GENERATE_UNKNOWN = decay_parameters["GENERATE_UNKNOWN"] if "GENERATE_UNKNOWN" in decay_parameters else None
+
+    events_per_mode = {'train': TRAIN_EVENTS_PER_TOP, 'val': VAL_EVENTS_PER_TOP, 'test': TEST_EVENTS_PER_TOP}
+
+    _, all_events = decay_tree_events
+
+    all_lca_mode_sorted = {mode:list() for mode in MODES_NAMES}
+    all_leaves_mode_sorted = {mode:list() for mode in MODES_NAMES}
+
+    for i, (lca, names) in enumerate(zip(all_lca, all_names)):
+        # NOTE generate leaves and labels for training, validation, and testing
+        modes = []
+        # For topologies not in the training set, save them to a different subdir
+        # save_dir = Path(root, 'unknown')
+        if i < N_TOPOLOGIES or not GENERATE_UNKNOWN:
+            modes = MODES_NAMES
+            # save_dir = Path(root, 'known')
+        elif i < (2 * N_TOPOLOGIES):
+            modes = MODES_NAMES[1:]
+        else:
+            modes = MODES_NAMES[2:]
+        # save_dir.mkdir(parents=True, exist_ok=True)
+
+
+        for mode in modes:
+            num_events = events_per_mode[mode]
+    
+            leaves = np.asarray([all_events[mode][i][name] if name in all_events[mode][i] else np.zeros((num_events, 4)) for name in names])
+            leaves = leaves.swapaxes(0, 1)
+            # assert leaves.shape == (num_events, _count_leaves(root_node), 4)
+
+            # NOTE shuffle leaves for each sample
+            # leaves, lca_shuffled = _shuffle_leaves(leaves, lca)
+
+            all_lca_mode_sorted[mode].append(lca)
+            all_leaves_mode_sorted[mode].append(leaves)
+                
+
+    return {
+        "all_lca_mode_sorted": all_lca_mode_sorted,
+        "all_leaves_mode_sorted": all_leaves_mode_sorted
+    }
+
+def shuffle_lca_and_leaves_in_mode(
+    decay_parameters: List,
+    all_lca_mode_sorted: List,
+    all_leaves_mode_sorted: List):
+    
+    MODES_NAMES = decay_parameters["MODES_NAMES"] if "MODES_NAMES" in decay_parameters else None
+
+    all_lca_shuffled = {mode:list() for mode in MODES_NAMES}
+    all_leaves_shuffled = {mode:list() for mode in MODES_NAMES}
+
+    for mode in MODES_NAMES:
+
+        for (lca, leaves) in zip(all_lca_mode_sorted[mode], all_leaves_mode_sorted[mode]):
+            # NOTE shuffle leaves for each sample
+            leaves_shuffled, lca_shuffled = _shuffle_lca_and_leaves(leaves, lca)
+
+            all_lca_shuffled[mode].append(lca_shuffled)
+            all_leaves_shuffled[mode].append(leaves_shuffled)
+                
+
+    return {
+        "all_lca_shuffled": all_lca_shuffled,
+        "all_leaves_shuffled": all_leaves_shuffled
+    }
+
 def shuffle_lca_and_leaves(
     decay_parameters: List,
     all_lca: List,
@@ -232,10 +312,10 @@ def shuffle_lca_and_leaves(
             # assert leaves.shape == (num_events, _count_leaves(root_node), 4)
 
             # NOTE shuffle leaves for each sample
-            leaves, lca_shuffled = _shuffle_leaves(leaves, lca)
+            leaves_shuffled, lca_shuffled = _shuffle_lca_and_leaves(leaves, lca)
 
             all_lca_shuffled[mode].append(lca_shuffled)
-            all_leaves_shuffled[mode].append(leaves)
+            all_leaves_shuffled[mode].append(leaves_shuffled)
                 
 
     return {
@@ -302,7 +382,7 @@ def _conv_decay_to_lca(root, pad_to=None):
 
     return lca_mat, names
 
-def _shuffle_leaves(leaves, lca):
+def _shuffle_lca_and_leaves(leaves, lca):
     """
     leaves (torch.Tensor): tensor containing leaves of shape (num_samples. num_leaves, num_features)
     lca torch.Tensor): tensor containing lca matrix of simulated decay of shape (num_leaves, num_leaves)
@@ -362,27 +442,27 @@ def _find_lca(node1, node2, parents, generations):
 
     return 0
 
-def merge_topologies(
-    all_lca_shuffled, all_leaves_shuffled
+def lca_and_leaves_to_tuple_dataset(
+    lca_by_topology, leaves_by_topology
 ) -> Dict[str, Tuple[List, List]]:
 
-    modes = all_lca_shuffled.keys()
+    modes = lca_by_topology.keys()
     dataset_lca_and_leaves = dict()
 
     for mode in modes:
         x_data = []
         y_data = []
-        for topology_it in range(len(all_lca_shuffled[mode])):
-            for i in range(len(all_lca_shuffled[mode][topology_it])):
-                x_data.append(all_leaves_shuffled[mode][topology_it][i])
-                y_data.append(all_lca_shuffled[mode][topology_it][i])
+        for topology_it in range(len(lca_by_topology[mode])):
+            for i in range(len(lca_by_topology[mode][topology_it])):
+                x_data.append(leaves_by_topology[mode][topology_it][i])
+                y_data.append(lca_by_topology[mode][topology_it][i])
         dataset_lca_and_leaves[mode] = (y_data, x_data)
 
     return {
         "dataset_lca_and_leaves":dataset_lca_and_leaves
     }
 
-def tuple_dataset_to_torch_tensor(
+def tuple_dataset_to_torch_tensor_dataset(
     tuple_dataset: Dict[str, Tuple[List, List]]
 ) -> Dict[str, Tuple[LongTensor, FloatTensor]]:
     torch_dataset_lca_and_leaves = dict()
