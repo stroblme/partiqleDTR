@@ -546,6 +546,12 @@ class Instructor():
 
         return graph
 
+    def prune_lca(self,lca):
+        index = sum(lca[:])>0
+        pruned_lca = lca[index][:,index]
+
+        return pruned_lca                
+
     def generateGraphsFromProbAndRef(self, prob, lca_ref):
         lca = self.prob2lca(prob, lca_ref.size(1))
         graph = self.generateGraph(lca)
