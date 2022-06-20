@@ -17,7 +17,9 @@ model_parameters:
 
 artificial_decay:
   type: yaml.YAMLDataSet
-  filepath: data/00_parameters/artificial_decay.yml
+  filepath: data/00_parameters/artificial_decay_small.yml
+  # filepath: data/00_parameters/artificial_decay.yml
+
   
 omega_decay:
   type: yaml.YAMLDataSet
