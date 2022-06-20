@@ -568,10 +568,8 @@ class Instructor():
         # pruned_lca = self.prune_lca(lca[0])
         # pruned_lca_ref = self.prune_lca(lca_ref[0])
 
-        graph = GraphVisualization()
-        self.lca2graph(lca, graph)
-        graph_ref = GraphVisualization() 
-        self.lca2graph(lca_ref, graph_ref)
+        graph = self.generateGraphFromLca(lca)
+        graph_ref = self.generateGraphFromLca(lca_ref)
 
         return graph, graph_ref
 
