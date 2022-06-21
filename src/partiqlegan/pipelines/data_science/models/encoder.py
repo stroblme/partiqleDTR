@@ -186,6 +186,7 @@ class GNNENC(GNN):
             z_skip = z
             z = self.interm_mlp_a[i](z)         #z: node*(node-1)/2, batch, n_hid
             z = torch.cat((z, z_skip), dim=2)   #z: node*(node-1)/2, batch, 2*n_hid
+            del z_skip
 
             z_skip = z
             # factor graph
@@ -194,13 +195,16 @@ class GNNENC(GNN):
             # factor graph
             z, _, __ = self.message(h, es)      #z: node*(node-1)/2, batch, 4*n_hid
             z = torch.cat((z, z_skip), dim=2)   #z: node*(node-1)/2, batch, 2*n_hid
+            del z_skip
 
             z_skip = z
             z = self.interm_mlp_b[i](z)         #z: node*(node-1)/2, batch, n_hid
             z = torch.cat((z, z_skip), dim=2)   #z: node*(node-1)/2, batch, 5*n_hid
             z = self.n2e_s[i](z)                #z: node*(node-1)/2, batch, n_hid
+            del z_skip
 
         z = torch.cat((z, z_skip_g), dim=2)
+        del z_skip_g
 
 
 
