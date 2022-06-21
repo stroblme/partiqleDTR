@@ -586,7 +586,7 @@ class Instructor():
         plt.figure(2)
         plt.title("Prediction")
         try:
-        graph.visualize()
+            graph.visualize()
         except:
             lca = self.prob2lca(prob, lca_ref.size(1))
             graph = self.generateGraphFromLca(lca)
@@ -645,7 +645,7 @@ class GraphVisualization:
             if opt=="min":
                 pos = self.hierarchy_pos(G, min(min(self.visual)))
             elif opt=="max":
-            pos = self.hierarchy_pos(G, max(max(self.visual)))
+                pos = self.hierarchy_pos(G, max(max(self.visual)))
         except TypeError:
             log.warning("Provided LCA is not a tree. Will use default graph style for visualization")
             # raise RuntimeError
