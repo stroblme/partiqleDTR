@@ -30,6 +30,9 @@ class NRIModel(nn.Module):
         # if not self.es.is_cuda:
             # self.es = self.es.cuda(states.device)
         logits = self.enc(states, self.es)
-        prob = logits.softmax(-1)
-        return prob
+
+        return logits   # multi class ce loss takes logits rather than probs
+
+        # prob = logits.softmax(-1)
+        # return prob
 
