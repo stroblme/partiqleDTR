@@ -46,8 +46,10 @@ def train_qgnn(model_parameters, torch_dataset_lca_and_leaves):
 
     # es = LongTensor(np.array(list(permutations(range(SIZE), 2))).T)
     es = list(permutations(range(n_fsps), 2))
-    es.sort(key=lambda es: sum(es))
-    es = es[1::2]
+    # get ut
+    # es.sort(key=lambda es: sum(es))
+    # es = es[1::2]
+
     es = LongTensor(np.array(es).T)
 
     encoder = GNNENC(N_MOMENTA, N_HID, max_depth)
