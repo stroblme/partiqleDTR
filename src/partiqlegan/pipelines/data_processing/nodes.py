@@ -269,59 +269,59 @@ def shuffle_lca_and_leaves_in_mode(
         "all_leaves_shuffled": all_leaves_shuffled
     }
 
-def shuffle_lca_and_leaves(
-    decay_parameters: List,
-    all_lca: List,
-    all_names: List,
-    decay_tree_events: Tuple[List, List]):
+# def shuffle_lca_and_leaves(
+#     decay_parameters: List,
+#     all_lca: List,
+#     all_names: List,
+#     decay_tree_events: Tuple[List, List]):
     
-    N_TOPOLOGIES = decay_parameters["N_TOPOLOGIES"] if "N_TOPOLOGIES" in decay_parameters else None
-    MODES_NAMES = decay_parameters["MODES_NAMES"] if "MODES_NAMES" in decay_parameters else None
-    TRAIN_EVENTS_PER_TOP = decay_parameters["TRAIN_EVENTS_PER_TOP"] if "TRAIN_EVENTS_PER_TOP" in decay_parameters else None
-    VAL_EVENTS_PER_TOP = decay_parameters["VAL_EVENTS_PER_TOP"] if "VAL_EVENTS_PER_TOP" in decay_parameters else None
-    TEST_EVENTS_PER_TOP = decay_parameters["TEST_EVENTS_PER_TOP"] if "TEST_EVENTS_PER_TOP" in decay_parameters else None
-    GENERATE_UNKNOWN = decay_parameters["GENERATE_UNKNOWN"] if "GENERATE_UNKNOWN" in decay_parameters else None
+#     N_TOPOLOGIES = decay_parameters["N_TOPOLOGIES"] if "N_TOPOLOGIES" in decay_parameters else None
+#     MODES_NAMES = decay_parameters["MODES_NAMES"] if "MODES_NAMES" in decay_parameters else None
+#     TRAIN_EVENTS_PER_TOP = decay_parameters["TRAIN_EVENTS_PER_TOP"] if "TRAIN_EVENTS_PER_TOP" in decay_parameters else None
+#     VAL_EVENTS_PER_TOP = decay_parameters["VAL_EVENTS_PER_TOP"] if "VAL_EVENTS_PER_TOP" in decay_parameters else None
+#     TEST_EVENTS_PER_TOP = decay_parameters["TEST_EVENTS_PER_TOP"] if "TEST_EVENTS_PER_TOP" in decay_parameters else None
+#     GENERATE_UNKNOWN = decay_parameters["GENERATE_UNKNOWN"] if "GENERATE_UNKNOWN" in decay_parameters else None
 
-    events_per_mode = {'train': TRAIN_EVENTS_PER_TOP, 'val': VAL_EVENTS_PER_TOP, 'test': TEST_EVENTS_PER_TOP}
+#     events_per_mode = {'train': TRAIN_EVENTS_PER_TOP, 'val': VAL_EVENTS_PER_TOP, 'test': TEST_EVENTS_PER_TOP}
 
-    _, all_events = decay_tree_events
+#     _, all_events = decay_tree_events
 
-    all_lca_shuffled = {mode:list() for mode in MODES_NAMES}
-    all_leaves_shuffled = {mode:list() for mode in MODES_NAMES}
+#     all_lca_shuffled = {mode:list() for mode in MODES_NAMES}
+#     all_leaves_shuffled = {mode:list() for mode in MODES_NAMES}
 
-    for i, (lca, names) in enumerate(zip(all_lca, all_names)):
-        # NOTE generate leaves and labels for training, validation, and testing
-        modes = []
-        # For topologies not in the training set, save them to a different subdir
-        # save_dir = Path(root, 'unknown')
-        if i < N_TOPOLOGIES or not GENERATE_UNKNOWN:
-            modes = MODES_NAMES
-            # save_dir = Path(root, 'known')
-        elif i < (2 * N_TOPOLOGIES):
-            modes = MODES_NAMES[1:]
-        else:
-            modes = MODES_NAMES[2:]
-        # save_dir.mkdir(parents=True, exist_ok=True)
+#     for i, (lca, names) in enumerate(zip(all_lca, all_names)):
+#         # NOTE generate leaves and labels for training, validation, and testing
+#         modes = []
+#         # For topologies not in the training set, save them to a different subdir
+#         # save_dir = Path(root, 'unknown')
+#         if i < N_TOPOLOGIES or not GENERATE_UNKNOWN:
+#             modes = MODES_NAMES
+#             # save_dir = Path(root, 'known')
+#         elif i < (2 * N_TOPOLOGIES):
+#             modes = MODES_NAMES[1:]
+#         else:
+#             modes = MODES_NAMES[2:]
+#         # save_dir.mkdir(parents=True, exist_ok=True)
 
 
-        for mode in modes:
-            num_events = events_per_mode[mode]
+#         for mode in modes:
+#             num_events = events_per_mode[mode]
     
-            leaves = np.asarray([all_events[mode][i][name] if name in all_events[mode][i] else np.zeros((num_events, 4)) for name in names])
-            leaves = leaves.swapaxes(0, 1)
-            # assert leaves.shape == (num_events, _count_leaves(root_node), 4)
+#             leaves = np.asarray([all_events[mode][i][name] if name in all_events[mode][i] else np.zeros((num_events, 4)) for name in names])
+#             leaves = leaves.swapaxes(0, 1)
+#             # assert leaves.shape == (num_events, _count_leaves(root_node), 4)
 
-            # NOTE shuffle leaves for each sample
-            leaves_shuffled, lca_shuffled = _shuffle_lca_and_leaves(leaves, lca)
+#             # NOTE shuffle leaves for each sample
+#             leaves_shuffled, lca_shuffled = _shuffle_lca_and_leaves(leaves, lca)
 
-            all_lca_shuffled[mode].append(lca_shuffled)
-            all_leaves_shuffled[mode].append(leaves_shuffled)
+#             all_lca_shuffled[mode].append(lca_shuffled)
+#             all_leaves_shuffled[mode].append(leaves_shuffled)
                 
 
-    return {
-        "all_lca_shuffled": all_lca_shuffled,
-        "all_leaves_shuffled": all_leaves_shuffled
-    }
+#     return {
+#         "all_lca_shuffled": all_lca_shuffled,
+#         "all_leaves_shuffled": all_leaves_shuffled
+#     }
 
 def _conv_decay_to_lca(root, pad_to=None):
     ''' Return the LCA matrix of a decay
