@@ -4,7 +4,7 @@ REDUCE: "MLP"
 ENC: "GNNENC"
 DEC: "GNNDEC"
 
-SIZE: 16
+SIZE: 7 # equals to padding
 # 3 for kuramoto and 4 for spring and charged.
 DIM: 4
 
@@ -22,9 +22,9 @@ NO_REG: False
 SYM: False
 
 # Scale the loss to avoid gradient explosion.
-SCALE: 0.00005
-EPOCHS: 500
-LR: 0.0025 #0.00025
+SCALE: 0.005 #0.00005
+EPOCHS: 10
+LR: 0.05 #0.00025
 LR_DECAY: 200
 GAMMA: 0.5
 BATCH_SIZE: 10

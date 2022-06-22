@@ -36,6 +36,7 @@ def train_qgnn(model_parameters, torch_dataset_lca_and_leaves):
     N_HID = model_parameters["N_HID"] if "N_HID" in model_parameters else None
     N_MOMENTA = model_parameters["DIM"] if "DIM" in model_parameters else None
 
+    log.info(f"Model parameters:\n{model_parameters}")
 
     # data, es, _ = load_nri(all_leaves_shuffled, num_of_leaves)
     # generate edge list of a fully connected graph
