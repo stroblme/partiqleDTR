@@ -22,7 +22,6 @@ from torch.optim.optimizer import Optimizer
 from torch.utils.data import Dataset, DataLoader
 import numpy as np
 
-
 import networkx as nx
 import matplotlib.pyplot as plt
 
@@ -47,6 +46,7 @@ def train_qgnn(model_parameters, torch_dataset_lca_and_leaves):
 
     # es = LongTensor(np.array(list(permutations(range(SIZE), 2))).T)
     es = list(permutations(range(n_fsps), 2))
+
     # get ut
     # es.sort(key=lambda es: sum(es))
     # es = es[1::2]
@@ -201,6 +201,7 @@ class Instructor():
             loss: cross-entropy of edge classification
         """
         prob = self.model.module.predict_relations(states)
+        # self.view(prob, lca)
 
         lca_filtered = []
         for batch in range(lca.shape[0]):
@@ -216,6 +217,8 @@ class Instructor():
 
         # loss = cross_entropy(prob.view(-1, prob.shape[-1]), lca.transpose(0, 1).flatten())
         loss = cross_entropy(prob.view(-1, prob.shape[-1]), lca_filtered.view(-1))
+        # self.view(prob, lca)
+        loss = loss / lca.shape[1]
         self.optimize(self.opt, loss)
         return loss
 
@@ -300,6 +303,7 @@ class Instructor():
         nodes = [i for i in range(lca.size(0))] # first start with all nodes available directly from the lca
         processed = [] # keeps track of all nodes which are somehow used to create an edge
 
+        
         while lca.max() > 0:
             directPairs = list((lca==1.0).nonzero())
             directPairs.sort(key=lambda dp: sum(dp))
@@ -330,6 +334,7 @@ class Instructor():
                 pair = convToPair(tensor_pair)
 
                 while(True):
+                    # this works since they are sorted by pair[0]
                     overlap = getOverlap(pair, processed)
 
                     # no overlap -> create new ancestor
@@ -545,6 +550,7 @@ class Instructor():
         pass
 
 
+
     def generateGraphFromAdj(self, adj):
         graph = GraphVisualization()
         for row in range(len(adj)):
@@ -577,11 +583,6 @@ class Instructor():
         return graph, graph_ref
 
     def view(self, prob, lca_ref):
-        # lca = torch.Tensor([[0,2,2,2,1,1],[2,0,1,1,2,2],[2,1,0,1,2,2], [2,1,1,0,2,2], [1,2,2,2,0,1], [1,2,2,2,1,0]])
-        # graph = GraphVisualization()
-        # self.lca2graph(lca, graph)
-        # graph.visualize()
-        
         graph, graph_ref = self.generateGraphsFromProbAndRef(prob, lca_ref)
         plt.figure(1)
         plt.title("Reference")
@@ -591,11 +592,12 @@ class Instructor():
         try:
             graph.visualize()
         except:
+            print("Whoops")
             lca = self.prob2lca(prob, lca_ref.size(1))
             graph = self.generateGraphFromLca(lca)
         # plt.show()
 
-        # input()
+        input()
         del graph, graph_ref
 
 
@@ -635,12 +637,13 @@ class GraphVisualization:
             if node == edge[1]:
                 childs.append(edge[1])
         return childs
+
     # In visualize function G is an object of
     # class Graph given by networkx G.add_edges_from(visual)
     # creates a graph with a given list
     # nx.draw_networkx(G) - plots the graph
     # plt.show() - displays the graph
-    def visualize(self, opt="min"):
+    def visualize(self, opt="max"):
         G = nx.Graph()
         G.add_edges_from(self.visual)
         pos = None
