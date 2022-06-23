@@ -22,13 +22,11 @@ NO_REG: False
 SYM: False
 
 # Scale the loss to avoid gradient explosion.
-SCALE: 0.005 #0.00005
 EPOCHS: 10
 LR: 0.05 #0.00025
 LR_DECAY: 200
 GAMMA: 0.5
 BATCH_SIZE: 10
-M: 10
 
 TIMESTEPS: 1
 TEMP: 0.5

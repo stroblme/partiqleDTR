@@ -169,7 +169,7 @@ class Instructor():
                 # torch.save(self.model.module.state_dict(), name)
 
             # learning rate scheduling
-            self.scheduler.step()
+            # self.scheduler.step()
         # if self.cmd.epochs > 0:
             # self.model.module.load_state_dict(torch.load(name))
         _ = self.report('test')
