@@ -218,7 +218,7 @@ class Instructor():
         # loss = cross_entropy(prob.view(-1, prob.shape[-1]), lca.transpose(0, 1).flatten())
         loss = cross_entropy(prob.view(-1, prob.shape[-1]), lca_filtered.view(-1))
         # self.view(prob, lca)
-        loss = loss / lca.shape[1]
+        # loss = loss / lca.shape[1]
         self.optimize(self.opt, loss)
         return loss
 
