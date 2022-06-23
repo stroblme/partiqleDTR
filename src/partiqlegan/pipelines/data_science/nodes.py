@@ -30,13 +30,14 @@ from typing import Tuple, List
 import logging
 log = logging.getLogger(__name__)
 
-def train_qgnn(model_parameters, torch_dataset_lca_and_leaves):
+def train_qgnn(torch_dataset_lca_and_leaves, n_hid:int, n_momenta:int, dropout_rate:float,
+                learning_rate:float, learning_rate_decay:int, gamma:float, batch_size:int, epochs:int):
     # load data
     # SIZE = model_parameters["SIZE"] if "SIZE" in model_parameters else None
-    N_HID = model_parameters["N_HID"] if "N_HID" in model_parameters else None
-    N_MOMENTA = model_parameters["DIM"] if "DIM" in model_parameters else None
+    # n_hid = model_parameters["N_HID"] if "N_HID" in model_parameters else None
+    # n_momenta = model_parameters["DIM"] if "DIM" in model_parameters else None
 
-    log.info(f"Model parameters:\n{model_parameters}")
+    # log.info(f"Model parameters:\n{model_parameters}")
 
     # data, es, _ = load_nri(all_leaves_shuffled, num_of_leaves)
     # generate edge list of a fully connected graph
@@ -53,10 +54,10 @@ def train_qgnn(model_parameters, torch_dataset_lca_and_leaves):
 
     es = LongTensor(np.array(es).T)
 
-    encoder = GNNENC(N_MOMENTA, N_HID, max_depth)
+    encoder = GNNENC(n_momenta, n_hid, max_depth, dropout_rate=dropout_rate)
     model = NRIModel(encoder, es, n_fsps)
     model = DataParallel(model)
-    ins = Instructor(model_parameters, model, torch_dataset_lca_and_leaves, es)
+    ins = Instructor(model, torch_dataset_lca_and_leaves, es, learning_rate, learning_rate_decay, gamma, batch_size, epochs)
     ins.train()
 
 
@@ -79,7 +80,8 @@ class Instructor():
     """
     Train the encoder in an supervised manner given the ground truth relations.
     """
-    def __init__(self, model_parameters, model: torch.nn.DataParallel, data: dict,  es: np.ndarray):
+    def __init__(self, model: torch.nn.DataParallel, data: dict,  es: np.ndarray,
+                learning_rate: float, learning_rate_decay: int, gamma: float, batch_size:int, epochs:int):
         """
         Args:
             model: an auto-encoder
@@ -87,12 +89,12 @@ class Instructor():
             es: edge list
             cmd: command line parameters
         """
-        LR = model_parameters["LR"] if "LR" in model_parameters else None
-        LR_DECAY = model_parameters["LR_DECAY"] if "LR_DECAY" in model_parameters else None
-        GAMMA = model_parameters["GAMMA"] if "GAMMA" in model_parameters else None
-        SIZE = model_parameters["SIZE"] if "SIZE" in model_parameters else None
-        BATCH_SIZE = model_parameters["BATCH_SIZE"] if "BATCH_SIZE" in model_parameters else None
-        EPOCHS = model_parameters["EPOCHS"] if "EPOCHS" in model_parameters else None
+        # learning_rate = model_parameters["LR"] if "LR" in model_parameters else None
+        # learning_rate_decay = model_parameters["LR_DECAY"] if "LR_DECAY" in model_parameters else None
+        # gamma = model_parameters["GAMMA"] if "GAMMA" in model_parameters else None
+        # size = model_parameters["SIZE"] if "SIZE" in model_parameters else None
+        # batch_size = model_parameters["BATCH_SIZE"] if "BATCH_SIZE" in model_parameters else None
+        # epochs = model_parameters["EPOCHS"] if "EPOCHS" in model_parameters else None
 
 
         # super(XNRIENCIns, self).__init__(cmd)
@@ -103,13 +105,12 @@ class Instructor():
         # self.data = data
         self.es = torch.LongTensor(es)
         # number of nodes
-        self.size = SIZE
-        self.epochs = EPOCHS
-        self.batch_size = BATCH_SIZE
+        self.epochs = epochs
+        self.batch_size = batch_size
         # optimizer
-        self.opt = optim.Adam(self.model.parameters(), lr=LR)
+        self.opt = optim.Adam(self.model.parameters(), lr=learning_rate)
         # learning rate scheduler, same as in NRI
-        self.scheduler = StepLR(self.opt, step_size=LR_DECAY, gamma=GAMMA)
+        self.scheduler = StepLR(self.opt, step_size=learning_rate_decay, gamma=gamma)
 
     @staticmethod
     def optimize(opt: Optimizer, loss: torch.Tensor):
