@@ -1,5 +1,16 @@
-# This is a boilerplate parameters config generated for pipeline 'data_generation'
-# using Kedro 0.17.7.
-#
-# Documentation for this file format can be found in "Parameters"
-# Link: https://kedro.readthedocs.io/en/0.17.7/04_kedro_project_setup/02_configuration.html#parameters
+---
+MASSES: [100, 90, 80, 70, 50, 20, 25, 10]
+FSP_MASSES: [1, 2, 3, 5, 12]
+MODES_NAMES: ['train', 'val', 'test']
+N_TOPOLOGIES: 20
+MAX_DEPTH: 3 # this will control the dimensionality of the classes
+MAX_CHILDREN: 3 # careful, this only controls how many children a single particle can have
+MIN_CHILDREN: 2
+PAD_TO: 8 # this should be the max number of fsps
+ISP_WEIGHT: 1.0
+TRAIN_EVENTS_PER_TOP: 1000
+VAL_EVENTS_PER_TOP: 1000
+TEST_EVENTS_PER_TOP: 1000
+# SEED: None
+ISO_RETRIES: 0
+GENERATE_UNKNOWN: True

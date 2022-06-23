@@ -27,8 +27,10 @@ Requires-Dist: tensorflow-probability (>=0.11)
 Requires-Dist: keras (<2.10)
 
 
+### MLflow
 
-
+upgrade kedro
+run kedro mlflow init
 
 
 

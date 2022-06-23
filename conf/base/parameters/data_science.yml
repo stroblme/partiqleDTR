@@ -1,5 +1,39 @@
-# This is a boilerplate parameters config generated for pipeline 'data_science'
-# using Kedro 0.17.7.
-#
-# Documentation for this file format can be found in "Parameters"
-# Link: https://kedro.readthedocs.io/en/0.17.7/04_kedro_project_setup/02_configuration.html#parameters
+---
+EPOCHS: 10
+REDUCE: "MLP"
+ENC: "GNNENC"
+DEC: "GNNDEC"
+
+SIZE: 7 # equals to padding
+# 3 for kuramoto and 4 for spring and charged.
+DIM: 4
+
+# N_HID: 120
+N_HID: 512
+INPUT_EMB_HID: 128
+# Dimension of hidden layers of attention mechanisms.
+EMB_HID: 256
+ATT_HID: 256
+# SKIP: True
+# Soft constraint for symmetry.
+REG: 0.
+NO_REG: False
+# Hard constraint for symmetry.
+SYM: False
+
+# Scale the loss to avoid gradient explosion.
+EPOCHS: 10
+LR: 0.05 #0.00025
+LR_DECAY: 200
+GAMMA: 0.5
+BATCH_SIZE: 10
+
+TIMESTEPS: 1
+TEMP: 0.5
+# NOTE: 10 for kuramoto, 100 for spring and charged.
+INTERVAL: 10
+SAMPLES: 100
+
+# Run n rounds of the code.
+ROUNDS: 1
+TEMP: 0.5
