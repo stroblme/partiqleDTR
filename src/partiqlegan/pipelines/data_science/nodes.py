@@ -242,14 +242,12 @@ class Instructor():
         """
         acc, rate, sparse, losses = [], [], [], []
         data = self.load_data(test, self.batch_size)
-        N = 0.
         with torch.no_grad():
             for lca, states in data:
                 prob = self.model.module.predict_relations(states)
                 # self.view(prob, lca)
 
-                scale = 1 / lca.size(1) / self.batch_size #running only a single batch here
-                N += scale
+                scale = 1 / lca.size(1) #running only a single batch here
 
                 lca_ut = []
                 for batch in range(lca.shape[0]):
@@ -269,11 +267,11 @@ class Instructor():
                 losses.append(loss)
 
                 acc.append(scale * edge_accuracy(prob, lca_ut))
-                _, p = prob.max(-1)
+                # _, p = prob.max(-1)
                 # rate.append(scale * asym_rate(p.t(), self.size))
                 # sparse.append(prob.max(-1)[1].float().mean() * scale)
-        loss = sum(losses) / N
-        acc = sum(acc) / N
+        loss = sum(losses) / self.batch_size
+        acc = sum(acc) / self.batch_size
         # rate = sum(rate) / N
         # sparse = sum(sparse) / N
         return loss, acc, rate, sparse
