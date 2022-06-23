@@ -147,18 +147,18 @@ class Instructor():
 
             self.model.train() # set the module in training mode
             # shuffle the data at each epoch
-            data = self.load_data(self.data['train'], self.batch_size)
+            data_batch = self.load_data(self.data['train'], self.batch_size)
             loss_a = 0.
             N = 0.
-            for lca, states in data:
+            for lca, states in data_batch:
+                scale = 1 / lca.size(1) # get the scaling dependend on the number of classes
                 # if cfg.gpu:
                 #     lca = lca.cuda()
                 #     states = states.cuda()
-                scale = len(states) / self.batch_size
                 # N: number of samples, equal to the batch size with possible exception for the last batch
-                N += scale
                 loss_a += scale * self.train_nri(states, lca)
-            loss_a /= N 
+            
+            loss_a /= self.batch_size # to the already scaled loss, apply the batch size scaling
             log.info(f'Epoch {epoch:03d} finished with an average loss of {loss_a:.3e}')
             acc = self.report('val')
 
@@ -248,7 +248,7 @@ class Instructor():
                 prob = self.model.module.predict_relations(states)
                 # self.view(prob, lca)
 
-                scale = len(states) / self.batch_size
+                scale = 1 / lca.size(1) / self.batch_size #running only a single batch here
                 N += scale
 
                 lca_ut = []
