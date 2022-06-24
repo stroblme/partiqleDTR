@@ -22,7 +22,7 @@ from torch.optim.optimizer import Optimizer
 from torch.utils.data import Dataset, DataLoader
 import numpy as np
 
-import kedro_mlflow as mlflow
+import mlflow
 
 import networkx as nx
 import matplotlib.pyplot as plt
@@ -145,6 +145,12 @@ class Instructor():
         # path to save the current best model
         # prefix = '/'.join(cfg.log.split('/')[:-1])
         # name = '{}/best.pth'.format(prefix)train_steps
+        try:
+            mlflow.end_run()
+            log.warn("There was an existing run which is now cancelled.")
+        except:
+            pass
+
         with mlflow.start_run():
             log.info(f'Training started with a batch size of {self.batch_size}')
             for epoch in range(1, 1 + self.epochs):
