@@ -22,6 +22,8 @@ from torch.optim.optimizer import Optimizer
 from torch.utils.data import Dataset, DataLoader
 import numpy as np
 
+import kedro_mlflow as mlflow
+
 import networkx as nx
 import matplotlib.pyplot as plt
 
@@ -143,34 +145,39 @@ class Instructor():
         # path to save the current best model
         # prefix = '/'.join(cfg.log.split('/')[:-1])
         # name = '{}/best.pth'.format(prefix)train_steps
-        log.info(f'Training started with a batch size of {self.batch_size}')
-        for epoch in range(1, 1 + self.epochs):
+        with mlflow.start_run():
+            log.info(f'Training started with a batch size of {self.batch_size}')
+            for epoch in range(1, 1 + self.epochs):
 
-            self.model.train() # set the module in training mode
-            # shuffle the data at each epoch
-            data_batch = self.load_data(self.data['train'], self.batch_size)
-            loss_a = 0.
-            N = 0.
-            for lca, states in data_batch:
-                scale = 1 / lca.size(1) # get the scaling dependend on the number of classes
-                # if cfg.gpu:
-                #     lca = lca.cuda()
-                #     states = states.cuda()
-                # N: number of samples, equal to the batch size with possible exception for the last batch
-                loss_a += scale * self.train_nri(states, lca)
-            
-            loss_a /= self.batch_size # to the already scaled loss, apply the batch size scaling
-            log.info(f'Epoch {epoch:03d} finished with an average loss of {loss_a:.3e}')
-            acc = self.report('val')
+                self.model.train() # set the module in training mode
+                # shuffle the data at each epoch
+                data_batch = self.load_data(self.data['train'], self.batch_size)
+                loss_a = 0.
+                N = 0.
+                for lca, states in data_batch:
+                    scale = 1 / lca.size(1) # get the scaling dependend on the number of classes
+                    # if cfg.gpu:
+                    #     lca = lca.cuda()
+                    #     states = states.cuda()
+                    # N: number of samples, equal to the batch size with possible exception for the last batch
+                    loss_a += scale * self.train_nri(states, lca)
+                
+                loss_a /= self.batch_size # to the already scaled loss, apply the batch size scaling
+                log.info(f'Epoch {epoch:03d} finished with an average loss of {loss_a:.3e}')
+                
+                mlflow.log_metric(key="loss", value=loss_a, step=epoch)
 
-            val_cur = max(acc, 1 - acc)
-            if val_cur > val_best:
-                # update the current best model when approaching a higher accuray
-                val_best = val_cur
-                # torch.save(self.model.module.state_dict(), name)
+                acc = self.report('val')
+                mlflow.log_metric(key="accuracy", value=acc, step=epoch)
 
-            # learning rate scheduling
-            # self.scheduler.step()
+                val_cur = max(acc, 1 - acc)
+                if val_cur > val_best:
+                    # update the current best model when approaching a higher accuray
+                    val_best = val_cur
+                    # torch.save(self.model.module.state_dict(), name)
+
+                # learning rate scheduling
+                self.scheduler.step()
         # if self.cmd.epochs > 0:
             # self.model.module.load_state_dict(torch.load(name))
         _ = self.report('test')
