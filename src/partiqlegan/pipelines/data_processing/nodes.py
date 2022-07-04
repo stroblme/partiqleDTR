@@ -4,13 +4,13 @@ generated using Kedro 0.17.7
 """
 import numpy as np
 from typing import Dict, Tuple, List
-from sqlalchemy import desc
+from sqlalchemy import Float, desc
 
 # import torch
 import torchvision
 import torchdata as td
-from torch import LongTensor, FloatTensor
-
+from torch import LongTensor, FloatTensor, cat
+from torch.utils.data import Dataset
 import copy
 
 import re
@@ -443,6 +443,21 @@ def _find_lca(node1, node2, parents, generations):
 
     return 0
 
+class TreeSet(Dataset):
+    """ Dataset holding trees to feed to network"""
+    def __init__(self, x, y):
+        """ In our use x will be the array of leaf attributes and y the LCA matrix, i.e. the labels"""
+        self.x = x
+        self.y = y
+        return
+
+    def __len__(self):
+        return len(self.x)
+
+    def __getitem__(self, idx):
+        return (FloatTensor(self.x[idx]), LongTensor(self.y[idx]))
+
+
 def lca_and_leaves_to_tuple_dataset(
     lca_by_topology, leaves_by_topology
 ) -> Dict[str, Tuple[List, List]]:
@@ -457,7 +472,8 @@ def lca_and_leaves_to_tuple_dataset(
             for i in range(len(lca_by_topology[mode][topology_it])):
                 x_data.append(leaves_by_topology[mode][topology_it][i])
                 y_data.append(lca_by_topology[mode][topology_it][i])
-        dataset_lca_and_leaves[mode] = (y_data, x_data)
+
+        dataset_lca_and_leaves[mode] = TreeSet(x_data, y_data)
 
     return {
         "dataset_lca_and_leaves":dataset_lca_and_leaves
@@ -468,11 +484,18 @@ def tuple_dataset_to_torch_tensor_dataset(
 ) -> Dict[str, Tuple[LongTensor, FloatTensor]]:
     torch_dataset_lca_and_leaves = dict()
 
-    for key, value in tuple_dataset.items():
-        torch_dataset_lca_and_leaves[key] = (LongTensor(value[0]), FloatTensor(value[1]))
+    # for key, value in tuple_dataset.items():
+    #     values = []
+    #     for v in value:
+    #         v_0_accum.append(LongTensor(v))
+    #     v_1_accum = []
+    #     for v in value[1]:
+    #         v_1_accum.append(FloatTensor(v))
+
+    #     torch_dataset_lca_and_leaves[key] = (v_0_accum, v_1_accum)
 
     return {
-        "torch_dataset_lca_and_leaves":torch_dataset_lca_and_leaves
+        "torch_dataset_lca_and_leaves":tuple_dataset
     }
 
 
