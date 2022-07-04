@@ -1,7 +1,7 @@
 from ordered_set import T
 import torch
 from .models.encoder import GNNENC
-from .models.nri import NRIModel
+from .models.nri import NRIModel, bb_NRIModel, rel_pad_collate_fn
 from torch.nn.parallel import DataParallel
 # from generate.load import load_nri
 from itertools import permutations
@@ -44,9 +44,9 @@ def train_qgnn(torch_dataset_lca_and_leaves, n_hid:int, n_momenta:int, dropout_r
     # data, es, _ = load_nri(all_leaves_shuffled, num_of_leaves)
     # generate edge list of a fully connected graph
 
-    max_depth = int(max([np.array(subset[0]).max() for _, subset in torch_dataset_lca_and_leaves.items()]))+1 # get the num of childs from the label list
-    n_fsps = int(max([np.array(subset[0]).shape[1] for _, subset in torch_dataset_lca_and_leaves.items()]))
-
+    # max_depth = int(max([np.array(subset[0]).max() for _, subset in torch_dataset_lca_and_leaves.items()]))+1 # get the num of childs from the label list
+    # n_fsps = int(max([len(subset[0]) for _, subset in torch_dataset_lca_and_leaves.items()]))
+    n_fsps = 4
     # es = LongTensor(np.array(list(permutations(range(SIZE), 2))).T)
     es = list(permutations(range(n_fsps), 2))
 
@@ -56,8 +56,9 @@ def train_qgnn(torch_dataset_lca_and_leaves, n_hid:int, n_momenta:int, dropout_r
 
     es = LongTensor(np.array(es).T)
 
-    encoder = GNNENC(n_momenta, n_hid, max_depth, dropout_rate=dropout_rate)
-    model = NRIModel(encoder, es, n_fsps)
+    # encoder = GNNENC(n_momenta, n_hid, max_depth, dropout_rate=dropout_rate)
+    # model = NRIModel(encoder, es, n_fsps)
+    model = bb_NRIModel(n_momenta, n_fsps)
     model = DataParallel(model)
     ins = Instructor(model, torch_dataset_lca_and_leaves, es, learning_rate, learning_rate_decay, gamma, batch_size, epochs)
     ins.train()
@@ -102,8 +103,9 @@ class Instructor():
         # super(XNRIENCIns, self).__init__(cmd)
         self.model = model
         
-        self.data = {key: TensorDataset(*value)
-                     for key, value in data.items()}
+        # self.data = {key: TensorDataset(*value)
+        #              for key, value in data.items()}
+        self.data = data
         # self.data = data
         self.es = torch.LongTensor(es)
         # number of nodes
@@ -136,7 +138,8 @@ class Instructor():
         batches = DataLoader(
             data,
             batch_size=batch_size,
-            shuffle=shuffle)
+            shuffle=shuffle,
+            collate_fn=rel_pad_collate_fn) # to handle varying input size
         return batches
 
     def train(self):
@@ -160,18 +163,20 @@ class Instructor():
                 data_batch = self.load_data(self.data['train'], self.batch_size)
                 loss_a = 0.
                 N = 0.
-                for lca, states in data_batch:
+                for states, lca in data_batch:
                     scale = 1 / lca.size(1) # get the scaling dependend on the number of classes
                     # if cfg.gpu:
                     #     lca = lca.cuda()
                     #     states = states.cuda()
                     # N: number of samples, equal to the batch size with possible exception for the last batch
-                    loss_a += scale * self.train_nri(states, lca)
+                    loss = self.train_nri(states, lca)
+                    loss_a += scale * loss
                 
-                loss_a /= self.batch_size # to the already scaled loss, apply the batch size scaling
+                # loss_a /= self.batch_size # to the already scaled loss, apply the batch size scaling
+                loss_a /= len(data_batch) # to the already scaled loss, apply the batch size scaling
                 log.info(f'Epoch {epoch:03d} finished with an average loss of {loss_a:.3e}')
                 
-                mlflow.log_metric(key="loss", value=loss_a, step=epoch)
+                mlflow.log_metric(key="loss", value=loss_a.item(), step=epoch)
 
                 acc = self.report('val')
                 mlflow.log_metric(key="accuracy", value=acc, step=epoch)
@@ -188,7 +193,9 @@ class Instructor():
             # self.model.module.load_state_dict(torch.load(name))
         _ = self.report('test')
 
-        return self.model
+        return {
+            "model_qgnn":self.model
+        }
 
     def report(self, name: str) -> float:
         """
@@ -214,8 +221,13 @@ class Instructor():
         Return:
             loss: cross-entropy of edge classification
         """
-        prob = self.model.module.predict_relations(states)
+        # prob = self.model.module.predict_relations(states)
+        prob = self.model.module(states)
         # self.view(prob, lca)
+        loss = cross_entropy(prob, lca, ignore_index=-1)
+        # loss = torch.nn.CrossEntropyLoss(prob, lca, ignore_index=-1)
+        self.optimize(self.opt, loss)
+        return loss
 
         lca_filtered = []
         for batch in range(lca.shape[0]):
@@ -255,37 +267,44 @@ class Instructor():
             sparse: rate of sparsity in terms of the first type of edge
         """
         acc, rate, sparse, losses = [], [], [], []
-        data = self.load_data(test, self.batch_size)
+        data_batch = self.load_data(test, self.batch_size)
         with torch.no_grad():
-            for lca, states in data:
-                prob = self.model.module.predict_relations(states)
+            for lca, states in data_batch:
+                # prob = self.model.module.predict_relations(states)
+                prob = self.model.module(states)
+                # self.view(prob, lca)
+                loss = cross_entropy(prob, lca)
                 # self.view(prob, lca)
 
                 scale = 1 / lca.size(1) #running only a single batch here
 
-                lca_ut = []
-                for batch in range(lca.shape[0]):
-                    lca_ut_batch = []
-                    for row in range(lca.shape[1]):
-                        for col in range(lca.shape[2]):
-                            if self.sideSelect(row, col):
-                                lca_ut_batch.append(lca[batch][row][col])
-                                # lca_ut.append(lca[batch][row][col])
-                    lca_ut.append(lca_ut_batch)
-                lca_ut = LongTensor(lca_ut)
+                # lca_ut = []
+                # for batch in range(lca.shape[0]):
+                #     lca_ut_batch = []
+                #     for row in range(lca.shape[1]):
+                #         for col in range(lca.shape[2]):
+                #             if self.sideSelect(row, col):
+                #                 lca_ut_batch.append(lca[batch][row][col])
+                #                 # lca_ut.append(lca[batch][row][col])
+                #     lca_ut.append(lca_ut_batch)
+                # lca_ut = LongTensor(lca_ut)
 
-                # use loss as the validation metric
-                loss = cross_entropy(prob.view(-1, prob.shape[-1]), lca_ut.view(-1))
-                # scale all metrics to match the batch size
+                # # use loss as the validation metric
+                # loss = cross_entropy(prob.view(-1, prob.shape[-1]), lca_ut.view(-1))
+                # # scale all metrics to match the batch size
                 loss = loss * scale
                 losses.append(loss)
 
-                acc.append(scale * edge_accuracy(prob, lca_ut))
+                # acc.append(scale * edge_accuracy(prob, lca_ut))
+                # acc.append(scale * edge_accuracy(prob, lca))
+                acc.append(0)
                 # _, p = prob.max(-1)
                 # rate.append(scale * asym_rate(p.t(), self.size))
                 # sparse.append(prob.max(-1)[1].float().mean() * scale)
-        loss = sum(losses) / self.batch_size
-        acc = sum(acc) / self.batch_size
+        # loss = sum(losses) / self.batch_size
+        loss = sum(losses) / len(data_batch)
+        # acc = sum(acc) / self.batch_size
+        acc = sum(acc) / len(data_batch)
         # rate = sum(rate) / N
         # sparse = sum(sparse) / N
         return loss, acc, rate, sparse
