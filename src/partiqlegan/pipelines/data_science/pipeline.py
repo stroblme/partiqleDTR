@@ -14,7 +14,7 @@ def create_training_qgnn_pipeline(**kwargs) -> Pipeline:
                 func=train_qgnn,
                 inputs=["torch_dataset_lca_and_leaves", "params:n_hid", "params:n_momenta", "params:dropout_rate", "params:learning_rate", "params:learning_rate_decay", "params:gamma", "params:batch_size", "params:epochs"],
                 outputs={
-                    "model":"model"
+                    "model_qgnn":"model_qgnn"
                 },
                 name="train_qgnn"
         )
