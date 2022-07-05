@@ -178,7 +178,7 @@ class Instructor():
 
                             self.optimize(self.opt, loss)
                         elif mode == "val":
-                            self.model.evaluate() # trigger evaluation forward mode
+                            self.model.module.eval() # trigger evaluation forward mode
                             with torch.no_grad(): # disable autograd in tensors
 
                                 prob = self.model.module(states)
@@ -186,7 +186,7 @@ class Instructor():
                                 loss = cross_entropy(prob, labels, ignore_index=-1)
                                 acc = edge_accuracy(prob, labels)
                         elif mode == "test":
-                            self.model.evaluate() # trigger evaluation forward mode
+                            self.model.module.eval() # trigger evaluation forward mode
                             with torch.no_grad(): # disable autograd in tensors
 
                                 prob = self.model.module(states)
