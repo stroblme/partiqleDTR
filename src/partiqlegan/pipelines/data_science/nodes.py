@@ -174,6 +174,7 @@ class Instructor():
 
                             prob = self.model.module(states)
                             loss = cross_entropy(prob, labels, ignore_index=-1)
+                            acc = edge_accuracy(prob, labels)
 
                             self.optimize(self.opt, loss)
                         elif mode == "val":
