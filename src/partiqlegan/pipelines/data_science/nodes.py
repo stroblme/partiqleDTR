@@ -157,97 +157,117 @@ class Instructor():
 
         with mlflow.start_run():
             log.info(f'Training started with a batch size of {self.batch_size}')
+            result = None            
+            best_acc = 0
             for epoch in range(1, 1 + self.epochs):
+                for mode in ["train", "val"]:
+                    data_batch = self.load_data(self.data[mode], self.batch_size) # get the date for the current mode
+                    epoch_loss = 0.
+                    epoch_acc = 0.
 
-                self.model.train() # set the module in training mode
-                # shuffle the data at each epoch
-                data_batch = self.load_data(self.data['train'], self.batch_size)
-                loss_a = 0.
-                N = 0.
-                for states, lca in data_batch:
-                    scale = 1 / lca.size(1) # get the scaling dependend on the number of classes
-                    # if cfg.gpu:
-                    #     lca = lca.cuda()
-                    #     states = states.cuda()
-                    # N: number of samples, equal to the batch size with possible exception for the last batch
-                    loss = self.train_nri(states, lca)
-                    loss_a += scale * loss
-                
-                # loss_a /= self.batch_size # to the already scaled loss, apply the batch size scaling
-                loss_a /= len(data_batch) # to the already scaled loss, apply the batch size scaling
-                log.info(f'Epoch {epoch:03d} finished with an average loss of {loss_a:.3e}')
-                
-                mlflow.log_metric(key="loss", value=loss_a.item(), step=epoch)
+                    log.info(f"Running epoch {epoch} in mode {mode}")
+                    for states, labels in data_batch:
+                        scale = 1 / labels.size(1) # get the scaling dependend on the number of classes
 
-                acc = self.report('val')
-                mlflow.log_metric(key="accuracy", value=acc, step=epoch)
+                        if mode == "train":
+                            self.model.train() # set the module in training mode
 
-                val_cur = max(acc, 1 - acc)
-                if val_cur > val_best:
-                    # update the current best model when approaching a higher accuray
-                    val_best = val_cur
-                    # torch.save(self.model.module.state_dict(), name)
+                            prob = self.model.module(states)
+                            loss = cross_entropy(prob, labels, ignore_index=-1)
 
-                # learning rate scheduling
-                self.scheduler.step()
-        # if self.cmd.epochs > 0:
-            # self.model.module.load_state_dict(torch.load(name))
-        _ = self.report('test')
+                            self.optimize(self.opt, loss)
+                        elif mode == "val":
+                            self.model.evaluate() # trigger evaluation forward mode
+                            with torch.no_grad(): # disable autograd in tensors
+
+                                prob = self.model.module(states)
+
+                                loss = cross_entropy(prob, labels, ignore_index=-1)
+                                acc = edge_accuracy(prob, labels)
+                        elif mode == "test":
+                            self.model.evaluate() # trigger evaluation forward mode
+                            with torch.no_grad(): # disable autograd in tensors
+
+                                prob = self.model.module(states)
+
+                                loss = cross_entropy(prob, labels, ignore_index=-1)
+                                acc = edge_accuracy(prob, labels)
+                        else:
+                            log.error("Unknown mode")
+
+                        epoch_loss += scale * loss
+                        epoch_acc += scale * acc
+
+                        if acc > best_acc:
+                            # update the current best model when approaching a higher accuray
+                            best_acc = acc
+                            result = self.model
+
+                    epoch_loss /= len(data_batch) # to the already scaled loss, apply the batch size scaling
+                    epoch_acc /= len(data_batch) # to the already scaled accuracy, apply the batch size scaling
+
+                    mlflow.log_metric(key=f"{mode}_accuracy", value=epoch_acc.item(), step=epoch)
+                    mlflow.log_metric(key=f"{mode}_loss", value=epoch_loss.item(), step=epoch)
+
+                    # learning rate scheduling
+                    self.scheduler.step()
+
+        
 
         return {
-            "model_qgnn":self.model
+            "model_qgnn":result
         }
 
-    def report(self, name: str) -> float:
-        """
-        Evaluate the accuracy.
+    # def report(self, name: str) -> float:
+    #     """
+    #     Evaluate the accuracy.
 
-        Args:
-            name: 'train' / 'val' / 'test'
+    #     Args:
+    #         name: 'train' / 'val' / 'test'
         
-        Return:
-            acc: accuracy of relation reconstruction
-        """
-        loss, acc, rate, sparse = self.evaluate(self.data[name])
-        # log.info('{} acc {:.4f} _acc {:.4f} rate {:.4f} sparse {:.4f}'.format(name, acc, 1 - acc, rate, sparse))
-        log.info(f"acc: {acc}, loss: {loss}")
-        return acc
+    #     Return:
+    #         acc: accuracy of relation reconstruction
+    #     """
+    #     loss, acc, rate, sparse = self.evaluate(self.data[name])
+    #     # log.info('{} acc {:.4f} _acc {:.4f} rate {:.4f} sparse {:.4f}'.format(name, acc, 1 - acc, rate, sparse))
+    #     log.info(f"acc: {acc}, loss: {loss}")
+    #     return acc
 
-    def train_nri(self, states: Tensor, lca: Tensor) -> Tensor:
-        """
-        Args:
-            states: [batch, step, node, dim], observed node states
-            lca: [batch, E, K], ground truth interacting relations
+    # def train_nri(self, states: Tensor, lca: Tensor) -> Tensor:
+    #     """
+    #     Args:
+    #         states: [batch, step, node, dim], observed node states
+    #         lca: [batch, E, K], ground truth interacting relations
 
-        Return:
-            loss: cross-entropy of edge classification
-        """
-        # prob = self.model.module.predict_relations(states)
-        prob = self.model.module(states)
-        # self.view(prob, lca)
-        loss = cross_entropy(prob, lca, ignore_index=-1)
-        # loss = torch.nn.CrossEntropyLoss(prob, lca, ignore_index=-1)
-        self.optimize(self.opt, loss)
-        return loss
+    #     Return:
+    #         loss: cross-entropy of edge classification
+    #     """
+    #     # prob = self.model.module.predict_relations(states)
+    #     prob = self.model.module(states)
+    #     # self.view(prob, lca)
+    #     loss = cross_entropy(prob, lca, ignore_index=-1)
+    #     # loss = torch.nn.CrossEntropyLoss(prob, lca, ignore_index=-1)
+    #     self.optimize(self.opt, loss)
+    #     return loss
 
-        lca_filtered = []
-        for batch in range(lca.shape[0]):
-            lca_ut_batch = []
-            for row in range(lca.shape[1]):
-                for col in range(lca.shape[2]):
-                    if self.sideSelect(row, col):
-                        lca_ut_batch.append(lca[batch][row][col])
-                        # lca_ut.append(lca[batch][row][col])
-            lca_filtered.append(lca_ut_batch)
-        lca_filtered = LongTensor(lca_filtered)
+    #     lca_filtered = []
+    #     for batch in range(lca.shape[0]):
+    #         lca_ut_batch = []
+    #         for row in range(lca.shape[1]):
+    #             for col in range(lca.shape[2]):
+    #                 if self.sideSelect(row, col):
+    #                     lca_ut_batch.append(lca[batch][row][col])
+    #                     # lca_ut.append(lca[batch][row][col])
+    #         lca_filtered.append(lca_ut_batch)
+    #     lca_filtered = LongTensor(lca_filtered)
 
 
-        # loss = cross_entropy(prob.view(-1, prob.shape[-1]), lca.transpose(0, 1).flatten())
-        loss = cross_entropy(prob.view(-1, prob.shape[-1]), lca_filtered.view(-1))
-        # self.view(prob, lca)
-        # loss = loss / lca.shape[1]
-        self.optimize(self.opt, loss)
-        return loss
+    #     # loss = cross_entropy(prob.view(-1, prob.shape[-1]), lca.transpose(0, 1).flatten())
+    #     loss = cross_entropy(prob.view(-1, prob.shape[-1]), lca_filtered.view(-1))
+    #     # self.view(prob, lca)
+    #     # loss = loss / lca.shape[1]
+    #     self.optimize(self.opt, loss)
+    #     return loss
 
     def sideSelect(self, row, col):
         # return row < col # lower (results in node*(node-1)/2)
