@@ -61,7 +61,8 @@ def train_qgnn(torch_dataset_lca_and_leaves, n_hid:int, n_momenta:int, dropout_r
     model = bb_NRIModel(n_momenta, n_fsps)
     model = DataParallel(model)
     ins = Instructor(model, torch_dataset_lca_and_leaves, es, learning_rate, learning_rate_decay, gamma, batch_size, epochs)
-    ins.train()
+    
+    return ins.train()
 
 
 
