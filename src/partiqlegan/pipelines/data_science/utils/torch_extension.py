@@ -4,8 +4,14 @@ from itertools import combinations
 from .general import prod
 import numpy as np
 
+def edge_accuracy(logits:Tensor, labels:Tensor)->float:
+    # logits: [Batch, Classes, LCA_0, LCA_1]
+    probs = logits.softmax(1) # get softmax for probabilities
+    preds = probs.max(1)[1] # find maximum across the classes
+    correct = (labels==preds).sum().float()
+    return correct/(labels.size(1)*labels.size(2))
 
-def edge_accuracy(preds: Tensor, target: Tensor) -> float:
+def b_edge_accuracy(preds: Tensor, target: Tensor) -> float:
     """
     Compute the accuracy of edge prediction (relation reconstruction).
 
