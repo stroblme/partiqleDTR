@@ -1,7 +1,7 @@
 from ordered_set import T
 import torch
 from .models.encoder import GNNENC
-from .models.nri import NRIModel, bb_NRIModel, rel_pad_collate_fn
+from .models.nri import bb_NRIModel, rel_pad_collate_fn
 from torch.nn.parallel import DataParallel
 # from generate.load import load_nri
 from itertools import permutations
@@ -45,22 +45,22 @@ def train_qgnn(torch_dataset_lca_and_leaves, n_hid:int, n_momenta:int, dropout_r
     # generate edge list of a fully connected graph
 
     # max_depth = int(max([np.array(subset[0]).max() for _, subset in torch_dataset_lca_and_leaves.items()]))+1 # get the num of childs from the label list
-    # n_fsps = int(max([len(subset[0]) for _, subset in torch_dataset_lca_and_leaves.items()]))
-    n_fsps = 4
+    n_fsps = int(max([len(subset[0]) for _, subset in torch_dataset_lca_and_leaves.items()]))+1
+    # n_fsps = 4
     # es = LongTensor(np.array(list(permutations(range(SIZE), 2))).T)
-    es = list(permutations(range(n_fsps), 2))
+    # es = list(permutations(range(n_fsps), 2))
 
     # get ut
     # es.sort(key=lambda es: sum(es))
     # es = es[1::2]
 
-    es = LongTensor(np.array(es).T)
+    # es = LongTensor(np.array(es).T)
 
     # encoder = GNNENC(n_momenta, n_hid, max_depth, dropout_rate=dropout_rate)
     # model = NRIModel(encoder, es, n_fsps)
     model = bb_NRIModel(n_momenta, n_fsps)
     model = DataParallel(model)
-    ins = Instructor(model, torch_dataset_lca_and_leaves, es, learning_rate, learning_rate_decay, gamma, batch_size, epochs)
+    ins = Instructor(model, torch_dataset_lca_and_leaves, None, learning_rate, learning_rate_decay, gamma, batch_size, epochs)
     
     return ins.train()
 
@@ -108,7 +108,7 @@ class Instructor():
         #              for key, value in data.items()}
         self.data = data
         # self.data = data
-        self.es = torch.LongTensor(es)
+        # self.es = torch.LongTensor(es)
         # number of nodes
         self.epochs = epochs
         self.batch_size = batch_size
