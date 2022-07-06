@@ -205,7 +205,8 @@ class Instructor():
                         # update the current best model when approaching a higher accuray
                         best_acc = acc
                         result = self.model
-                        self.plotBatchGraphs(prob, labels, postfix=f"_val_e{epoch}")
+                        c_plt = self.plotBatchGraphs(prob, labels, postfix=f"_val_e{epoch}")
+                        mlflow.log_figure(c_plt.gcf(), f"e{epoch}_sample_graph.png")
 
                 epoch_loss /= len(data_batch) # to the already scaled loss, apply the batch size scaling
                 epoch_acc /= len(data_batch) # to the already scaled accuracy, apply the batch size scaling
