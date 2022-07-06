@@ -1,5 +1,5 @@
 ---
-epochs: 10
+epochs: 20
 
 # 3 for kuramoto and 4 for spring and charged.
 n_momenta: 4
@@ -18,18 +18,8 @@ NO_REG: False
 SYM: False
 
 # Scale the loss to avoid gradient explosion.
-dropout_rate: 0
-learning_rate: 0.05 #0.00025
+dropout_rate: 0.1
+learning_rate: 0.002 #0.00025
 learning_rate_decay: 200
 gamma: 0.5
-batch_size: 10
-
-TIMESTEPS: 1
-TEMP: 0.5
-# NOTE: 10 for kuramoto, 100 for spring and charged.
-INTERVAL: 10
-SAMPLES: 100
-
-# Run n rounds of the code.
-ROUNDS: 1
-TEMP: 0.5
+batch_size: 5
