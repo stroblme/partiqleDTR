@@ -603,6 +603,31 @@ class Instructor():
             [3, 3, 3, 3, 0]   # c
         ])
 
+        example_5 = torch.tensor([
+            [0, 2, 1, 2],
+            [2, 0, 2, 1],
+            [1, 2, 0, 2],
+            [2, 1, 2, 0]
+        ])
+        examples = [example_1, example_2, example_3, example_5]
+
+        fig, ax = plt.subplots(1, 4, figsize=(15,5))
+        fig.tight_layout()
+        it = 0
+        for lcag_ref in examples:
+            graph_ref = GraphVisualization()
+            try:
+                self.lca2graph(lcag_ref, graph_ref)
+                plt.sca(ax[it])
+                graph_ref.visualize(opt="max", ax=ax[it])
+            except:
+                continue
+
+            it += 1
+        plt.show()
+        # plt.savefig(f"batch_graphs_and_ref_{postfix}.png")
+
+
         graph = GraphVisualization()
         self.lca2graph(example_1, graph)
         plt.figure(1)
