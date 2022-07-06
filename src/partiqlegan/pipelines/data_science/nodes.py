@@ -467,7 +467,7 @@ class Instructor():
             try:
                 self.lca2graph(lcag, graph)
                 plt.sca(ax[it][0])
-                graph.visualize(opt="min", ax=ax[it][0])
+                graph.visualize(opt="max", ax=ax[it][0])
             except:
                 continue
 
@@ -475,7 +475,7 @@ class Instructor():
             try:
                 self.lca2graph(lcag_ref, graph_ref)
                 plt.sca(ax[it][1])
-                graph_ref.visualize(opt="min", ax=ax[it][1])
+                graph_ref.visualize(opt="max", ax=ax[it][1])
             except:
                 continue
 
@@ -484,7 +484,8 @@ class Instructor():
 
             it += 1
 
-        plt.savefig(f"batch_graphs_and_ref_{postfix}.png")
+        # plt.savefig(f"batch_graphs_and_ref_{postfix}.png")
+        return plt
             
 
     def testLca2Graph(self):
