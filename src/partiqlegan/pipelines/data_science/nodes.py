@@ -149,71 +149,71 @@ class Instructor():
         # path to save the current best model
         # prefix = '/'.join(cfg.log.split('/')[:-1])
         # name = '{}/best.pth'.format(prefix)train_steps
-        try:
-            mlflow.end_run()
-            log.warn("There was an existing run which is now cancelled.")
-        except:
-            pass
+        # try:
+        #     mlflow.end_run()
+        #     log.warn("There was an existing run which is now cancelled.")
+        # except:
+        #     pass
 
-        with mlflow.start_run():
-            log.info(f'Training started with a batch size of {self.batch_size}')
-            result = None            
-            best_acc = 0
-            for epoch in range(1, 1 + self.epochs):
-                for mode in ["train", "val"]:
-                    data_batch = self.load_data(self.data[mode], self.batch_size) # get the date for the current mode
-                    epoch_loss = 0.
-                    epoch_acc = 0.
+        # with mlflow.start_run():
+        log.info(f'Training started with a batch size of {self.batch_size}')
+        result = None            
+        best_acc = 0
+        for epoch in range(1, 1 + self.epochs):
+            for mode in ["train", "val"]:
+                data_batch = self.load_data(self.data[mode], self.batch_size) # get the date for the current mode
+                epoch_loss = 0.
+                epoch_acc = 0.
 
-                    log.info(f"Running epoch {epoch} in mode {mode}")
-                    for states, labels in data_batch:
-                        scale = 1 / labels.size(1) # get the scaling dependend on the number of classes
+                log.info(f"Running epoch {epoch} in mode {mode}")
+                for states, labels in data_batch:
+                    scale = 1 / labels.size(1) # get the scaling dependend on the number of classes
 
-                        if mode == "train":
-                            self.model.train() # set the module in training mode
+                    if mode == "train":
+                        self.model.train() # set the module in training mode
+
+                        prob = self.model.module(states)
+                        loss = cross_entropy(prob, labels, ignore_index=-1)
+                        acc = edge_accuracy(prob, labels)
+
+                        self.optimize(self.opt, loss)
+                    elif mode == "val":
+                        self.model.module.eval() # trigger evaluation forward mode
+                        with torch.no_grad(): # disable autograd in tensors
 
                             prob = self.model.module(states)
+
                             loss = cross_entropy(prob, labels, ignore_index=-1)
                             acc = edge_accuracy(prob, labels)
+                    elif mode == "test":
+                        self.model.module.eval() # trigger evaluation forward mode
+                        with torch.no_grad(): # disable autograd in tensors
 
-                            self.optimize(self.opt, loss)
-                        elif mode == "val":
-                            self.model.module.eval() # trigger evaluation forward mode
-                            with torch.no_grad(): # disable autograd in tensors
+                            prob = self.model.module(states)
 
-                                prob = self.model.module(states)
+                            loss = cross_entropy(prob, labels, ignore_index=-1)
+                            acc = edge_accuracy(prob, labels)
+                    else:
+                        log.error("Unknown mode")
 
-                                loss = cross_entropy(prob, labels, ignore_index=-1)
-                                acc = edge_accuracy(prob, labels)
-                        elif mode == "test":
-                            self.model.module.eval() # trigger evaluation forward mode
-                            with torch.no_grad(): # disable autograd in tensors
+                    epoch_loss += scale * loss
+                    epoch_acc += scale * acc
 
-                                prob = self.model.module(states)
+                    if acc > best_acc and mode == "val":
+                        # update the current best model when approaching a higher accuray
+                        best_acc = acc
+                        result = self.model
 
-                                loss = cross_entropy(prob, labels, ignore_index=-1)
-                                acc = edge_accuracy(prob, labels)
-                        else:
-                            log.error("Unknown mode")
+                epoch_loss /= len(data_batch) # to the already scaled loss, apply the batch size scaling
+                epoch_acc /= len(data_batch) # to the already scaled accuracy, apply the batch size scaling
 
-                        epoch_loss += scale * loss
-                        epoch_acc += scale * acc
+                mlflow.log_metric(key=f"{mode}_accuracy", value=epoch_acc.item(), step=epoch)
+                mlflow.log_metric(key=f"{mode}_loss", value=epoch_loss.item(), step=epoch)
 
-                        if acc > best_acc:
-                            # update the current best model when approaching a higher accuray
-                            best_acc = acc
-                            result = self.model
+                # learning rate scheduling
+                self.scheduler.step()
 
-                    epoch_loss /= len(data_batch) # to the already scaled loss, apply the batch size scaling
-                    epoch_acc /= len(data_batch) # to the already scaled accuracy, apply the batch size scaling
-
-                    mlflow.log_metric(key=f"{mode}_accuracy", value=epoch_acc.item(), step=epoch)
-                    mlflow.log_metric(key=f"{mode}_loss", value=epoch_loss.item(), step=epoch)
-
-                    # learning rate scheduling
-                    self.scheduler.step()
-
-        
+    
 
         return {
             "model_qgnn":result
