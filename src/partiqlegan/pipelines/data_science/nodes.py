@@ -177,6 +177,8 @@ class Instructor():
                         acc = edge_accuracy(prob, labels)
 
                         self.optimize(self.opt, loss)
+                        if labels.numpy().min() < -1:
+                            raise Exception(f"Found graph with negative values: {labels.numpy()}")
                     elif mode == "val":
                         self.model.module.eval() # trigger evaluation forward mode
                         with torch.no_grad(): # disable autograd in tensors
