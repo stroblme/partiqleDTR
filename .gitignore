@@ -2,7 +2,7 @@ venv
 mlruns
 *.pdf
 .ipython
-
+*.png
 ##########################
 # KEDRO PROJECT
 
