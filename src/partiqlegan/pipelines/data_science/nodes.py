@@ -164,7 +164,7 @@ class Instructor():
                     data_batch = self.load_data(self.data[mode], self.batch_size) # get the date for the current mode
                     epoch_loss = 0.
                     epoch_acc = 0.
-
+                    
                     log.info(f"Running epoch {epoch} in mode {mode}")
                     for states, labels in data_batch:
                         scale = 1 / labels.size(1) # get the scaling dependend on the number of classes
@@ -175,7 +175,6 @@ class Instructor():
                             prob = self.model.module(states)
                             loss = cross_entropy(prob, labels, ignore_index=-1)
                             acc = edge_accuracy(prob, labels)
-
                             self.optimize(self.opt, loss)
                         elif mode == "val":
                             self.model.module.eval() # trigger evaluation forward mode
@@ -357,7 +356,6 @@ class Instructor():
 
         nodes = [i for i in range(lca.size(0))] # first start with all nodes available directly from the lca
         processed = [] # keeps track of all nodes which are somehow used to create an edge
-
         
         while lca.max() > 0:
             directPairs = list((lca==1.0).nonzero())
