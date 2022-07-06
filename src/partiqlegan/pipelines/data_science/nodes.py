@@ -454,6 +454,30 @@ class Instructor():
                 lca += torch.diag(torch.ones(lca.size(0), dtype=torch.long))
             # processed = []
 
+    def plotBatchGraphs(self, batch_logits, batch_ref, postfix=""):
+        fig, ax = plt.subplots(4, 2, figsize=(15,15), gridspec_kw={'width_ratios': [1, 1]})
+        fig.tight_layout()
+        it = 0
+        for logits, lcag_ref in zip(batch_logits, batch_ref):
+            lcag = logits.max(0)[1]
+            graph = GraphVisualization()
+            self.lca2graph(lcag, graph)
+            plt.sca(ax[it][0])
+            graph.visualize(opt="min", ax=ax[it][0])
+
+            graph_ref = GraphVisualization()
+            self.lca2graph(lcag_ref, graph_ref)
+            plt.sca(ax[it][1])
+            graph_ref.visualize(opt="min", ax=ax[it][1])
+
+
+            if it*2>4:
+                break
+
+            it += 1
+
+        plt.savefig(f"batch_graphs_and_ref_{postfix}.png")
+            
 
     def testLca2Graph(self):
         """
