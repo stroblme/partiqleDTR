@@ -203,6 +203,7 @@ class Instructor():
                         # update the current best model when approaching a higher accuray
                         best_acc = acc
                         result = self.model
+                        self.plotBatchGraphs(prob, labels, postfix=f"_val_e{epoch}")
 
                 epoch_loss /= len(data_batch) # to the already scaled loss, apply the batch size scaling
                 epoch_acc /= len(data_batch) # to the already scaled accuracy, apply the batch size scaling
@@ -275,61 +276,61 @@ class Instructor():
         # return row > col # upper (results in node*(node-1)/2)
         return row != col # all but diagonal (results in node*(node-1))
 
-    def evaluate(self, test):
-        """
-        Evaluate related metrics to monitor the training process.
+    # def evaluate(self, test):
+    #     """
+    #     Evaluate related metrics to monitor the training process.
 
-        Args:
-            test: data set to be evaluted
+    #     Args:
+    #         test: data set to be evaluted
 
-        Return:
-            loss: loss_nll + loss_kl (+ loss_reg) 
-            acc: accuracy of relation reconstruction
-            rate: rate of assymmetry
-            sparse: rate of sparsity in terms of the first type of edge
-        """
-        acc, rate, sparse, losses = [], [], [], []
-        data_batch = self.load_data(test, self.batch_size)
-        with torch.no_grad():
-            for lca, states in data_batch:
-                # prob = self.model.module.predict_relations(states)
-                prob = self.model.module(states)
-                # self.view(prob, lca)
-                loss = cross_entropy(prob, lca)
-                # self.view(prob, lca)
+    #     Return:
+    #         loss: loss_nll + loss_kl (+ loss_reg) 
+    #         acc: accuracy of relation reconstruction
+    #         rate: rate of assymmetry
+    #         sparse: rate of sparsity in terms of the first type of edge
+    #     """
+    #     acc, rate, sparse, losses = [], [], [], []
+    #     data_batch = self.load_data(test, self.batch_size)
+    #     with torch.no_grad():
+    #         for lca, states in data_batch:
+    #             # prob = self.model.module.predict_relations(states)
+    #             prob = self.model.module(states)
+    #             # self.view(prob, lca)
+    #             loss = cross_entropy(prob, lca)
+    #             # self.view(prob, lca)
 
-                scale = 1 / lca.size(1) #running only a single batch here
+    #             scale = 1 / lca.size(1) #running only a single batch here
 
-                # lca_ut = []
-                # for batch in range(lca.shape[0]):
-                #     lca_ut_batch = []
-                #     for row in range(lca.shape[1]):
-                #         for col in range(lca.shape[2]):
-                #             if self.sideSelect(row, col):
-                #                 lca_ut_batch.append(lca[batch][row][col])
-                #                 # lca_ut.append(lca[batch][row][col])
-                #     lca_ut.append(lca_ut_batch)
-                # lca_ut = LongTensor(lca_ut)
+    #             # lca_ut = []
+    #             # for batch in range(lca.shape[0]):
+    #             #     lca_ut_batch = []
+    #             #     for row in range(lca.shape[1]):
+    #             #         for col in range(lca.shape[2]):
+    #             #             if self.sideSelect(row, col):
+    #             #                 lca_ut_batch.append(lca[batch][row][col])
+    #             #                 # lca_ut.append(lca[batch][row][col])
+    #             #     lca_ut.append(lca_ut_batch)
+    #             # lca_ut = LongTensor(lca_ut)
 
-                # # use loss as the validation metric
-                # loss = cross_entropy(prob.view(-1, prob.shape[-1]), lca_ut.view(-1))
-                # # scale all metrics to match the batch size
-                loss = loss * scale
-                losses.append(loss)
+    #             # # use loss as the validation metric
+    #             # loss = cross_entropy(prob.view(-1, prob.shape[-1]), lca_ut.view(-1))
+    #             # # scale all metrics to match the batch size
+    #             loss = loss * scale
+    #             losses.append(loss)
 
-                # acc.append(scale * edge_accuracy(prob, lca_ut))
-                # acc.append(scale * edge_accuracy(prob, lca))
-                acc.append(0)
-                # _, p = prob.max(-1)
-                # rate.append(scale * asym_rate(p.t(), self.size))
-                # sparse.append(prob.max(-1)[1].float().mean() * scale)
-        # loss = sum(losses) / self.batch_size
-        loss = sum(losses) / len(data_batch)
-        # acc = sum(acc) / self.batch_size
-        acc = sum(acc) / len(data_batch)
-        # rate = sum(rate) / N
-        # sparse = sum(sparse) / N
-        return loss, acc, rate, sparse
+    #             # acc.append(scale * edge_accuracy(prob, lca_ut))
+    #             # acc.append(scale * edge_accuracy(prob, lca))
+    #             acc.append(0)
+    #             # _, p = prob.max(-1)
+    #             # rate.append(scale * asym_rate(p.t(), self.size))
+    #             # sparse.append(prob.max(-1)[1].float().mean() * scale)
+    #     # loss = sum(losses) / self.batch_size
+    #     loss = sum(losses) / len(data_batch)
+    #     # acc = sum(acc) / self.batch_size
+    #     acc = sum(acc) / len(data_batch)
+    #     # rate = sum(rate) / N
+    #     # sparse = sum(sparse) / N
+    #     return loss, acc, rate, sparse
 
     def prob2lca(self, prob, size):
         batchSize = prob.size(1)
@@ -355,7 +356,6 @@ class Instructor():
 
         nodes = [i for i in range(lca.size(0))] # first start with all nodes available directly from the lca
         processed = [] # keeps track of all nodes which are somehow used to create an edge
-
         
         while lca.max() > 0:
             directPairs = list((lca==1.0).nonzero())
@@ -454,6 +454,35 @@ class Instructor():
                 lca += torch.diag(torch.ones(lca.size(0), dtype=torch.long))
             # processed = []
 
+    def plotBatchGraphs(self, batch_logits, batch_ref, postfix=""):
+        fig, ax = plt.subplots(4, 2, figsize=(15,15), gridspec_kw={'width_ratios': [1, 1]})
+        fig.tight_layout()
+        it = 0
+        for logits, lcag_ref in zip(batch_logits, batch_ref):
+            lcag = logits.max(0)[1]
+            graph = GraphVisualization()
+            try:
+                self.lca2graph(lcag, graph)
+                plt.sca(ax[it][0])
+                graph.visualize(opt="min", ax=ax[it][0])
+            except:
+                continue
+
+            graph_ref = GraphVisualization()
+            try:
+                self.lca2graph(lcag_ref, graph_ref)
+                plt.sca(ax[it][1])
+                graph_ref.visualize(opt="min", ax=ax[it][1])
+            except:
+                continue
+
+            if it*2>4:
+                break
+
+            it += 1
+
+        plt.savefig(f"batch_graphs_and_ref_{postfix}.png")
+            
 
     def testLca2Graph(self):
         """
@@ -696,7 +725,7 @@ class GraphVisualization:
     # creates a graph with a given list
     # nx.draw_networkx(G) - plots the graph
     # plt.show() - displays the graph
-    def visualize(self, opt="max"):
+    def visualize(self, opt="max", ax=None):
         G = nx.Graph()
         G.add_edges_from(self.visual)
         pos = None
@@ -708,7 +737,7 @@ class GraphVisualization:
         except TypeError:
             log.warning("Provided LCA is not a tree. Will use default graph style for visualization")
             # raise RuntimeError
-        nx.draw_networkx(G, pos)
+        nx.draw_networkx(G, pos, ax=ax)
         # plt.show()
 
 

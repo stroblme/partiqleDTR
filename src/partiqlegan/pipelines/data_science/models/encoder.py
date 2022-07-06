@@ -58,6 +58,7 @@ class CNN(nn.Module):
         edge_prob = (pred * attention).mean(dim=2)
         return edge_prob
 
+    
 class GNNENC(GNN):
     """
     Encoder of NRI. A combination of MLPEncoder and CNNEncoder from https://github.com/ethanfetaya/NRI/modules.py.
