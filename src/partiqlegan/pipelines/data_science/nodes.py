@@ -203,6 +203,8 @@ class Instructor():
                             # update the current best model when approaching a higher accuray
                             best_acc = acc
                             result = self.model
+                            self.plotBatchGraphs(prob, labels, postfix=f"_val_e{epoch}")
+
 
                     epoch_loss /= len(data_batch) # to the already scaled loss, apply the batch size scaling
                     epoch_acc /= len(data_batch) # to the already scaled accuracy, apply the batch size scaling
