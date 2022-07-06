@@ -461,15 +461,20 @@ class Instructor():
         for logits, lcag_ref in zip(batch_logits, batch_ref):
             lcag = logits.max(0)[1]
             graph = GraphVisualization()
-            self.lca2graph(lcag, graph)
-            plt.sca(ax[it][0])
-            graph.visualize(opt="min", ax=ax[it][0])
+            try:
+                self.lca2graph(lcag, graph)
+                plt.sca(ax[it][0])
+                graph.visualize(opt="min", ax=ax[it][0])
+            except:
+                continue
 
             graph_ref = GraphVisualization()
-            self.lca2graph(lcag_ref, graph_ref)
-            plt.sca(ax[it][1])
-            graph_ref.visualize(opt="min", ax=ax[it][1])
-
+            try:
+                self.lca2graph(lcag_ref, graph_ref)
+                plt.sca(ax[it][1])
+                graph_ref.visualize(opt="min", ax=ax[it][1])
+            except:
+                continue
 
             if it*2>4:
                 break
