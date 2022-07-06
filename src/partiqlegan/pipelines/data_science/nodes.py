@@ -275,61 +275,61 @@ class Instructor():
         # return row > col # upper (results in node*(node-1)/2)
         return row != col # all but diagonal (results in node*(node-1))
 
-    def evaluate(self, test):
-        """
-        Evaluate related metrics to monitor the training process.
+    # def evaluate(self, test):
+    #     """
+    #     Evaluate related metrics to monitor the training process.
 
-        Args:
-            test: data set to be evaluted
+    #     Args:
+    #         test: data set to be evaluted
 
-        Return:
-            loss: loss_nll + loss_kl (+ loss_reg) 
-            acc: accuracy of relation reconstruction
-            rate: rate of assymmetry
-            sparse: rate of sparsity in terms of the first type of edge
-        """
-        acc, rate, sparse, losses = [], [], [], []
-        data_batch = self.load_data(test, self.batch_size)
-        with torch.no_grad():
-            for lca, states in data_batch:
-                # prob = self.model.module.predict_relations(states)
-                prob = self.model.module(states)
-                # self.view(prob, lca)
-                loss = cross_entropy(prob, lca)
-                # self.view(prob, lca)
+    #     Return:
+    #         loss: loss_nll + loss_kl (+ loss_reg) 
+    #         acc: accuracy of relation reconstruction
+    #         rate: rate of assymmetry
+    #         sparse: rate of sparsity in terms of the first type of edge
+    #     """
+    #     acc, rate, sparse, losses = [], [], [], []
+    #     data_batch = self.load_data(test, self.batch_size)
+    #     with torch.no_grad():
+    #         for lca, states in data_batch:
+    #             # prob = self.model.module.predict_relations(states)
+    #             prob = self.model.module(states)
+    #             # self.view(prob, lca)
+    #             loss = cross_entropy(prob, lca)
+    #             # self.view(prob, lca)
 
-                scale = 1 / lca.size(1) #running only a single batch here
+    #             scale = 1 / lca.size(1) #running only a single batch here
 
-                # lca_ut = []
-                # for batch in range(lca.shape[0]):
-                #     lca_ut_batch = []
-                #     for row in range(lca.shape[1]):
-                #         for col in range(lca.shape[2]):
-                #             if self.sideSelect(row, col):
-                #                 lca_ut_batch.append(lca[batch][row][col])
-                #                 # lca_ut.append(lca[batch][row][col])
-                #     lca_ut.append(lca_ut_batch)
-                # lca_ut = LongTensor(lca_ut)
+    #             # lca_ut = []
+    #             # for batch in range(lca.shape[0]):
+    #             #     lca_ut_batch = []
+    #             #     for row in range(lca.shape[1]):
+    #             #         for col in range(lca.shape[2]):
+    #             #             if self.sideSelect(row, col):
+    #             #                 lca_ut_batch.append(lca[batch][row][col])
+    #             #                 # lca_ut.append(lca[batch][row][col])
+    #             #     lca_ut.append(lca_ut_batch)
+    #             # lca_ut = LongTensor(lca_ut)
 
-                # # use loss as the validation metric
-                # loss = cross_entropy(prob.view(-1, prob.shape[-1]), lca_ut.view(-1))
-                # # scale all metrics to match the batch size
-                loss = loss * scale
-                losses.append(loss)
+    #             # # use loss as the validation metric
+    #             # loss = cross_entropy(prob.view(-1, prob.shape[-1]), lca_ut.view(-1))
+    #             # # scale all metrics to match the batch size
+    #             loss = loss * scale
+    #             losses.append(loss)
 
-                # acc.append(scale * edge_accuracy(prob, lca_ut))
-                # acc.append(scale * edge_accuracy(prob, lca))
-                acc.append(0)
-                # _, p = prob.max(-1)
-                # rate.append(scale * asym_rate(p.t(), self.size))
-                # sparse.append(prob.max(-1)[1].float().mean() * scale)
-        # loss = sum(losses) / self.batch_size
-        loss = sum(losses) / len(data_batch)
-        # acc = sum(acc) / self.batch_size
-        acc = sum(acc) / len(data_batch)
-        # rate = sum(rate) / N
-        # sparse = sum(sparse) / N
-        return loss, acc, rate, sparse
+    #             # acc.append(scale * edge_accuracy(prob, lca_ut))
+    #             # acc.append(scale * edge_accuracy(prob, lca))
+    #             acc.append(0)
+    #             # _, p = prob.max(-1)
+    #             # rate.append(scale * asym_rate(p.t(), self.size))
+    #             # sparse.append(prob.max(-1)[1].float().mean() * scale)
+    #     # loss = sum(losses) / self.batch_size
+    #     loss = sum(losses) / len(data_batch)
+    #     # acc = sum(acc) / self.batch_size
+    #     acc = sum(acc) / len(data_batch)
+    #     # rate = sum(rate) / N
+    #     # sparse = sum(sparse) / N
+    #     return loss, acc, rate, sparse
 
     def prob2lca(self, prob, size):
         batchSize = prob.size(1)
