@@ -1,11 +1,10 @@
 from ordered_set import T
-import torch
 from .nri import bb_NRIModel, rel_pad_collate_fn
 from torch.nn.parallel import DataParallel
 # from generate.load import load_nri
 import numpy as np
 
-import torch
+import torch as t
 # import config as cfg
 from torch.nn.functional import cross_entropy
 from torch import optim
@@ -38,7 +37,7 @@ def train_qgnn(torch_dataset_lca_and_leaves, n_hid:int, n_momenta:int, dropout_r
 
 class DataWrapper(Dataset):
     """
-    A wrapper for torch.utils.data.Dataset.
+    A wrapper for t.utils.data.Dataset.
     """
     def __init__(self, data):
         self.data = data
@@ -54,7 +53,7 @@ class Instructor():
     """
     Train the encoder in an supervised manner given the ground truth relations.
     """
-    def __init__(self, model: torch.nn.DataParallel, data: dict,  es: np.ndarray,
+    def __init__(self, model: t.nn.DataParallel, data: dict,  es: np.ndarray,
                 learning_rate: float, learning_rate_decay: int, gamma: float, batch_size:int, epochs:int):
         """
         Args:
@@ -69,7 +68,7 @@ class Instructor():
         #              for key, value in data.items()}
         self.data = data
         # self.data = data
-        # self.es = torch.LongTensor(es)
+        # self.es = t.LongTensor(es)
         # number of nodes
         self.epochs = epochs
         self.batch_size = batch_size
@@ -114,7 +113,7 @@ class Instructor():
                             raise Exception(f"Found graph with negative values: {labels.numpy()}")
                     elif mode == "val":
                         self.model.module.eval() # trigger evaluation forward mode
-                        with torch.no_grad(): # disable autograd in tensors
+                        with t.no_grad(): # disable autograd in tensors
 
                             prob = self.model.module(states)
 
@@ -122,7 +121,7 @@ class Instructor():
                             acc = self.edge_accuracy(prob, labels)
                     elif mode == "test":
                         self.model.module.eval() # trigger evaluation forward mode
-                        with torch.no_grad(): # disable autograd in tensors
+                        with t.no_grad(): # disable autograd in tensors
 
                             prob = self.model.module(states)
 
@@ -161,7 +160,7 @@ class Instructor():
         }
 
 
-    def edge_accuracy(self, logits:Tensor, labels:Tensor)->float:
+    def edge_accuracy(self, logits:t.Tensor, labels:t.Tensor)->float:
         # logits: [Batch, Classes, LCA_0, LCA_1]
         probs = logits.softmax(1) # get softmax for probabilities
         preds = probs.max(1)[1] # find maximum across the classes
@@ -178,7 +177,7 @@ class Instructor():
             directPairs.sort(key=lambda dp: sum(dp))
             directPairs = directPairs[1::2]
 
-            def convToPair(pair:torch.Tensor) -> Tuple[int,int]:
+            def convToPair(pair:t.Tensor) -> Tuple[int,int]:
                 return (int(pair[0]), int(pair[1]))
 
             def getOverlap(edge:Tuple[int,int], ref:List[int]) -> List[Tuple[int,int]]:
@@ -267,7 +266,7 @@ class Instructor():
 
             lca -= 1
             if len(directPairs) == 0:
-                lca += torch.diag(torch.ones(lca.size(0), dtype=torch.long))
+                lca += t.diag(t.ones(lca.size(0), dtype=t.long))
             # processed = []
 
     def plotBatchGraphs(self, batch_logits, batch_ref):
@@ -314,7 +313,7 @@ class Instructor():
         | d | | e | | f | | g |     | h |
         +---+ +---+ +---+ +---+     +---+
         """
-        example_1 = torch.tensor([
+        example_1 = t.tensor([
             #d  g  f  h  e
             [0, 2, 1, 2, 1], # d
             [2, 0, 2, 1, 2], # g
@@ -340,7 +339,7 @@ class Instructor():
         | 0 | | 4 | | 2 | | 1 |     | 3 |
         +---+ +---+ +---+ +---+     +---+
         """
-        example_2 = torch.tensor([
+        example_2 = t.tensor([
             #d  g  f  h  e
             [0, 5, 2, 5, 2], # d
             [5, 0, 5, 2, 5], # g
@@ -371,7 +370,7 @@ class Instructor():
         | 0 | | 1 | | 2 | | 3 | | 4 |
         +---+ +---+ +---+ +---+ +---+
         """
-        example_3 = torch.tensor([
+        example_3 = t.tensor([
             #e  f  g  h  i
             [0, 1, 3, 3, 3],  # e
             [1, 0, 3, 3, 3],  # f
@@ -402,7 +401,7 @@ class Instructor():
         | 0 | | 1 | | 2 | | 3 | | 4 |
         +---+ +---+ +---+ +---+ +---+
         """
-        example_4 = torch.tensor([
+        example_4 = t.tensor([
             #g  h  d  f  c
             [0, 1, 2, 2, 3],  # g
             [1, 0, 2, 2, 3],  # h
@@ -411,7 +410,7 @@ class Instructor():
             [3, 3, 3, 3, 0]   # c
         ])
 
-        example_5 = torch.tensor([
+        example_5 = t.tensor([
             [0, 2, 1, 2],
             [2, 0, 2, 1],
             [1, 2, 0, 2],
