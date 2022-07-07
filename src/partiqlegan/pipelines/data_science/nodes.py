@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 import torch as t
 from torch.nn.parallel import DataParallel
 from torch.nn.functional import cross_entropy
-from torch import optim
 from torch.optim.lr_scheduler import StepLR
 from torch.utils.data import Dataset, DataLoader
 
@@ -61,7 +60,7 @@ class Instructor():
     """
     Train the encoder in an supervised manner given the ground truth relations.
     """
-    def __init__(self, model: t.nn.DataParallel, data: dict,
+    def __init__(self, model: DataParallel, data: dict,
                 learning_rate: float, learning_rate_decay: int, gamma: float, batch_size:int, epochs:int):
         """
         Args:
@@ -72,16 +71,10 @@ class Instructor():
         """
         self.model = model
         
-        # self.data = {key: TensorDataset(*value)
-        #              for key, value in data.items()}
         self.data = data
-        # self.data = data
-        # self.es = t.LongTensor(es)
-        # number of nodes
         self.epochs = epochs
         self.batch_size = batch_size
-        # optimizer
-        self.opt = optim.Adam(self.model.parameters(), lr=learning_rate)
+        self.opt = t.optim.Adam(self.model.parameters(), lr=learning_rate)
         # learning rate scheduler, same as in NRI
         self.scheduler = StepLR(self.opt, step_size=learning_rate_decay, gamma=gamma)
 
