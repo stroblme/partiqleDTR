@@ -253,8 +253,8 @@ def gen_events_from_structure(parameters, decay_tree_structure):
     all_weights = {mode:list() for mode in MODES_NAMES}
     all_events = {mode:list() for mode in MODES_NAMES}
 
-    np.random.seed(SEEDS)
-    seeds = [np.random.randint(9999)]*len(decay_tree_structure)*len(modes)
+    rd = np.random.default_rng(SEEDS) #rd.choice #TODO: check that
+    seeds = [rd.integers(9999) for i in range(len(decay_tree_structure)*len(MODES_NAMES))]
 
     actual_seeds = []
     for i, root_node in enumerate(decay_tree_structure):
@@ -273,8 +273,8 @@ def gen_events_from_structure(parameters, decay_tree_structure):
 
         for j, mode in enumerate(modes):
             num_events = events_per_mode[mode]
-            np.random.seed(seeds[i*len(modes)+j])
-            seed = np.random.randint(np.iinfo(np.int32).max)
+            l_rd = np.random.default_rng(seeds[i*len(modes)+j])
+            seed = l_rd.integers(np.iinfo(np.int32).max)
 
             weights, events = root_node.generate(
                 num_events,
