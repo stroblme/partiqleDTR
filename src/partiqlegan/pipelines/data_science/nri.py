@@ -1,41 +1,6 @@
+import torch as t
 from torch import nn
-# import config as cfg
-import torch
 import torch.nn.functional as F
-
-# class NRIModel(nn.Module):
-#     """Auto-encoder."""
-#     def __init__(self, encoder: nn.Module, es: Tensor, size: int):
-#         """
-#         Args:
-#             encoder: an encoder inferring relations
-#             decoder: an decoder predicting future states
-#             es: edge list
-#             size: number of nodes
-#         """
-#         super(NRIModel, self).__init__()
-#         self.enc = encoder
-#         self.es = es
-#         self.size = size
-
-#     # def predict_relations(self, states: Tensor) -> Tensor:
-#     #     """
-#     #     Given historical node states, infer interacting relations.
-
-#     #     Args:
-#     #         states: [batch, step, node, dim]
-
-#     #     Return:
-#     #         prob: [E, batch, K]
-#     #     """
-#     #     # if not self.es.is_cuda:
-#     #         # self.es = self.es.cuda(states.device)
-#     #     logits = self.enc(states, self.es)
-
-#     #     return logits   # multi class ce loss takes logits rather than probs
-
-#     #     # prob = logits.softmax(-1)
-#     #     # return prob
 
 
 def construct_rel_recvs(ln_leaves, self_interaction=False, device=None):
@@ -45,7 +10,7 @@ def construct_rel_recvs(ln_leaves, self_interaction=False, device=None):
     pad_len = max(ln_leaves)
     rel_recvs = []
     for l in ln_leaves:
-        rel_recv = torch.eye(pad_len, device=device)  # (l, l)
+        rel_recv = t.eye(pad_len, device=device)  # (l, l)
         rel_recv[:, l:] = 0
         rel_recv = rel_recv.repeat_interleave(pad_len, dim=1).T  # (l*l, l)
         for j in range(l, pad_len):  # remove padding vertex edges TODO optimize
@@ -56,7 +21,7 @@ def construct_rel_recvs(ln_leaves, self_interaction=False, device=None):
 
         rel_recvs.append(rel_recv)
 
-    return torch.stack(rel_recvs)
+    return t.stack(rel_recvs)
 
 
 def construct_rel_sends(ln_leaves, self_interaction=False, device=None):
@@ -66,16 +31,16 @@ def construct_rel_sends(ln_leaves, self_interaction=False, device=None):
     pad_len = max(ln_leaves)
     rel_sends = []
     for l in ln_leaves:
-        rel_send = torch.eye(pad_len, device=device).repeat(pad_len, 1)
+        rel_send = t.eye(pad_len, device=device).repeat(pad_len, 1)
         if self_interaction == False:
-            rel_send[torch.arange(0, pad_len*pad_len, pad_len+1)] = 0
+            rel_send[t.arange(0, pad_len*pad_len, pad_len+1)] = 0
             # rel_send = rel_send[rel_send.sum(dim=1) > 0]  # (l*l, l)
 
         # padding
         rel_send[:, l:] = 0
         rel_send[l*(pad_len):] = 0
         rel_sends.append(rel_send)
-    return torch.stack(rel_sends)
+    return t.stack(rel_sends)
 
 def pad_collate_fn(batch):
     ''' Collate function for batches with varying sized inputs
@@ -90,14 +55,14 @@ def pad_collate_fn(batch):
     # First pad the input data
     data = [item[0] for item in batch]
     # Here we pad with 0 as it's the input, so need to indicate that the network ignores it
-    data = torch.nn.utils.rnn.pad_sequence(data, batch_first=True, padding_value=0.0)  # (N, L, F)
+    data = t.nn.utils.rnn.pad_sequence(data, batch_first=True, padding_value=0.0)  # (N, L, F)
     data = data.transpose(0, 1)  # (L, N, F)
     # Then the labels
     labels = [item[1] for item in batch]
 
     # Note the -1 padding, this is where we tell the loss to ignore the outputs in those cells
-    target = torch.zeros(data.shape[1], data.shape[0], data.shape[0], dtype=torch.long) - 1  # (N, L, L)
-    # mask = torch.zeros(data.shape[0], data.shape[1], data.shape[1])  # (N, L, L)
+    target = t.zeros(data.shape[1], data.shape[0], data.shape[0], dtype=t.long) - 1  # (N, L, L)
+    # mask = t.zeros(data.shape[0], data.shape[1], data.shape[1])  # (N, L, L)
 
     # I don't know a cleaner way to do this, just copying data into the fixed-sized tensor
     for i, tensor in enumerate(labels):
@@ -300,7 +265,7 @@ class bb_NRIModel(nn.Module):
         '''
         # TODO assumes that batched matrix product just works
         # TODO these do not have to be members
-        incoming = torch.matmul(rel_rec.permute(0, 2, 1), x)  # (b, l, d)
+        incoming = t.matmul(rel_rec.permute(0, 2, 1), x)  # (b, l, d)
         denom = rel_rec.sum(1)[:, 1]
         return incoming / denom.reshape(-1, 1, 1)  # (b, l, d)
         # return incoming / incoming.size(1)  # (b, l, d)
@@ -311,9 +276,9 @@ class bb_NRIModel(nn.Module):
         Output: (b, l*l(l-1), 2d)
         '''
         # TODO assumes that batched matrix product just works
-        receivers = torch.matmul(rel_rec, x)  # (b, l*l, d)
-        senders = torch.matmul(rel_send, x)  # (b, l*l, d)
-        edges = torch.cat([senders, receivers], dim=2)  # (b, l*l, 2d)
+        receivers = t.matmul(rel_rec, x)  # (b, l*l, d)
+        senders = t.matmul(rel_send, x)  # (b, l*l, d)
+        edges = t.cat([senders, receivers], dim=2)  # (b, l*l, 2d)
 
         return edges
 
@@ -335,7 +300,7 @@ class bb_NRIModel(nn.Module):
 
         # NOTE create rel matrices on the fly if not given as input
         if rel_rec is None:
-            # rel_rec = torch.eye(
+            # rel_rec = t.eye(
             #     n_leaves,
             #     device=device
             # ).repeat_interleave(n_leaves-1, dim=1).T  # (l*(l-1), l)
@@ -343,8 +308,8 @@ class bb_NRIModel(nn.Module):
             rel_rec = construct_rel_recvs([inputs.size(0)], device=device)
 
         if rel_send is None:
-            # rel_send = torch.eye(n_leaves, device=device).repeat(n_leaves, 1)
-            # rel_send[torch.arange(0, n_leaves*n_leaves, n_leaves + 1)] = 0
+            # rel_send = t.eye(n_leaves, device=device).repeat(n_leaves, 1)
+            # rel_send[t.arange(0, n_leaves*n_leaves, n_leaves + 1)] = 0
             # rel_send = rel_send[rel_send.sum(dim=1) > 0]  # (l*(l-1), l)
             # rel_send = rel_send.unsqueeze(0).expand(inputs.size(1), -1, -1)
             rel_send = construct_rel_sends([inputs.size(0)], device=device)
@@ -362,14 +327,14 @@ class bb_NRIModel(nn.Module):
         if self.tokenize is not None:
             emb_x = []
             # We'll use this to drop tokenized features from x
-            mask = torch.ones(feats, dtype=torch.bool, device=device)
+            mask = t.ones(feats, dtype=t.bool, device=device)
             for idx, emb in self.embed.items():
                 # Note we need to convert tokens to type long here for embedding layer
                 emb_x.append(emb(x[..., int(idx)].long()))  # List of (b, l, emb_dim)
                 mask[int(idx)] = False
 
             # Now merge the embedding outputs with x (mask has deleted the old tokenized feats)
-            x = torch.cat([x[..., mask], *emb_x], dim=-1)  # (b, l, d + embeddings)
+            x = t.cat([x[..., mask], *emb_x], dim=-1)  # (b, l, d + embeddings)
             del emb_x
 
         # Initial set of linear layers
@@ -409,19 +374,19 @@ class bb_NRIModel(nn.Module):
                 x = self.node2edge(x, rel_rec, rel_send)  # (b, l*l, 2d)
 
                 # Final MLP in block to reduce dimensions again
-                x = torch.cat((x, x_skip), dim=2)  # Skip connection  # (b, l*l, 3d)
+                x = t.cat((x, x_skip), dim=2)  # Skip connection  # (b, l*l, 3d)
                 x = block[2](x)  # (b, l*l, d)
                 del x_skip
 
             # Global skip connection
-            x = torch.cat((x, x_global_skip), dim=2)  # Skip connection  # (b, l*(l-1), 2d)
+            x = t.cat((x, x_global_skip), dim=2)  # Skip connection  # (b, l*(l-1), 2d)
 
             # Cleanup
             del rel_rec, rel_send
 
         # else:
         #     x = self.mlp3(x)  # (b, l*(l-1), d)
-        #     x = torch.cat((x, x_skip), dim=2)  # Skip connection  # (b, l*(l-1), 2d)
+        #     x = t.cat((x, x_skip), dim=2)  # Skip connection  # (b, l*(l-1), 2d)
         #     x = self.mlp4(x)  # (b, l*(l-1), d)
 
         # Final set of linear layers
@@ -434,9 +399,9 @@ class bb_NRIModel(nn.Module):
         # Change to LCA shape
         # x is currently the flattened rows of the predicted LCA but without the diagonal
         # We need to create an empty LCA then populate the off-diagonals with their corresponding values
-        # out = torch.zeros((batch, n_leaves, n_leaves, self.num_classes), device=device)  # (b, l, l, c)
-        # ind_upper = torch.triu_indices(n_leaves, n_leaves, offset=1)
-        # ind_lower = torch.tril_indices(n_leaves, n_leaves, offset=-1)
+        # out = t.zeros((batch, n_leaves, n_leaves, self.num_classes), device=device)  # (b, l, l, c)
+        # ind_upper = t.triu_indices(n_leaves, n_leaves, offset=1)
+        # ind_lower = t.tril_indices(n_leaves, n_leaves, offset=-1)
 
         # Assign the values to their corresponding position in the LCA
         # The right side is just some quick mafs to get the correct edge predictions from the flattened x array
@@ -448,6 +413,6 @@ class bb_NRIModel(nn.Module):
 
         # Symmetrize
         if self.symmetrize:
-            out = torch.div(out + torch.transpose(out, 2, 3), 2)  # (b, c, l, l)
+            out = t.div(out + t.transpose(out, 2, 3), 2)  # (b, c, l, l)
 
         return out
