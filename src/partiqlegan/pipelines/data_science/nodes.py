@@ -205,7 +205,11 @@ class Instructor():
                         # update the current best model when approaching a higher accuray
                         best_acc = acc
                         result = self.model
-                        c_plt = self.plotBatchGraphs(prob, labels, postfix=f"_val_e{epoch}")
+                        try:
+                            c_plt = self.plotBatchGraphs(prob, labels, postfix=f"_val_e{epoch}")
+                        except Exception:
+                            mlflow.log
+
                         mlflow.log_figure(c_plt.gcf(), f"e{epoch}_sample_graph.png")
 
                 epoch_loss /= len(data_batch) # to the already scaled loss, apply the batch size scaling
@@ -464,20 +468,16 @@ class Instructor():
         for logits, lcag_ref in zip(batch_logits, batch_ref):
             lcag = logits.max(0)[1]
             graph = GraphVisualization()
-            try:
-                self.lca2graph(lcag, graph)
-                plt.sca(ax[it][0])
-                graph.visualize(opt="max", ax=ax[it][0])
-            except:
-                continue
+
+            self.lca2graph(lcag, graph)
+            plt.sca(ax[it][0])
+            graph.visualize(opt="max", ax=ax[it][0])
 
             graph_ref = GraphVisualization()
-            try:
-                self.lca2graph(lcag_ref, graph_ref)
-                plt.sca(ax[it][1])
-                graph_ref.visualize(opt="max", ax=ax[it][1])
-            except:
-                continue
+
+            self.lca2graph(lcag_ref, graph_ref)
+            plt.sca(ax[it][1])
+            graph_ref.visualize(opt="max", ax=ax[it][1])
 
             if it*2>4:
                 break
