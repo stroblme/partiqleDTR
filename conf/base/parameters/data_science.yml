@@ -5,7 +5,7 @@ epochs: 30
 n_momenta: 4
 
 n_blocks: 3
-dim_feedforward: 512
+dim_feedforward: 128
 n_layers_mlp: 2
 n_additional_mlp_layers: 2
 n_final_mlp_layers: 2
