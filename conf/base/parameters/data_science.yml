@@ -4,18 +4,12 @@ epochs: 30
 # 3 for kuramoto and 4 for spring and charged.
 n_momenta: 4
 
-# N_HID: 120
-n_hid: 512
-INPUT_EMB_HID: 128
-# Dimension of hidden layers of attention mechanisms.
-EMB_HID: 256
-ATT_HID: 256
-# SKIP: True
-# Soft constraint for symmetry.
-REG: 0.
-NO_REG: False
-# Hard constraint for symmetry.
-SYM: False
+n_blocks: 3
+dim_feedforward: 512
+n_layers_mlp: 2
+n_additional_mlp_layers: 2
+n_final_mlp_layers: 2
+
 
 # Scale the loss to avoid gradient explosion.
 dropout_rate: 0.2
