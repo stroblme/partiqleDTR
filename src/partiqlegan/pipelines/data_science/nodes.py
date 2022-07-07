@@ -181,7 +181,7 @@ class Instructor():
                         self.opt.zero_grad()
                         loss.backward()
                         self.opt.step()
-                        
+
                         if labels.numpy().min() < -1:
                             raise Exception(f"Found graph with negative values: {labels.numpy()}")
                     elif mode == "val":
@@ -212,8 +212,8 @@ class Instructor():
                         result = self.model
                         try:
                             c_plt = self.plotBatchGraphs(prob, labels, postfix=f"_val_e{epoch}")
-                        except Exception:
-                            mlflow.log
+                        except Exception as e:
+                            log.error(f"Exception occured when trying to plot graphs: {e}\n\tThe lcag matrices were:\n\t{labels.numpy()}\n\tand\n\t{prob.numpy()}")
 
                         mlflow.log_figure(c_plt.gcf(), f"e{epoch}_sample_graph.png")
 
