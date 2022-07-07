@@ -90,7 +90,7 @@ def gen_structure_from_parameters(
     TRAIN_EVENTS_PER_TOP = parameters["TRAIN_EVENTS_PER_TOP"] if "TRAIN_EVENTS_PER_TOP" in parameters else None
     VAL_EVENTS_PER_TOP = parameters["VAL_EVENTS_PER_TOP"] if "VAL_EVENTS_PER_TOP" in parameters else None
     TEST_EVENTS_PER_TOP = parameters["TEST_EVENTS_PER_TOP"] if "TEST_EVENTS_PER_TOP" in parameters else None
-    SEED = parameters["SEED"] if "SEED" in parameters else None
+    # SEED = parameters["SEED"] if "SEED" in parameters else None
     ISO_RETRIES = parameters["ISO_RETRIES"] if "ISO_RETRIES" in parameters else None
     GENERATE_UNKNOWN = parameters["GENERATE_UNKNOWN"] if "GENERATE_UNKNOWN" in parameters else None
 
@@ -120,8 +120,8 @@ def gen_structure_from_parameters(
 
     # import tensorflow as tf
 
-    if SEED is not None:
-        np.random.seed(SEED)
+    # if SEED is not None:
+        # np.random.seed(SEED)
         # This is supposed to be supported as a global seed for Phasespace but doesn't work
         # Instead we set the seed below in the calls to generate()
         # tf.random.set_seed(np.random.randint(np.iinfo(np.int32).max))
