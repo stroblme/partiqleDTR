@@ -1,24 +1,15 @@
 from ordered_set import T
 import torch
-from .models.encoder import GNNENC
-from .models.nri import bb_NRIModel, rel_pad_collate_fn
+from .nri import bb_NRIModel, rel_pad_collate_fn
 from torch.nn.parallel import DataParallel
 # from generate.load import load_nri
-from itertools import permutations
 import numpy as np
-from torch import LongTensor, FloatTensor
-
-from torch.utils.data.dataset import TensorDataset
 
 import torch
-from torch import Tensor
 # import config as cfg
 from torch.nn.functional import cross_entropy
-from .utils.torch_extension import edge_accuracy, asym_rate
-from torch.utils.data.dataset import TensorDataset
 from torch import optim
 from torch.optim.lr_scheduler import StepLR
-from torch.optim.optimizer import Optimizer
 from torch.utils.data import Dataset, DataLoader
 import numpy as np
 
@@ -112,7 +103,7 @@ class Instructor():
 
                         prob = self.model.module(states)
                         loss = cross_entropy(prob, labels, ignore_index=-1)
-                        acc = edge_accuracy(prob, labels)
+                        acc = self.edge_accuracy(prob, labels)
 
                         # do the actual optimization
                         self.opt.zero_grad()
@@ -128,7 +119,7 @@ class Instructor():
                             prob = self.model.module(states)
 
                             loss = cross_entropy(prob, labels, ignore_index=-1)
-                            acc = edge_accuracy(prob, labels)
+                            acc = self.edge_accuracy(prob, labels)
                     elif mode == "test":
                         self.model.module.eval() # trigger evaluation forward mode
                         with torch.no_grad(): # disable autograd in tensors
@@ -136,7 +127,7 @@ class Instructor():
                             prob = self.model.module(states)
 
                             loss = cross_entropy(prob, labels, ignore_index=-1)
-                            acc = edge_accuracy(prob, labels)
+                            acc = self.edge_accuracy(prob, labels)
                     else:
                         log.error("Unknown mode")
 
@@ -170,7 +161,12 @@ class Instructor():
         }
 
 
-           
+    def edge_accuracy(self, logits:Tensor, labels:Tensor)->float:
+        # logits: [Batch, Classes, LCA_0, LCA_1]
+        probs = logits.softmax(1) # get softmax for probabilities
+        preds = probs.max(1)[1] # find maximum across the classes
+        correct = (labels==preds).sum().float()
+        return correct/(labels.size(1)*labels.size(2))           
 
     def lca2graph(self, lca, graph):
 

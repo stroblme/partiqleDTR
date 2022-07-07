@@ -1,4 +1,4 @@
-from torch import Tensor, nn
+from torch import nn
 # import config as cfg
 import torch
 import torch.nn.functional as F
