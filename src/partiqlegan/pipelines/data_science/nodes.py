@@ -32,39 +32,17 @@ from typing import Tuple, List
 import logging
 log = logging.getLogger(__name__)
 
+
 def train_qgnn(torch_dataset_lca_and_leaves, n_hid:int, n_momenta:int, dropout_rate:float,
                 learning_rate:float, learning_rate_decay:int, gamma:float, batch_size:int, epochs:int):
-    # load data
-    # SIZE = model_parameters["SIZE"] if "SIZE" in model_parameters else None
-    # n_hid = model_parameters["N_HID"] if "N_HID" in model_parameters else None
-    # n_momenta = model_parameters["DIM"] if "DIM" in model_parameters else None
-
-    # log.info(f"Model parameters:\n{model_parameters}")
-
-    # data, es, _ = load_nri(all_leaves_shuffled, num_of_leaves)
-    # generate edge list of a fully connected graph
-
-    # max_depth = int(max([np.array(subset[0]).max() for _, subset in torch_dataset_lca_and_leaves.items()]))+1 # get the num of childs from the label list
     n_fsps = int(max([len(subset[0]) for _, subset in torch_dataset_lca_and_leaves.items()]))+1
-    # n_fsps = 4
-    # es = LongTensor(np.array(list(permutations(range(SIZE), 2))).T)
-    # es = list(permutations(range(n_fsps), 2))
 
-    # get ut
-    # es.sort(key=lambda es: sum(es))
-    # es = es[1::2]
-
-    # es = LongTensor(np.array(es).T)
-
-    # encoder = GNNENC(n_momenta, n_hid, max_depth, dropout_rate=dropout_rate)
-    # model = NRIModel(encoder, es, n_fsps)
     model = bb_NRIModel(n_momenta, n_fsps)
     model = DataParallel(model)
     ins = Instructor(model, torch_dataset_lca_and_leaves, None, learning_rate, learning_rate_decay, gamma, batch_size, epochs)
     # ins.testLca2Graph()
     
     return ins.train()
-
 
 
 class DataWrapper(Dataset):
@@ -94,15 +72,6 @@ class Instructor():
             es: edge list
             cmd: command line parameters
         """
-        # learning_rate = model_parameters["LR"] if "LR" in model_parameters else None
-        # learning_rate_decay = model_parameters["LR_DECAY"] if "LR_DECAY" in model_parameters else None
-        # gamma = model_parameters["GAMMA"] if "GAMMA" in model_parameters else None
-        # size = model_parameters["SIZE"] if "SIZE" in model_parameters else None
-        # batch_size = model_parameters["BATCH_SIZE"] if "BATCH_SIZE" in model_parameters else None
-        # epochs = model_parameters["EPOCHS"] if "EPOCHS" in model_parameters else None
-
-
-        # super(XNRIENCIns, self).__init__(cmd)
         self.model = model
         
         # self.data = {key: TensorDataset(*value)
@@ -118,51 +87,19 @@ class Instructor():
         # learning rate scheduler, same as in NRI
         self.scheduler = StepLR(self.opt, step_size=learning_rate_decay, gamma=gamma)
 
-    @staticmethod
-    def optimize(opt: Optimizer, loss: torch.Tensor):
-        """
-        Optimize the parameters based on the loss and the optimizer.
-
-        Args:
-            opt: optimizer
-            loss: loss, a scalar
-        """
-        opt.zero_grad()
-        loss.backward()
-        opt.step()
-
-    @staticmethod
-    def load_data(inputs, batch_size: int, shuffle: bool=True):
-        """
-        Return a dataloader given the input and the batch size.
-        """
-        data = DataWrapper(inputs)
-        batches = DataLoader(
-            data,
-            batch_size=batch_size,
-            shuffle=shuffle,
-            collate_fn=rel_pad_collate_fn) # to handle varying input size
-        return batches
 
     def train(self):
-        # use the accuracy as the metric for model selection, default: 0
-        val_best = 0
-        # path to save the current best model
-        # prefix = '/'.join(cfg.log.split('/')[:-1])
-        # name = '{}/best.pth'.format(prefix)train_steps
-        # try:
-        #     mlflow.end_run()
-        #     log.warn("There was an existing run which is now cancelled.")
-        # except:
-        #     pass
-
-        # with mlflow.start_run():
         log.info(f'Training started with a batch size of {self.batch_size}')
         result = None            
         best_acc = 0
         for epoch in range(1, 1 + self.epochs):
             for mode in ["train", "val"]:
-                data_batch = self.load_data(self.data[mode], self.batch_size) # get the date for the current mode
+                data_batch = DataLoader(
+                                        DataWrapper(self.data[mode]),
+                                        batch_size=self.batch_size,
+                                        shuffle=True,
+                                        collate_fn=rel_pad_collate_fn) # to handle varying input size
+
                 epoch_loss = 0.
                 epoch_acc = 0.
 
@@ -232,137 +169,32 @@ class Instructor():
             "model_qgnn":result
         }
 
-    # def report(self, name: str) -> float:
-    #     """
-    #     Evaluate the accuracy.
 
-    #     Args:
-    #         name: 'train' / 'val' / 'test'
-        
-    #     Return:
-    #         acc: accuracy of relation reconstruction
-    #     """
-    #     loss, acc, rate, sparse = self.evaluate(self.data[name])
-    #     # log.info('{} acc {:.4f} _acc {:.4f} rate {:.4f} sparse {:.4f}'.format(name, acc, 1 - acc, rate, sparse))
-    #     log.info(f"acc: {acc}, loss: {loss}")
-    #     return acc
+    # def sideSelect(self, row, col):
+    #     # return row < col # lower (results in node*(node-1)/2)
+    #     # return row > col # upper (results in node*(node-1)/2)
+    #     return row != col # all but diagonal (results in node*(node-1))
 
-    # def train_nri(self, states: Tensor, lca: Tensor) -> Tensor:
-    #     """
-    #     Args:
-    #         states: [batch, step, node, dim], observed node states
-    #         lca: [batch, E, K], ground truth interacting relations
+   
+    # def prob2lca(self, prob, size):
+    #     batchSize = prob.size(1)
+    #     lca = torch.zeros((batchSize, size, size))
 
-    #     Return:
-    #         loss: cross-entropy of edge classification
-    #     """
-    #     # prob = self.model.module.predict_relations(states)
-    #     prob = self.model.module(states)
-    #     # self.view(prob, lca)
-    #     loss = cross_entropy(prob, lca, ignore_index=-1)
-    #     # loss = torch.nn.CrossEntropyLoss(prob, lca, ignore_index=-1)
-    #     self.optimize(self.opt, loss)
-    #     return loss
-
-    #     lca_filtered = []
-    #     for batch in range(lca.shape[0]):
-    #         lca_ut_batch = []
-    #         for row in range(lca.shape[1]):
-    #             for col in range(lca.shape[2]):
+    #     for batch in range(batchSize):
+    #         prob_idx = 0
+    #         for row in range(size):
+    #             for col in range(size):
     #                 if self.sideSelect(row, col):
-    #                     lca_ut_batch.append(lca[batch][row][col])
-    #                     # lca_ut.append(lca[batch][row][col])
-    #         lca_filtered.append(lca_ut_batch)
-    #     lca_filtered = LongTensor(lca_filtered)
+    #                     _, particle_idx = torch.max(prob[prob_idx][batch], 0) # get the max prob of this prediction
+    #                     # careful, that batch is on dim 1 in the particles whereas it is in dim 0 in the lca
+    #                     lca[batch][row][col] = particle_idx
+    #                     prob_idx += 1 # use seperate indexing to ensure that we don't fall in this matrix scheme
+    #                 elif row == col:
+    #                     lca[batch][row][col] = 0 # so that after transpose and add it will sum up to -1
 
+    #     lca_sym = lca + lca.transpose(1, 2)
 
-    #     # loss = cross_entropy(prob.view(-1, prob.shape[-1]), lca.transpose(0, 1).flatten())
-    #     loss = cross_entropy(prob.view(-1, prob.shape[-1]), lca_filtered.view(-1))
-    #     # self.view(prob, lca)
-    #     # loss = loss / lca.shape[1]
-    #     self.optimize(self.opt, loss)
-    #     return loss
-
-    def sideSelect(self, row, col):
-        # return row < col # lower (results in node*(node-1)/2)
-        # return row > col # upper (results in node*(node-1)/2)
-        return row != col # all but diagonal (results in node*(node-1))
-
-    # def evaluate(self, test):
-    #     """
-    #     Evaluate related metrics to monitor the training process.
-
-    #     Args:
-    #         test: data set to be evaluted
-
-    #     Return:
-    #         loss: loss_nll + loss_kl (+ loss_reg) 
-    #         acc: accuracy of relation reconstruction
-    #         rate: rate of assymmetry
-    #         sparse: rate of sparsity in terms of the first type of edge
-    #     """
-    #     acc, rate, sparse, losses = [], [], [], []
-    #     data_batch = self.load_data(test, self.batch_size)
-    #     with torch.no_grad():
-    #         for lca, states in data_batch:
-    #             # prob = self.model.module.predict_relations(states)
-    #             prob = self.model.module(states)
-    #             # self.view(prob, lca)
-    #             loss = cross_entropy(prob, lca)
-    #             # self.view(prob, lca)
-
-    #             scale = 1 / lca.size(1) #running only a single batch here
-
-    #             # lca_ut = []
-    #             # for batch in range(lca.shape[0]):
-    #             #     lca_ut_batch = []
-    #             #     for row in range(lca.shape[1]):
-    #             #         for col in range(lca.shape[2]):
-    #             #             if self.sideSelect(row, col):
-    #             #                 lca_ut_batch.append(lca[batch][row][col])
-    #             #                 # lca_ut.append(lca[batch][row][col])
-    #             #     lca_ut.append(lca_ut_batch)
-    #             # lca_ut = LongTensor(lca_ut)
-
-    #             # # use loss as the validation metric
-    #             # loss = cross_entropy(prob.view(-1, prob.shape[-1]), lca_ut.view(-1))
-    #             # # scale all metrics to match the batch size
-    #             loss = loss * scale
-    #             losses.append(loss)
-
-    #             # acc.append(scale * edge_accuracy(prob, lca_ut))
-    #             # acc.append(scale * edge_accuracy(prob, lca))
-    #             acc.append(0)
-    #             # _, p = prob.max(-1)
-    #             # rate.append(scale * asym_rate(p.t(), self.size))
-    #             # sparse.append(prob.max(-1)[1].float().mean() * scale)
-    #     # loss = sum(losses) / self.batch_size
-    #     loss = sum(losses) / len(data_batch)
-    #     # acc = sum(acc) / self.batch_size
-    #     acc = sum(acc) / len(data_batch)
-    #     # rate = sum(rate) / N
-    #     # sparse = sum(sparse) / N
-    #     return loss, acc, rate, sparse
-
-    def prob2lca(self, prob, size):
-        batchSize = prob.size(1)
-        lca = torch.zeros((batchSize, size, size))
-
-        for batch in range(batchSize):
-            prob_idx = 0
-            for row in range(size):
-                for col in range(size):
-                    if self.sideSelect(row, col):
-                        _, particle_idx = torch.max(prob[prob_idx][batch], 0) # get the max prob of this prediction
-                        # careful, that batch is on dim 1 in the particles whereas it is in dim 0 in the lca
-                        lca[batch][row][col] = particle_idx
-                        prob_idx += 1 # use seperate indexing to ensure that we don't fall in this matrix scheme
-                    elif row == col:
-                        lca[batch][row][col] = 0 # so that after transpose and add it will sum up to -1
-
-        lca_sym = lca + lca.transpose(1, 2)
-
-        return lca_sym                
+    #     return lca_sym                
 
     def lca2graph(self, lca, graph):
 
@@ -667,54 +499,54 @@ class Instructor():
 
 
 
-    def generateGraphFromAdj(self, adj):
-        graph = GraphVisualization()
-        for row in range(len(adj)):
-            for col in range(len(adj)):
-                if adj[row][col] and self.sideSelect(row, col):
-                    graph.addEdge(row, col)
+    # def generateGraphFromAdj(self, adj):
+    #     graph = GraphVisualization()
+    #     for row in range(len(adj)):
+    #         for col in range(len(adj)):
+    #             if adj[row][col] and self.sideSelect(row, col):
+    #                 graph.addEdge(row, col)
 
-        return graph
+    #     return graph
 
-    def generateGraphFromLca(self, lca):
-        graph = GraphVisualization()
-        self.lca2graph(lca[0], graph)
+    # def generateGraphFromLca(self, lca):
+    #     graph = GraphVisualization()
+    #     self.lca2graph(lca[0], graph)
 
-        return graph
+    #     return graph
 
-    def prune_lca(self,lca):
-        index = sum(lca[:])>0
-        pruned_lca = lca[index][:,index]
+    # def prune_lca(self,lca):
+    #     index = sum(lca[:])>0
+    #     pruned_lca = lca[index][:,index]
 
-        return pruned_lca                
+    #     return pruned_lca                
 
-    def generateGraphsFromProbAndRef(self, prob, lca_ref):
-        lca = self.prob2lca(prob, lca_ref.size(1))
-        # pruned_lca = self.prune_lca(lca[0])
-        # pruned_lca_ref = self.prune_lca(lca_ref[0])
+    # def generateGraphsFromProbAndRef(self, prob, lca_ref):
+    #     lca = self.prob2lca(prob, lca_ref.size(1))
+    #     # pruned_lca = self.prune_lca(lca[0])
+    #     # pruned_lca_ref = self.prune_lca(lca_ref[0])
 
-        graph = self.generateGraphFromLca(lca)
-        graph_ref = self.generateGraphFromLca(lca_ref)
+    #     graph = self.generateGraphFromLca(lca)
+    #     graph_ref = self.generateGraphFromLca(lca_ref)
 
-        return graph, graph_ref
+    #     return graph, graph_ref
 
-    def view(self, prob, lca_ref):
-        graph, graph_ref = self.generateGraphsFromProbAndRef(prob, lca_ref)
-        plt.figure(1)
-        plt.title("Reference")
-        graph_ref.visualize()
-        plt.figure(2)
-        plt.title("Prediction")
-        try:
-            graph.visualize()
-        except:
-            print("Whoops")
-            lca = self.prob2lca(prob, lca_ref.size(1))
-            graph = self.generateGraphFromLca(lca)
-        # plt.show()
+    # def view(self, prob, lca_ref):
+    #     graph, graph_ref = self.generateGraphsFromProbAndRef(prob, lca_ref)
+    #     plt.figure(1)
+    #     plt.title("Reference")
+    #     graph_ref.visualize()
+    #     plt.figure(2)
+    #     plt.title("Prediction")
+    #     try:
+    #         graph.visualize()
+    #     except:
+    #         print("Whoops")
+    #         lca = self.prob2lca(prob, lca_ref.size(1))
+    #         graph = self.generateGraphFromLca(lca)
+    #     # plt.show()
 
-        input()
-        del graph, graph_ref
+    #     input()
+    #     del graph, graph_ref
 
 
     def save(self, prob, lca_ref, postfix):
