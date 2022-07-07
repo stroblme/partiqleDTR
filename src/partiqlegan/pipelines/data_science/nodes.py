@@ -13,18 +13,32 @@ import mlflow
 from .nri import bb_NRIModel, rel_pad_collate_fn
 from .graph_visualization import GraphVisualization
 
+from typing import Dict
+
 import logging
 log = logging.getLogger(__name__)
 
 
-def train_qgnn(torch_dataset_lca_and_leaves, n_hid:int, n_momenta:int, dropout_rate:float,
-                learning_rate:float, learning_rate_decay:int, gamma:float, batch_size:int, epochs:int):
+def train_qgnn( torch_dataset_lca_and_leaves:Dict, n_momenta:int,
+                n_blocks:int, dim_feedforward:int, n_layers_mlp:int, n_additional_mlp_layers:int, n_final_mlp_layers:int,
+                dropout_rate:float, learning_rate:float, learning_rate_decay:int, gamma:float, batch_size:int, epochs:int):
     n_fsps = int(max([len(subset[0]) for _, subset in torch_dataset_lca_and_leaves.items()]))+1
 
-    model = bb_NRIModel(n_momenta, n_fsps)
+    model = bb_NRIModel(infeatures=n_momenta,
+                        num_classes=n_fsps,
+                        n_blocks=n_blocks,
+                        dim_feedforward=dim_feedforward,
+                        n_layers_mlp=n_layers_mlp,
+                        n_additional_mlp_layers=n_additional_mlp_layers,
+                        n_final_mlp_layers=n_final_mlp_layers,
+                        dropout=dropout_rate,
+                        factor=True,
+                        tokenize=None,
+                        embedding_dims=None,
+                        batchnorm=True,
+                        symmetrize=True)
     model = DataParallel(model)
-    ins = Instructor(model, torch_dataset_lca_and_leaves, None, learning_rate, learning_rate_decay, gamma, batch_size, epochs)
-    # ins.testLca2Graph()
+    ins = Instructor(model, torch_dataset_lca_and_leaves, learning_rate, learning_rate_decay, gamma, batch_size, epochs)
     
     return ins.train()
 
@@ -47,7 +61,7 @@ class Instructor():
     """
     Train the encoder in an supervised manner given the ground truth relations.
     """
-    def __init__(self, model: t.nn.DataParallel, data: dict,  es: np.ndarray,
+    def __init__(self, model: t.nn.DataParallel, data: dict,
                 learning_rate: float, learning_rate_decay: int, gamma: float, batch_size:int, epochs:int):
         """
         Args:
