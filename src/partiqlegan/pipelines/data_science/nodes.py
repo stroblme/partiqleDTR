@@ -159,6 +159,30 @@ class Instructor():
             "model_qgnn":result
         }
 
+    def plotBatchGraphs(self, batch_logits, batch_ref, rows=4, cols=2):
+        fig, ax = plt.subplots(rows, cols, figsize=(15,15), gridspec_kw={'width_ratios': [1, 1]})
+        fig.tight_layout()
+        it = 0
+        for logits, lcag_ref in zip(batch_logits, batch_ref):
+            lcag = logits.max(0)[1]
+            graph = GraphVisualization()
+
+            graph.lca2graph(lcag)
+            plt.sca(ax[it][0])
+            graph.visualize(opt="max", ax=ax[it][0])
+
+            graph_ref = GraphVisualization()
+
+            graph_ref.lca2graph(lcag_ref)
+            plt.sca(ax[it][1])
+            graph_ref.visualize(opt="max", ax=ax[it][1])
+
+            if it*cols>rows:
+                break
+
+            it += 1
+
+        return plt
 
     def edge_accuracy(self, logits:t.Tensor, labels:t.Tensor)->float:
         # logits: [Batch, Classes, LCA_0, LCA_1]
@@ -167,7 +191,59 @@ class Instructor():
         correct = (labels==preds).sum().float()
         return correct/(labels.size(1)*labels.size(2))           
 
-    def lca2graph(self, lca, graph):
+
+        # Defining a Class
+class GraphVisualization:
+   
+    def __init__(self):
+          
+        # visual is a list which stores all 
+        # the set of edges that constitutes a
+        # graph
+        self.visual = []
+          
+    # addEdge function inputs the vertices of an
+    # edge and appends it to the visual list
+    def addEdge(self, a, b):
+        temp = [a, b]
+        self.visual.append(temp)
+          
+    def parentOf(self, node):
+        for edge in self.visual:
+            # childs are always in [0]
+            if node == edge[0]:
+                return edge[1]
+        return node
+
+    def childOf(self, node):
+        childs = []
+        for edge in self.visual:
+            # childs are always in [0]
+            if node == edge[1]:
+                childs.append(edge[1])
+        return childs
+
+    # In visualize function G is an object of
+    # class Graph given by networkx G.add_edges_from(visual)
+    # creates a graph with a given list
+    # nx.draw_networkx(G) - plots the graph
+    # plt.show() - displays the graph
+    def visualize(self, opt="max", ax=None):
+        G = nx.Graph()
+        G.add_edges_from(self.visual)
+        pos = None
+        try:
+            if opt=="min":
+                pos = self.hierarchy_pos(G, min(min(self.visual)))
+            elif opt=="max":
+                pos = self.hierarchy_pos(G, max(max(self.visual)))
+        except TypeError:
+            log.warning("Provided LCA is not a tree. Will use default graph style for visualization")
+            # raise RuntimeError
+        nx.draw_networkx(G, pos, ax=ax)
+        # plt.show()
+
+    def lca2graph(self, lca):
 
         nodes = [i for i in range(lca.size(0))] # first start with all nodes available directly from the lca
         processed = [] # keeps track of all nodes which are somehow used to create an edge
@@ -185,7 +261,7 @@ class Instructor():
 
             def addNodeNotInSet(node:int, parent:int, ovSet:List[Tuple[int,int]], appendSet:bool) -> List[Tuple[int,int]]:
                 if node not in ovSet:
-                        graph.addEdge(node, parent)
+                        self.addEdge(node, parent)
                         if appendSet:
                             ovSet.append(node)
                 return ovSet
@@ -218,13 +294,13 @@ class Instructor():
                     # only 1 common node -> set the ancestor to the parent of this overlap
                     elif len(overlap) == 1:
                         # overlap has only one element here
-                        ancestor = graph.parentOf(overlap[0])
+                        ancestor = self.parentOf(overlap[0])
 
                         generation = -1
                         while True:
-                            if graph.parentOf(ancestor) == ancestor:
+                            if self.parentOf(ancestor) == ancestor:
                                 break
-                            ancestor = graph.parentOf(ancestor)
+                            ancestor = self.parentOf(ancestor)
                             generation -= 1
 
                         if lca[0][0] <= generation:
@@ -240,23 +316,23 @@ class Instructor():
 
                     # full overlap -> meaning they were both processed previously
                     else:
-                        ancestor_a = graph.parentOf(overlap[0])
+                        ancestor_a = self.parentOf(overlap[0])
                         while True:
-                            if graph.parentOf(ancestor_a) == ancestor_a:
+                            if self.parentOf(ancestor_a) == ancestor_a:
                                 break
-                            ancestor_a = graph.parentOf(ancestor_a)
+                            ancestor_a = self.parentOf(ancestor_a)
 
-                        ancestor_b = graph.parentOf(overlap[1])
+                        ancestor_b = self.parentOf(overlap[1])
                         while True:
-                            if graph.parentOf(ancestor_b) == ancestor_b:
+                            if self.parentOf(ancestor_b) == ancestor_b:
                                 break
-                            ancestor_b = graph.parentOf(ancestor_b)
+                            ancestor_b = self.parentOf(ancestor_b)
 
                         # cancel if they have the same parent
                         if ancestor_a == ancestor_b:
                             break
                         # cancel if they are already connected (cause this would happen again in the next round)
-                        elif graph.parentOf(ancestor_a) == ancestor_b:
+                        elif self.parentOf(ancestor_a) == ancestor_b:
                             break # TODO check here if this break is ok
 
                         # overwrite edge by new set of parents
@@ -269,30 +345,7 @@ class Instructor():
                 lca += t.diag(t.ones(lca.size(0), dtype=t.long))
             # processed = []
 
-    def plotBatchGraphs(self, batch_logits, batch_ref):
-        fig, ax = plt.subplots(4, 2, figsize=(15,15), gridspec_kw={'width_ratios': [1, 1]})
-        fig.tight_layout()
-        it = 0
-        for logits, lcag_ref in zip(batch_logits, batch_ref):
-            lcag = logits.max(0)[1]
-            graph = GraphVisualization()
-
-            self.lca2graph(lcag, graph)
-            plt.sca(ax[it][0])
-            graph.visualize(opt="max", ax=ax[it][0])
-
-            graph_ref = GraphVisualization()
-
-            self.lca2graph(lcag_ref, graph_ref)
-            plt.sca(ax[it][1])
-            graph_ref.visualize(opt="max", ax=ax[it][1])
-
-            if it*2>4:
-                break
-
-            it += 1
-
-        return plt
+    
             
 
     def testLca2Graph(self):
@@ -433,66 +486,6 @@ class Instructor():
             it += 1
         plt.show()
         input()
-
-
-
-    def save(self, prob, lca_ref, postfix):
-        graph, graph_ref = self.generateGraphsFromProbAndRef(prob, lca_ref)
-
-        graph.save(f"pred_{postfix}")
-        graph_ref.save(f"ref_{postfix}")
-
-        # Defining a Class
-class GraphVisualization:
-   
-    def __init__(self):
-          
-        # visual is a list which stores all 
-        # the set of edges that constitutes a
-        # graph
-        self.visual = []
-          
-    # addEdge function inputs the vertices of an
-    # edge and appends it to the visual list
-    def addEdge(self, a, b):
-        temp = [a, b]
-        self.visual.append(temp)
-          
-    def parentOf(self, node):
-        for edge in self.visual:
-            # childs are always in [0]
-            if node == edge[0]:
-                return edge[1]
-        return node
-
-    def childOf(self, node):
-        childs = []
-        for edge in self.visual:
-            # childs are always in [0]
-            if node == edge[1]:
-                childs.append(edge[1])
-        return childs
-
-    # In visualize function G is an object of
-    # class Graph given by networkx G.add_edges_from(visual)
-    # creates a graph with a given list
-    # nx.draw_networkx(G) - plots the graph
-    # plt.show() - displays the graph
-    def visualize(self, opt="max", ax=None):
-        G = nx.Graph()
-        G.add_edges_from(self.visual)
-        pos = None
-        try:
-            if opt=="min":
-                pos = self.hierarchy_pos(G, min(min(self.visual)))
-            elif opt=="max":
-                pos = self.hierarchy_pos(G, max(max(self.visual)))
-        except TypeError:
-            log.warning("Provided LCA is not a tree. Will use default graph style for visualization")
-            # raise RuntimeError
-        nx.draw_networkx(G, pos, ax=ax)
-        # plt.show()
-
 
     def save(self, filename):
         G = nx.Graph()
