@@ -148,7 +148,7 @@ class Instructor():
                         best_acc = acc
                         result = self.model
                         try:
-                            c_plt = self.plotBatchGraphs(prob, labels, postfix=f"_val_e{epoch}")
+                            c_plt = self.plotBatchGraphs(prob, labels)
                         except Exception as e:
                             log.error(f"Exception occured when trying to plot graphs: {e}\n\tThe lcag matrices were:\n\t{labels.numpy()}\n\tand\n\t{prob.numpy()}")
 
@@ -170,31 +170,7 @@ class Instructor():
         }
 
 
-    # def sideSelect(self, row, col):
-    #     # return row < col # lower (results in node*(node-1)/2)
-    #     # return row > col # upper (results in node*(node-1)/2)
-    #     return row != col # all but diagonal (results in node*(node-1))
-
-   
-    # def prob2lca(self, prob, size):
-    #     batchSize = prob.size(1)
-    #     lca = torch.zeros((batchSize, size, size))
-
-    #     for batch in range(batchSize):
-    #         prob_idx = 0
-    #         for row in range(size):
-    #             for col in range(size):
-    #                 if self.sideSelect(row, col):
-    #                     _, particle_idx = torch.max(prob[prob_idx][batch], 0) # get the max prob of this prediction
-    #                     # careful, that batch is on dim 1 in the particles whereas it is in dim 0 in the lca
-    #                     lca[batch][row][col] = particle_idx
-    #                     prob_idx += 1 # use seperate indexing to ensure that we don't fall in this matrix scheme
-    #                 elif row == col:
-    #                     lca[batch][row][col] = 0 # so that after transpose and add it will sum up to -1
-
-    #     lca_sym = lca + lca.transpose(1, 2)
-
-    #     return lca_sym                
+           
 
     def lca2graph(self, lca, graph):
 
@@ -298,7 +274,7 @@ class Instructor():
                 lca += torch.diag(torch.ones(lca.size(0), dtype=torch.long))
             # processed = []
 
-    def plotBatchGraphs(self, batch_logits, batch_ref, postfix=""):
+    def plotBatchGraphs(self, batch_logits, batch_ref):
         fig, ax = plt.subplots(4, 2, figsize=(15,15), gridspec_kw={'width_ratios': [1, 1]})
         fig.tight_layout()
         it = 0
@@ -321,7 +297,6 @@ class Instructor():
 
             it += 1
 
-        # plt.savefig(f"batch_graphs_and_ref_{postfix}.png")
         return plt
             
 
@@ -446,9 +421,9 @@ class Instructor():
             [1, 2, 0, 2],
             [2, 1, 2, 0]
         ])
-        examples = [example_1, example_2, example_3, example_5]
+        examples = [example_1, example_2, example_3, example_4, example_5]
 
-        fig, ax = plt.subplots(1, 4, figsize=(15,5))
+        fig, ax = plt.subplots(1, 5, figsize=(15,5))
         fig.tight_layout()
         it = 0
         for lcag_ref in examples:
@@ -462,91 +437,8 @@ class Instructor():
 
             it += 1
         plt.show()
-        # plt.savefig(f"batch_graphs_and_ref_{postfix}.png")
+        input()
 
-
-        graph = GraphVisualization()
-        self.lca2graph(example_1, graph)
-        plt.figure(1)
-        graph.visualize("max")
-        plt.show()
-
-        graph = GraphVisualization()
-        self.lca2graph(example_2, graph)
-        plt.figure(2)
-        graph.visualize("max")
-        plt.show()
-        
-        graph = GraphVisualization()
-        self.lca2graph(example_3, graph)
-        plt.figure(3)
-        graph.visualize("max")
-        plt.show()
-
-        # pruned_lca_ref = self.prune_lca(example_4)
-
-        # adj_ref = lca2adjacency(pruned_lca_ref)
-
-        # graph_ref =self.generateGraphFromAdj(adj_ref)
-        # graph_ref.visualize()
-        
-        graph = GraphVisualization()
-        self.lca2graph(example_4, graph)
-        plt.figure(4)
-        graph.visualize("max")
-        plt.show()
-        pass
-
-
-
-    # def generateGraphFromAdj(self, adj):
-    #     graph = GraphVisualization()
-    #     for row in range(len(adj)):
-    #         for col in range(len(adj)):
-    #             if adj[row][col] and self.sideSelect(row, col):
-    #                 graph.addEdge(row, col)
-
-    #     return graph
-
-    # def generateGraphFromLca(self, lca):
-    #     graph = GraphVisualization()
-    #     self.lca2graph(lca[0], graph)
-
-    #     return graph
-
-    # def prune_lca(self,lca):
-    #     index = sum(lca[:])>0
-    #     pruned_lca = lca[index][:,index]
-
-    #     return pruned_lca                
-
-    # def generateGraphsFromProbAndRef(self, prob, lca_ref):
-    #     lca = self.prob2lca(prob, lca_ref.size(1))
-    #     # pruned_lca = self.prune_lca(lca[0])
-    #     # pruned_lca_ref = self.prune_lca(lca_ref[0])
-
-    #     graph = self.generateGraphFromLca(lca)
-    #     graph_ref = self.generateGraphFromLca(lca_ref)
-
-    #     return graph, graph_ref
-
-    # def view(self, prob, lca_ref):
-    #     graph, graph_ref = self.generateGraphsFromProbAndRef(prob, lca_ref)
-    #     plt.figure(1)
-    #     plt.title("Reference")
-    #     graph_ref.visualize()
-    #     plt.figure(2)
-    #     plt.title("Prediction")
-    #     try:
-    #         graph.visualize()
-    #     except:
-    #         print("Whoops")
-    #         lca = self.prob2lca(prob, lca_ref.size(1))
-    #         graph = self.generateGraphFromLca(lca)
-    #     # plt.show()
-
-    #     input()
-    #     del graph, graph_ref
 
 
     def save(self, prob, lca_ref, postfix):
@@ -642,12 +534,6 @@ class GraphVisualization:
         '''
         if not nx.is_tree(G):
             raise TypeError('cannot use hierarchy_pos on a graph that is not a tree')
-
-        # if root is None:
-        #     if isinstance(G, nx.DiGraph):
-        #         root = next(iter(nx.topological_sort(G)))  #allows back compatibility with nx version 1.11
-        #     else:
-        #         root = random.choice(list(G.nodes))
 
         def _hierarchy_pos(G, root, width=1., vert_gap = 0.2, vert_loc = 0, xcenter = 0.5, pos = None, parent = None):
             '''
