@@ -61,6 +61,7 @@ def train_qgnn(torch_dataset_lca_and_leaves, n_hid:int, n_momenta:int, dropout_r
     model = bb_NRIModel(n_momenta, n_fsps)
     model = DataParallel(model)
     ins = Instructor(model, torch_dataset_lca_and_leaves, None, learning_rate, learning_rate_decay, gamma, batch_size, epochs)
+    # ins.testLca2Graph()
     
     return ins.train()
 
@@ -176,7 +177,11 @@ class Instructor():
                         loss = cross_entropy(prob, labels, ignore_index=-1)
                         acc = edge_accuracy(prob, labels)
 
-                        self.optimize(self.opt, loss)
+                        # do the actual optimization
+                        self.opt.zero_grad()
+                        loss.backward()
+                        self.opt.step()
+                        
                         if labels.numpy().min() < -1:
                             raise Exception(f"Found graph with negative values: {labels.numpy()}")
                     elif mode == "val":
