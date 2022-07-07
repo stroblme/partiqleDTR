@@ -5,15 +5,15 @@ epochs: 30
 n_momenta: 4
 
 n_blocks: 3
-dim_feedforward: 512
+dim_feedforward: 128 # must be %2
 n_layers_mlp: 2
 n_additional_mlp_layers: 2
 n_final_mlp_layers: 2
 
 
 # Scale the loss to avoid gradient explosion.
-dropout_rate: 0.2
-learning_rate: 0.002 #0.00025
+dropout_rate: 0.3
+learning_rate: 0.002
 learning_rate_decay: 200
 gamma: 0.5
 batch_size: 5
