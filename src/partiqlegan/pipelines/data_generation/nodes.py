@@ -245,6 +245,7 @@ def gen_events_from_structure(parameters, decay_tree_structure):
     VAL_EVENTS_PER_TOP = parameters["VAL_EVENTS_PER_TOP"] if "VAL_EVENTS_PER_TOP" in parameters else None
     TEST_EVENTS_PER_TOP = parameters["TEST_EVENTS_PER_TOP"] if "TEST_EVENTS_PER_TOP" in parameters else None
     GENERATE_UNKNOWN = parameters["GENERATE_UNKNOWN"] if "GENERATE_UNKNOWN" in parameters else None
+    SEEDS = parameters["SEEDS"] if "SEEDS" in parameters else None
 
     events_per_mode = {'train': TRAIN_EVENTS_PER_TOP, 'val': VAL_EVENTS_PER_TOP, 'test': TEST_EVENTS_PER_TOP}
 
@@ -252,6 +253,10 @@ def gen_events_from_structure(parameters, decay_tree_structure):
     all_weights = {mode:list() for mode in MODES_NAMES}
     all_events = {mode:list() for mode in MODES_NAMES}
 
+    np.random.seed(SEEDS)
+    seeds = [np.random.randint(9999)]*len(decay_tree_structure)*len(modes)
+
+    actual_seeds = []
     for i, root_node in enumerate(decay_tree_structure):
         # NOTE generate leaves and labels for training, validation, and testing
         modes = []
@@ -266,17 +271,24 @@ def gen_events_from_structure(parameters, decay_tree_structure):
             modes = MODES_NAMES[2:]
         # save_dir.mkdir(parents=True, exist_ok=True)
 
-        for mode in modes:
+        for j, mode in enumerate(modes):
             num_events = events_per_mode[mode]
+            np.random.seed(seeds[i*len(modes)+j])
+            seed = np.random.randint(np.iinfo(np.int32).max)
+
             weights, events = root_node.generate(
                 num_events,
-                seed=np.random.randint(np.iinfo(np.int32).max),
+                seed=seed
             )
+
+            actual_seeds.append(seed)
 
             all_weights[mode].append(weights)
             all_events[mode].append(events)
+
     return {
-        "decay_tree_events": (all_weights, all_events)
+        "decay_tree_events": (all_weights, all_events),
+        "decay_events_seeds": actual_seeds
     }
 
 
