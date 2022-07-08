@@ -67,19 +67,19 @@ def create_training_qgnn_pipeline(**kwargs) -> Pipeline:
         ),
         
         node(
-                func=calculate_n_fsps,
+                func=calculate_n_classes,
                 inputs={
                     "dataset_lca_and_leaves":"dataset_lca_and_leaves",
                 },
                 outputs={
-                    "n_fsps":"n_fsps"
+                    "n_classes":"n_classes"
                 },
-                name="calculate_n_fsps"
+                name="calculate_n_classes"
         ),
         node(
                 func=create_model,
                 inputs={
-                    "n_fsps":"n_fsps",
+                    "n_classes":"n_classes",
                     "n_momenta":"params:n_momenta",
                     "n_blocks":"params:n_blocks",
                     "dim_feedforward":"params:dim_feedforward",

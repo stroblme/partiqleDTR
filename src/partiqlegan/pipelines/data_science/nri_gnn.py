@@ -157,7 +157,7 @@ class bb_NRIModel(nn.Module):
     def __init__(
         self,
         n_momenta,
-        n_fsps,
+        n_classes,
         n_blocks=3,
         dim_feedforward=128,
         n_layers_mlp=2,
@@ -175,7 +175,7 @@ class bb_NRIModel(nn.Module):
 
         assert dim_feedforward % 2 == 0, 'dim_feedforward must be an even number'
 
-        self.num_classes = n_fsps
+        self.num_classes = n_classes
         self.factor = factor
         self.tokenize = tokenize
         self.symmetrize = symmetrize

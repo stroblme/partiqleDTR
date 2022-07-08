@@ -54,18 +54,18 @@ def log_decay_parameter(
     # mlflow.log_param("seed", seed)
 
 
-def calculate_n_fsps(dataset_lca_and_leaves:Dict) -> int:
-    n_fsps = 0
+def calculate_n_classes(dataset_lca_and_leaves:Dict) -> int:
+    n_classes = 0
     for _, subset in dataset_lca_and_leaves.items():
         for lca in subset.y:
-            n_fsps = lca.max() if lca.max() > n_fsps else n_fsps
+            n_classes = lca.max() if lca.max() > n_classes else n_classes
     # n_fsps = int(max([len(subset[0]) for _, subset in dataset_lca_and_leaves.items()]))+1
 
     return{
-        "n_fsps": n_fsps
+        "n_classes": n_classes
     }
 
-def create_model(   n_fsps,
+def create_model(   n_classes,
                     n_momenta,
                     n_blocks=3,
                     dim_feedforward=128,
@@ -81,7 +81,7 @@ def create_model(   n_fsps,
                 ) -> DataParallel:
 
     model = bb_NRIModel(n_momenta=n_momenta,
-                        n_fsps=n_fsps,
+                        n_classes=n_classes,
                         n_blocks=n_blocks,
                         dim_feedforward=dim_feedforward,
                         n_layers_mlp=n_layers_mlp,
