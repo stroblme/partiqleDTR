@@ -325,7 +325,7 @@ def shuffle_lca_and_leaves_in_mode(
 #         "all_leaves_shuffled": all_leaves_shuffled
 #     }
 
-def _conv_decay_to_lca(root, pad_to=None):
+def _conv_decay_to_lca(root, pad_to=-1):
     ''' Return the LCA matrix of a decay
 
     Args:
@@ -377,7 +377,7 @@ def _conv_decay_to_lca(root, pad_to=None):
             lca_mat[i, j] = _lca
             lca_mat[j, i] = _lca
 
-    if pad_to != None:
+    if pad_to > 0:
         #increase pad_to parameter if an error occurs here
         lca_res = np.pad(lca_mat, [(0,pad_to-lca_mat.shape[0]), (0,pad_to-lca_mat.shape[1])], 'constant')
         names_res = np.pad(names, (0, pad_to-len(names)), 'constant')

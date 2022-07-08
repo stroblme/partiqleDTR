@@ -165,8 +165,8 @@ class bb_NRIModel(nn.Module):
         n_final_mlp_layers=2,
         dropout_rate=0.3,
         factor=True,
-        tokenize=None,
-        embedding_dims=None,
+        tokenize=-1,
+        embedding_dims=-1,
         batchnorm=True,
         symmetrize=True,
         **kwargs,
@@ -183,7 +183,7 @@ class bb_NRIModel(nn.Module):
         # self.max_leaves = max_leaves
 
         # Set up embedding for tokens and adjust input dims
-        if self.tokenize is not None:
+        if self.tokenize is not -1:
             assert (embedding_dims is not None) and isinstance(embedding_dims, int), 'embedding_dims must be set to an integer is tokenize is given'
 
             # Initialise the embedding layers, ignoring pad values
@@ -324,7 +324,7 @@ class bb_NRIModel(nn.Module):
 
         # Create embeddings and merge back into x
         # TODO: Move mask creation to init, optimise this loop
-        if self.tokenize is not None:
+        if self.tokenize is not -1:
             emb_x = []
             # We'll use this to drop tokenized features from x
             mask = t.ones(feats, dtype=t.bool, device=device)
