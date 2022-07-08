@@ -55,28 +55,30 @@ def create_model(   n_momenta,
                         batchnorm=batchnorm,
                         symmetrize=symmetrize)
 
-    model = DataParallel(model)
+    nri_model = DataParallel(model)
 
     return{
-        "nri_model":model
+        "nri_model":nri_model
     }
 
-def generate_instructor(torch_dataset_lca_and_leaves:Dict,
-                        model: DataParallel, data: Dict, 
+def create_instructor(  torch_dataset_lca_and_leaves:Dict,
+                        model: DataParallel,
                         learning_rate: float, learning_rate_decay: int, gamma: float,
                         batch_size:int, epochs:int) -> Instructor:
-    ins = Instructor(model, torch_dataset_lca_and_leaves, learning_rate, learning_rate_decay, gamma, batch_size, epochs)
+    instructor = Instructor(model, torch_dataset_lca_and_leaves, 
+                            learning_rate, learning_rate_decay, gamma, 
+                            batch_size, epochs)
 
     return{
-        "instructor":ins
+        "instructor":instructor
     }
 
 def train_qgnn(instructor:Instructor):
 
-    model = instructor.train()
+    trained_model = instructor.train()
 
     return{
-        "trained_model":model
+        "trained_model":trained_model
     }
 
 
