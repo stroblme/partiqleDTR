@@ -111,7 +111,7 @@ def create_artificial_pipeline(**kwargs) -> Pipeline:
                     "all_leaves_shuffled":"all_leaves_shuffled"
                 },
                 outputs={
-                    "torch_dataset_lca_and_leaves":"torch_dataset_lca_and_leaves"
+                    "dataset_lca_and_leaves":"dataset_lca_and_leaves"
                 },
                 name="lca_and_leaves_to_tuple_dataset"
         ),

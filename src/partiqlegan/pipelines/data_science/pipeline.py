@@ -69,7 +69,7 @@ def create_training_qgnn_pipeline(**kwargs) -> Pipeline:
         node(
                 func=calculate_n_fsps,
                 inputs={
-                    "torch_dataset_lca_and_leaves":"torch_dataset_lca_and_leaves",
+                    "dataset_lca_and_leaves":"dataset_lca_and_leaves",
                 },
                 outputs={
                     "n_fsps":"n_fsps"
