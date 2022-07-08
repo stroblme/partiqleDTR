@@ -62,7 +62,7 @@ def calculate_n_classes(dataset_lca_and_leaves:Dict) -> int:
     # n_fsps = int(max([len(subset[0]) for _, subset in dataset_lca_and_leaves.items()]))+1
 
     return{
-        "n_classes": n_classes
+        "n_classes": n_classes+1 # +1 for starting counting from zero (len(0..5)=5+1)
     }
 
 def create_model(   n_classes,
