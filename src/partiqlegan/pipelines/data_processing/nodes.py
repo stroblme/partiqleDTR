@@ -461,19 +461,19 @@ class TreeSet(Dataset):
 
 
 def lca_and_leaves_to_tuple_dataset(
-    lca_by_topology, leaves_by_topology
+    all_lca_shuffled, all_leaves_shuffled
 ) -> Dict[str, Tuple[List, List]]:
 
-    modes = lca_by_topology.keys()
+    modes = all_lca_shuffled.keys()
     dataset_lca_and_leaves = dict()
 
     for mode in modes:
         x_data = []
         y_data = []
-        for topology_it in range(len(lca_by_topology[mode])):
-            for i in range(len(lca_by_topology[mode][topology_it])):
-                x_data.append(leaves_by_topology[mode][topology_it][i])
-                y_data.append(lca_by_topology[mode][topology_it][i])
+        for topology_it in range(len(all_lca_shuffled[mode])):
+            for i in range(len(all_lca_shuffled[mode][topology_it])):
+                x_data.append(all_leaves_shuffled[mode][topology_it][i])
+                y_data.append(all_lca_shuffled[mode][topology_it][i])
 
         dataset_lca_and_leaves[mode] = TreeSet(x_data, y_data)
 

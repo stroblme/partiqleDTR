@@ -14,10 +14,10 @@ from typing import Dict, List
 import logging
 log = logging.getLogger(__name__)
 
-def log_git_repo():
+def log_git_repo(git_hash_identifier:str):
     repo = git.Repo(search_parent_directories=True)
     sha = repo.head.object.hexsha
-    mlflow.set_tag("git_hash", str(sha))
+    mlflow.set_tag(git_hash_identifier, str(sha))
 
 def log_decay_parameter(
                         masses:List[int],
@@ -34,20 +34,21 @@ def log_decay_parameter(
                         val_events_per_top: int,
                         test_events_per_top: int,
                         seed: int):
-    mlflow.log_param("masses", masses)
-    mlflow.log_param("fsp_masses", fsp_masses)
-    mlflow.log_param("n_topologies", n_topologies)
-    mlflow.log_param("max_depth", max_depth)
-    mlflow.log_param("max_children", max_children)
-    mlflow.log_param("min_children", min_children)
-    mlflow.log_param("isp_weight", isp_weight)
-    mlflow.log_param("iso_retries", iso_retries)
-    mlflow.log_param("generate_unknown", generate_unknown)
-    mlflow.log_param("modes_names", modes_names)
-    mlflow.log_param("train_events_per_top", train_events_per_top)
-    mlflow.log_param("val_events_per_top", val_events_per_top)
-    mlflow.log_param("test_events_per_top", test_events_per_top)
-    mlflow.log_param("seed", seed)
+    pass # just calling is enough for auto logging
+    # mlflow.log_param("masses", masses)
+    # mlflow.log_param("fsp_masses", fsp_masses)
+    # mlflow.log_param("n_topologies", n_topologies)
+    # mlflow.log_param("max_depth", max_depth)
+    # mlflow.log_param("max_children", max_children)
+    # mlflow.log_param("min_children", min_children)
+    # mlflow.log_param("isp_weight", isp_weight)
+    # mlflow.log_param("iso_retries", iso_retries)
+    # mlflow.log_param("generate_unknown", generate_unknown)
+    # mlflow.log_param("modes_names", modes_names)
+    # mlflow.log_param("train_events_per_top", train_events_per_top)
+    # mlflow.log_param("val_events_per_top", val_events_per_top)
+    # mlflow.log_param("test_events_per_top", test_events_per_top)
+    # mlflow.log_param("seed", seed)
 
 
 def calculate_n_fsps(torch_dataset_lca_and_leaves:Dict) -> int:
@@ -57,8 +58,8 @@ def calculate_n_fsps(torch_dataset_lca_and_leaves:Dict) -> int:
         "n_fsps": n_fsps
     }
 
-def create_model(   n_momenta,
-                    n_fsps,
+def create_model(   n_fsps,
+                    n_momenta,
                     n_blocks=3,
                     dim_feedforward=128,
                     n_layers_mlp=2,

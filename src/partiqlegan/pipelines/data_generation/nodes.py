@@ -246,14 +246,15 @@ def assign_parenthetical_weight_tuples(node):
 
 
 
-def gen_events_from_structure(  n_topologies: int,
+def gen_events_from_structure(  
+                                n_topologies: int,
                                 modes_names: List[str],
                                 train_events_per_top: int,
                                 val_events_per_top: int,
                                 test_events_per_top: int,
                                 generate_unknown: bool,
                                 seed: int,
-                                decay_tree_structure):
+                                decay_tree_structure: Dict[str, np.ndarray]):
     # n_topologies = parameters["N_TOPOLOGIES"] if "N_TOPOLOGIES" in parameters else None
     # modes_names = parameters["MODES_NAMES"] if "MODES_NAMES" in parameters else None
     # train_events_per_top = parameters["TRAIN_EVENTS_PER_TOP"] if "TRAIN_EVENTS_PER_TOP" in parameters else None
