@@ -17,3 +17,11 @@ learning_rate: 0.002
 learning_rate_decay: 200
 gamma: 0.5
 batch_size: 5
+
+factor: True
+tokenize: None
+embedding_dims: None
+batchnorm: True
+symmetrize: True
+
+git_hash_identifier: "git_hash"
