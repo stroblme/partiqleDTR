@@ -51,8 +51,8 @@ def log_decay_parameter(
     # mlflow.log_param("seed", seed)
 
 
-def calculate_n_fsps(torch_dataset_lca_and_leaves:Dict) -> int:
-    n_fsps = int(max([len(subset[0]) for _, subset in torch_dataset_lca_and_leaves.items()]))+1
+def calculate_n_fsps(dataset_lca_and_leaves:Dict) -> int:
+    n_fsps = int(max([len(subset[0]) for _, subset in dataset_lca_and_leaves.items()]))+1
 
     return{
         "n_fsps": n_fsps
