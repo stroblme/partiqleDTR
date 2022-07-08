@@ -58,7 +58,7 @@ def calculate_n_classes(dataset_lca_and_leaves:Dict) -> int:
     n_classes = 0
     for _, subset in dataset_lca_and_leaves.items():
         for lca in subset.y:
-            n_classes = lca.max() if lca.max() > n_classes else n_classes
+            n_classes = int(lca.max() if lca.max() > n_classes else n_classes)
     # n_fsps = int(max([len(subset[0]) for _, subset in dataset_lca_and_leaves.items()]))+1
 
     return{
