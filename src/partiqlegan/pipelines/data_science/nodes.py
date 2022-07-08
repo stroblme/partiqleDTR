@@ -17,7 +17,9 @@ log = logging.getLogger(__name__)
 def log_git_repo(git_hash_identifier:str):
     repo = git.Repo(search_parent_directories=True)
     sha = repo.head.object.hexsha
-    mlflow.set_tag(git_hash_identifier, str(sha))
+    mlflow.set_tag(git_hash_identifier, sha)
+
+    return {}
 
 def log_decay_parameter(
                         masses:List[int],
@@ -34,6 +36,7 @@ def log_decay_parameter(
                         val_events_per_top: int,
                         test_events_per_top: int,
                         seed: int):
+    
     pass # just calling is enough for auto logging
     # mlflow.log_param("masses", masses)
     # mlflow.log_param("fsp_masses", fsp_masses)
@@ -93,11 +96,11 @@ def create_model(   n_fsps,
         "nri_model":nri_model
     }
 
-def create_instructor(  torch_dataset_lca_and_leaves:Dict,
+def create_instructor(  dataset_lca_and_leaves:Dict,
                         model: DataParallel,
                         learning_rate: float, learning_rate_decay: int, gamma: float,
                         batch_size:int, epochs:int) -> Instructor:
-    instructor = Instructor(model, torch_dataset_lca_and_leaves, 
+    instructor = Instructor(model, dataset_lca_and_leaves, 
                             learning_rate, learning_rate_decay, gamma, 
                             batch_size, epochs)
 
