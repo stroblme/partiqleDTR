@@ -101,7 +101,7 @@ def create_training_qgnn_pipeline(**kwargs) -> Pipeline:
         node(
                 func=create_instructor,
                 inputs={
-                    "torch_dataset_lca_and_leaves":"torch_dataset_lca_and_leaves",
+                    "dataset_lca_and_leaves":"dataset_lca_and_leaves",
                     "model":"nri_model",
                     "learning_rate":"params:learning_rate",
                     "learning_rate_decay":"params:learning_rate_decay",
