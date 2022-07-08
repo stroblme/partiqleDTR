@@ -19,6 +19,7 @@ def create_artificial_pipeline(**kwargs) -> Pipeline:
                     "min_children":"params:min_children",
                     "isp_weight":"params:isp_weight",
                     "iso_retries":"params:iso_retries",
+                    "seed":"params:seed",
                     "generate_unknown":"params:generate_unknown"
                 },
                 outputs={
