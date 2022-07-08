@@ -9,7 +9,7 @@ import mlflow
 from .instructor import Instructor
 from .nri_gnn import bb_NRIModel
 
-from typing import Dict
+from typing import Dict, List
 
 import logging
 log = logging.getLogger(__name__)
@@ -19,7 +19,36 @@ def log_git_repo():
     sha = repo.head.object.hexsha
     mlflow.set_tag("git_hash", str(sha))
 
-def log_dataset_parameter():
+def log_decay_parameter(
+                        masses:List[int],
+                        fsp_masses:List[int],
+                        n_topologies:int,
+                        max_depth:int,
+                        max_children:int,
+                        min_children:int,
+                        isp_weight:int,
+                        iso_retries:int,
+                        generate_unknown: bool,
+                        modes_names: List[str],
+                        train_events_per_top: int,
+                        val_events_per_top: int,
+                        test_events_per_top: int,
+                        seed: int):
+    mlflow.log_param("masses", masses)
+    mlflow.log_param("fsp_masses", fsp_masses)
+    mlflow.log_param("n_topologies", n_topologies)
+    mlflow.log_param("max_depth", max_depth)
+    mlflow.log_param("max_children", max_children)
+    mlflow.log_param("min_children", min_children)
+    mlflow.log_param("isp_weight", isp_weight)
+    mlflow.log_param("iso_retries", iso_retries)
+    mlflow.log_param("generate_unknown", generate_unknown)
+    mlflow.log_param("modes_names", modes_names)
+    mlflow.log_param("train_events_per_top", train_events_per_top)
+    mlflow.log_param("val_events_per_top", val_events_per_top)
+    mlflow.log_param("test_events_per_top", test_events_per_top)
+    mlflow.log_param("seed", seed)
+
 
 def calculate_n_fsps(torch_dataset_lca_and_leaves:Dict) -> int:
     n_fsps = int(max([len(subset[0]) for _, subset in torch_dataset_lca_and_leaves.items()]))+1
