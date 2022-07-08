@@ -1,6 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+import git
+
 import torch as t
 from torch.nn.parallel import DataParallel
 from torch.nn.functional import cross_entropy
@@ -39,6 +41,11 @@ def train_qgnn( torch_dataset_lca_and_leaves:Dict, n_momenta:int,
     model = DataParallel(model)
     ins = Instructor(model, torch_dataset_lca_and_leaves, learning_rate, learning_rate_decay, gamma, batch_size, epochs)
     
+
+    repo = git.Repo(search_parent_directories=True)
+    sha = repo.head.object.hexsha
+    mlflow.set_tag("git_hash", str(sha))
+
     return ins.train()
 
 
