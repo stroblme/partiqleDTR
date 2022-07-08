@@ -21,7 +21,7 @@ model_parameters:
 
 artificial_decay:
   type: yaml.YAMLDataSet
-  filepath: data/00_parameters/artificial_decay_small.yml
+  filepath: data/00_parameters/artificial_decay.yml
   # filepath: data/00_parameters/artificial_decay.yml
 
 omega_decay:
@@ -35,13 +35,13 @@ omega_decay:
 
 decay_tree_structure:
   type: pickle.PickleDataSet
-  filepath: data/02_intermediate/decay_tree_structure_small.pkl
+  filepath: data/02_intermediate/decay_tree_structure.pkl
   # filepath: data/02_intermediate/decay_tree_structure_omega.pkl
   # filepath: data/02_intermediate/decay_tree_structure.pkl
 
 decay_tree_events:
   type: pickle.PickleDataSet
-  filepath: data/02_intermediate/decay_tree_events_small.pkl
+  filepath: data/02_intermediate/decay_tree_events.pkl
   # filepath: data/02_intermediate/decay_tree_events.pkl
 
 decay_events_seeds:

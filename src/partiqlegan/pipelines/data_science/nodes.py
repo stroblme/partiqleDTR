@@ -21,23 +21,23 @@ def log_git_repo(git_hash_identifier:str):
 
     return {}
 
-def log_decay_parameter(
-                        masses:List[int],
-                        fsp_masses:List[int],
-                        n_topologies:int,
-                        max_depth:int,
-                        max_children:int,
-                        min_children:int,
-                        isp_weight:int,
-                        iso_retries:int,
-                        generate_unknown: bool,
-                        modes_names: List[str],
-                        train_events_per_top: int,
-                        val_events_per_top: int,
-                        test_events_per_top: int,
-                        seed: int):
+# def log_decay_parameter(
+#                         masses:List[int],
+#                         fsp_masses:List[int],
+#                         n_topologies:int,
+#                         max_depth:int,
+#                         max_children:int,
+#                         min_children:int,
+#                         isp_weight:int,
+#                         iso_retries:int,
+#                         generate_unknown: bool,
+#                         modes_names: List[str],
+#                         train_events_per_top: int,
+#                         val_events_per_top: int,
+#                         test_events_per_top: int,
+#                         seed: int):
     
-    pass # just calling is enough for auto logging
+#     pass # just calling is enough for auto logging
     # mlflow.log_param("masses", masses)
     # mlflow.log_param("fsp_masses", fsp_masses)
     # mlflow.log_param("n_topologies", n_topologies)
@@ -62,7 +62,7 @@ def calculate_n_classes(dataset_lca_and_leaves:Dict) -> int:
     # n_fsps = int(max([len(subset[0]) for _, subset in dataset_lca_and_leaves.items()]))+1
 
     return{
-        "n_classes": n_classes
+        "n_classes": n_classes+1 # +1 for starting counting from zero (len(0..5)=5+1)
     }
 
 def create_model(   n_classes,
