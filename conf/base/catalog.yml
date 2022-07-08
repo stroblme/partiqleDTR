@@ -43,6 +43,7 @@ decay_tree_events:
   type: pickle.PickleDataSet
   filepath: data/02_intermediate/decay_tree_events_small.pkl
   # filepath: data/02_intermediate/decay_tree_events.pkl
+
 decay_events_seeds:
   type: pickle.PickleDataSet
   filepath: data/02_intermediate/decay_events_seeds.pkl
@@ -73,11 +74,11 @@ dataset_lca_and_leaves:
   type: pickle.PickleDataSet
   filepath: data/04_feature/dataset_lca_and_leaves.pkl
 
-torch_dataset_lca_and_leaves:
-  type: kedro_mlflow.io.artifacts.MlflowArtifactDataSet
-  data_set:
-    type: pickle.PickleDataSet
-    filepath: data/04_feature/torch_dataset_lca_and_leaves.pkl
+# torch_dataset_lca_and_leaves:
+#   type: kedro_mlflow.io.artifacts.MlflowArtifactDataSet
+#   data_set:
+#     type: pickle.PickleDataSet
+#     filepath: data/04_feature/torch_dataset_lca_and_leaves.pkl
 
 model_qgnn:
   type: kedro_mlflow.io.artifacts.MlflowArtifactDataSet
