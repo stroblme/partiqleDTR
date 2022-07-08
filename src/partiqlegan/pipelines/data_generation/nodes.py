@@ -75,24 +75,32 @@ def gen_decay_from_file(
 
 
 def gen_structure_from_parameters(
-    parameters: Dict[str, np.ndarray]
+    masses:List[int],
+    fsp_masses:List[int],
+    n_topologies:int,
+    max_depth:int,
+    max_children:int,
+    min_children:int,
+    isp_weight:int,
+    iso_retries:int,
+    generate_unknown:bool,
 ) -> Dict[str, np.ndarray]:
 
-    particles = dict()
+    # particles = dict()
 
-    MASSES = parameters["MASSES"] if "MASSES" in parameters else None
-    FSP_MASSES = parameters["FSP_MASSES"] if "FSP_MASSES" in parameters else None
-    N_TOPOLOGIES = parameters["N_TOPOLOGIES"] if "N_TOPOLOGIES" in parameters else None
-    MAX_DEPTH = parameters["MAX_DEPTH"] if "MAX_DEPTH" in parameters else None
-    MAX_CHILDREN = parameters["MAX_CHILDREN"] if "MAX_CHILDREN" in parameters else None
-    MIN_CHILDREN = parameters["MIN_CHILDREN"] if "MIN_CHILDREN" in parameters else None
-    ISP_WEIGHT = parameters["ISP_WEIGHT"] if "ISP_WEIGHT" in parameters else None
-    TRAIN_EVENTS_PER_TOP = parameters["TRAIN_EVENTS_PER_TOP"] if "TRAIN_EVENTS_PER_TOP" in parameters else None
-    VAL_EVENTS_PER_TOP = parameters["VAL_EVENTS_PER_TOP"] if "VAL_EVENTS_PER_TOP" in parameters else None
-    TEST_EVENTS_PER_TOP = parameters["TEST_EVENTS_PER_TOP"] if "TEST_EVENTS_PER_TOP" in parameters else None
-    # SEED = parameters["SEED"] if "SEED" in parameters else None
-    ISO_RETRIES = parameters["ISO_RETRIES"] if "ISO_RETRIES" in parameters else None
-    GENERATE_UNKNOWN = parameters["GENERATE_UNKNOWN"] if "GENERATE_UNKNOWN" in parameters else None
+    # masses = parameters["MASSES"] if "MASSES" in parameters else None
+    # fsp_masses = parameters["FSP_MASSES"] if "FSP_MASSES" in parameters else None
+    # n_topologies = parameters["N_TOPOLOGIES"] if "N_TOPOLOGIES" in parameters else None
+    # max_depth = parameters["MAX_DEPTH"] if "MAX_DEPTH" in parameters else None
+    # max_children = parameters["MAX_CHILDREN"] if "MAX_CHILDREN" in parameters else None
+    # min_children = parameters["MIN_CHILDREN"] if "MIN_CHILDREN" in parameters else None
+    # isp_weight = parameters["ISP_WEIGHT"] if "ISP_WEIGHT" in parameters else None
+    # TRAIN_EVENTS_PER_TOP = parameters["TRAIN_EVENTS_PER_TOP"] if "TRAIN_EVENTS_PER_TOP" in parameters else None
+    # VAL_EVENTS_PER_TOP = parameters["VAL_EVENTS_PER_TOP"] if "VAL_EVENTS_PER_TOP" in parameters else None
+    # TEST_EVENTS_PER_TOP = parameters["TEST_EVENTS_PER_TOP"] if "TEST_EVENTS_PER_TOP" in parameters else None
+    # # SEED = parameters["SEED"] if "SEED" in parameters else None
+    # iso_retries = parameters["ISO_RETRIES"] if "ISO_RETRIES" in parameters else None
+    # generate_unknown = parameters["GENERATE_UNKNOWN"] if "GENERATE_UNKNOWN" in parameters else None
 
    
 
@@ -126,29 +134,29 @@ def gen_structure_from_parameters(
         # Instead we set the seed below in the calls to generate()
         # tf.random.set_seed(np.random.randint(np.iinfo(np.int32).max))
 
-    if int(MAX_DEPTH) <= 1:
+    if int(max_depth) <= 1:
         raise ValueError("Tree needs to have at least two levels")
 
-    if int(MIN_CHILDREN) < 2:
+    if int(min_children) < 2:
         raise ValueError("min_children must be two or more")
 
-    masses = sorted(MASSES, reverse=True)
-    fsp_masses = sorted(FSP_MASSES, reverse=True)
+    masses = sorted(masses, reverse=True)
+    fsp_masses = sorted(fsp_masses, reverse=True)
     if not set(masses).isdisjoint(set(fsp_masses)):
         raise ValueError("Particles are only identified by their masses. Final state particle masses can not occur in intermediate particle masses.")
 
 
     topology_isomorphism_invariates = []
 
-    total_topologies = N_TOPOLOGIES
-    if GENERATE_UNKNOWN:
-        total_topologies = 3 * N_TOPOLOGIES
+    total_topologies = n_topologies
+    if generate_unknown:
+        total_topologies = 3 * n_topologies
 
     decay_tree_structure = list()
     
     for i in range(total_topologies):
         # NOTE generate tree for a topology
-        for j in range(max(1, ISO_RETRIES)):
+        for j in range(max(1, iso_retries)):
             queue = []
             root_node = GenParticle('root', masses[0])
             queue.append((root_node, 1))
@@ -158,7 +166,7 @@ def gen_structure_from_parameters(
                 node, level = queue.pop(0)
                 if next_level <= level:
                     next_level = level + 1
-                num_children = np.random.randint(MIN_CHILDREN, MAX_CHILDREN + 1)
+                num_children = np.random.randint(min_children, max_children + 1)
 
                 total_child_mass = 0
                 children = []
@@ -179,9 +187,9 @@ def gen_structure_from_parameters(
 
                     # use fsps if last generation or at random determined by number of possible masses and isp weight
                     if (
-                        next_level == MAX_DEPTH
+                        next_level == max_depth
                         or avail_mass <= min(masses)
-                        or np.random.random() < (1. * len(fsp_masses)) / ((1. * len(fsp_masses)) + (ISP_WEIGHT * len(masses)))
+                        or np.random.random() < (1. * len(fsp_masses)) / ((1. * len(fsp_masses)) + (isp_weight * len(masses)))
                     ):
                         child_mass = np.random.choice([n for n in fsp_masses if (n < avail_mass)])
                     else:
@@ -201,10 +209,10 @@ def gen_structure_from_parameters(
 
             # NOTE if iso_retries given, check if topology already represented in dataset
             top_iso_invar = assign_parenthetical_weight_tuples(root_node)
-            if ISO_RETRIES <= 0 or top_iso_invar not in topology_isomorphism_invariates:
+            if iso_retries <= 0 or top_iso_invar not in topology_isomorphism_invariates:
                 topology_isomorphism_invariates.append(top_iso_invar)
                 break
-            if j == (ISO_RETRIES - 1):
+            if j == (iso_retries - 1):
                 raise RuntimeError("Could not find sufficient number of non-isomorphic topologies.")
                 # print("Could not find sufficient number of non-isomorphic topologies.")
                 # continue
@@ -238,23 +246,30 @@ def assign_parenthetical_weight_tuples(node):
 
 
 
-def gen_events_from_structure(parameters, decay_tree_structure):
-    N_TOPOLOGIES = parameters["N_TOPOLOGIES"] if "N_TOPOLOGIES" in parameters else None
-    MODES_NAMES = parameters["MODES_NAMES"] if "MODES_NAMES" in parameters else None
-    TRAIN_EVENTS_PER_TOP = parameters["TRAIN_EVENTS_PER_TOP"] if "TRAIN_EVENTS_PER_TOP" in parameters else None
-    VAL_EVENTS_PER_TOP = parameters["VAL_EVENTS_PER_TOP"] if "VAL_EVENTS_PER_TOP" in parameters else None
-    TEST_EVENTS_PER_TOP = parameters["TEST_EVENTS_PER_TOP"] if "TEST_EVENTS_PER_TOP" in parameters else None
-    GENERATE_UNKNOWN = parameters["GENERATE_UNKNOWN"] if "GENERATE_UNKNOWN" in parameters else None
-    SEEDS = parameters["SEEDS"] if "SEEDS" in parameters else None
+def gen_events_from_structure(  n_topologies: int,
+                                modes_names: List[str],
+                                train_events_per_top: int,
+                                val_events_per_top: int,
+                                test_events_per_top: int,
+                                generate_unknown: bool,
+                                seed: int,
+                                decay_tree_structure):
+    # n_topologies = parameters["N_TOPOLOGIES"] if "N_TOPOLOGIES" in parameters else None
+    # modes_names = parameters["MODES_NAMES"] if "MODES_NAMES" in parameters else None
+    # train_events_per_top = parameters["TRAIN_EVENTS_PER_TOP"] if "TRAIN_EVENTS_PER_TOP" in parameters else None
+    # val_events_per_top = parameters["VAL_EVENTS_PER_TOP"] if "VAL_EVENTS_PER_TOP" in parameters else None
+    # test_events_per_top = parameters["TEST_EVENTS_PER_TOP"] if "TEST_EVENTS_PER_TOP" in parameters else None
+    # generate_unknown = parameters["GENERATE_UNKNOWN"] if "GENERATE_UNKNOWN" in parameters else None
+    # seed = parameters["SEEDS"] if "SEEDS" in parameters else None
 
-    events_per_mode = {'train': TRAIN_EVENTS_PER_TOP, 'val': VAL_EVENTS_PER_TOP, 'test': TEST_EVENTS_PER_TOP}
+    events_per_mode = {'train': train_events_per_top, 'val': val_events_per_top, 'test': test_events_per_top}
 
     
-    all_weights = {mode:list() for mode in MODES_NAMES}
-    all_events = {mode:list() for mode in MODES_NAMES}
+    all_weights = {mode:list() for mode in modes_names}
+    all_events = {mode:list() for mode in modes_names}
 
-    rd = np.random.default_rng(SEEDS) #rd.choice #TODO: check that
-    seeds = [rd.integers(9999) for i in range(len(decay_tree_structure)*len(MODES_NAMES))]
+    rd = np.random.default_rng(seed) #rd.choice #TODO: check that
+    seeds = [rd.integers(9999) for i in range(len(decay_tree_structure)*len(modes_names))]
 
     actual_seeds = []
     for i, root_node in enumerate(decay_tree_structure):
@@ -262,13 +277,13 @@ def gen_events_from_structure(parameters, decay_tree_structure):
         modes = []
         # For topologies not in the training set, save them to a different subdir
         # save_dir = Path(root, 'unknown')
-        if i < N_TOPOLOGIES or not GENERATE_UNKNOWN:
-            modes = MODES_NAMES
+        if i < n_topologies or not generate_unknown:
+            modes = modes_names
             # save_dir = Path(root, 'known')
-        elif i < (2 * N_TOPOLOGIES):
-            modes = MODES_NAMES[1:]
+        elif i < (2 * n_topologies):
+            modes = modes_names[1:]
         else:
-            modes = MODES_NAMES[2:]
+            modes = modes_names[2:]
         # save_dir.mkdir(parents=True, exist_ok=True)
 
         for j, mode in enumerate(modes):

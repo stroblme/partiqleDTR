@@ -19,6 +19,8 @@ def log_git_repo():
     sha = repo.head.object.hexsha
     mlflow.set_tag("git_hash", str(sha))
 
+def log_dataset_parameter():
+
 def calculate_n_fsps(torch_dataset_lca_and_leaves:Dict) -> int:
     n_fsps = int(max([len(subset[0]) for _, subset in torch_dataset_lca_and_leaves.items()]))+1
 
