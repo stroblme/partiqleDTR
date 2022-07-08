@@ -4,7 +4,7 @@ generated using Kedro 0.17.7
 """
 
 from kedro.pipeline import Pipeline, node, pipeline
-from .nodes import gen_decay_from_file, gen_structure_from_parameters, gen_events_from_structure
+from .nodes import *
 
 def create_artificial_pipeline(**kwargs) -> Pipeline:
     return pipeline([
