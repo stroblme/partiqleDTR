@@ -156,14 +156,14 @@ class bb_NRIModel(nn.Module):
     '''
     def __init__(
         self,
-        infeatures,
-        num_classes,
+        n_momenta,
+        n_fsps,
         n_blocks=3,
         dim_feedforward=128,
         n_layers_mlp=2,
         n_additional_mlp_layers=2,
         n_final_mlp_layers=2,
-        dropout=0.3,
+        dropout_rate=0.3,
         factor=True,
         tokenize=None,
         embedding_dims=None,
@@ -175,7 +175,7 @@ class bb_NRIModel(nn.Module):
 
         assert dim_feedforward % 2 == 0, 'dim_feedforward must be an even number'
 
-        self.num_classes = num_classes
+        self.num_classes = n_fsps
         self.factor = factor
         self.tokenize = tokenize
         self.symmetrize = symmetrize
@@ -193,19 +193,19 @@ class bb_NRIModel(nn.Module):
                 self.embed[str(idx)] = nn.Embedding(n_tokens, embedding_dims, padding_idx=0)
 
             # And update the infeatures to include the embedded feature dims and delete the original, now tokenized feats
-            infeatures = infeatures + (len(self.tokenize) * (embedding_dims - 1))
+            n_momenta = n_momenta + (len(self.tokenize) * (embedding_dims - 1))
             print(f'Set up embedding for {len(self.tokenize)} inputs')
 
         # Create first half of inital NRI half-block to go from leaves to edges
-        initial_mlp = [MLP(infeatures, dim_feedforward, dim_feedforward, dropout, batchnorm)]
+        initial_mlp = [MLP(n_momenta, dim_feedforward, dim_feedforward, dropout_rate, batchnorm)]
         # Add any additional layers as per request
         initial_mlp.extend([
-            MLP(dim_feedforward, dim_feedforward, dim_feedforward, dropout, batchnorm) for _ in range(n_layers_mlp - 1)
+            MLP(dim_feedforward, dim_feedforward, dim_feedforward, dropout_rate, batchnorm) for _ in range(n_layers_mlp - 1)
         ])
         self.initial_mlp = nn.Sequential(*initial_mlp)
 
         # MLP to reduce feature dimensions from first Node2Edge before blocks begin
-        self.pre_blocks_mlp = MLP(dim_feedforward * 2, dim_feedforward, dim_feedforward, dropout, batchnorm)
+        self.pre_blocks_mlp = MLP(dim_feedforward * 2, dim_feedforward, dim_feedforward, dropout_rate, batchnorm)
 
         if self.factor:
             # MLPs within NRI blocks
@@ -216,35 +216,35 @@ class bb_NRIModel(nn.Module):
                 nn.ModuleList([
                     # MLP layers before Edge2Node (start of block)
                     nn.ModuleList([
-                        MLP(dim_feedforward, dim_feedforward, dim_feedforward, dropout, batchnorm),
-                        nn.Sequential(*[MLP(dim_feedforward, dim_feedforward, dim_feedforward, dropout, batchnorm) for _ in range(n_additional_mlp_layers)]),
+                        MLP(dim_feedforward, dim_feedforward, dim_feedforward, dropout_rate, batchnorm),
+                        nn.Sequential(*[MLP(dim_feedforward, dim_feedforward, dim_feedforward, dropout_rate, batchnorm) for _ in range(n_additional_mlp_layers)]),
                         # This is what would be needed for a concat instead of addition of the skip connection
                         # MLP(dim_feedforward * 2, dim_feedforward, dim_feedforward, dropout, batchnorm) if (block_additional_mlp_layers > 0) else None,
                     ]),
                     # MLP layers between Edge2Node and Node2Edge (middle of block)
                     nn.ModuleList([
-                        MLP(dim_feedforward, dim_feedforward, dim_feedforward, dropout, batchnorm),
-                        nn.Sequential(*[MLP(dim_feedforward, dim_feedforward, dim_feedforward, dropout, batchnorm) for _ in range(n_additional_mlp_layers)]),
+                        MLP(dim_feedforward, dim_feedforward, dim_feedforward, dropout_rate, batchnorm),
+                        nn.Sequential(*[MLP(dim_feedforward, dim_feedforward, dim_feedforward, dropout_rate, batchnorm) for _ in range(n_additional_mlp_layers)]),
                         # This is what would be needed for a concat instead of addition of the skip connection
                         # MLP(dim_feedforward * 2, dim_feedforward, dim_feedforward, dropout, batchnorm) if (block_additional_mlp_layers > 0) else None,
                     ]),
                     # MLP layer after Node2Edge (end of block)
                     # This is just to reduce feature dim after skip connection was concatenated
-                    MLP(dim_feedforward * 3, dim_feedforward, dim_feedforward, dropout, batchnorm),
+                    MLP(dim_feedforward * 3, dim_feedforward, dim_feedforward, dropout_rate, batchnorm),
                 ]) for _ in range(n_blocks)
             ])
             print("Using factor graph MLP encoder.")
         else:
-            self.mlp3 = MLP(dim_feedforward, dim_feedforward, dim_feedforward, dropout, batchnorm)
-            self.mlp4 = MLP(dim_feedforward * 2, dim_feedforward, dim_feedforward, dropout, batchnorm)
+            self.mlp3 = MLP(dim_feedforward, dim_feedforward, dim_feedforward, dropout_rate, batchnorm)
+            self.mlp4 = MLP(dim_feedforward * 2, dim_feedforward, dim_feedforward, dropout_rate, batchnorm)
             print("Using MLP encoder.")
 
         # Final linear layers as requested
         # self.final_mlp = nn.Sequential(*[MLP(dim_feedforward, dim_feedforward, dim_feedforward, dropout, batchnorm) for _ in range(final_mlp_layers)])
-        final_mlp = [MLP(dim_feedforward * 2, dim_feedforward, dim_feedforward, dropout, batchnorm)]
+        final_mlp = [MLP(dim_feedforward * 2, dim_feedforward, dim_feedforward, dropout_rate, batchnorm)]
         # Add any additional layers as per request
         final_mlp.extend([
-            MLP(dim_feedforward, dim_feedforward, dim_feedforward, dropout, batchnorm) for _ in range(n_final_mlp_layers - 1)
+            MLP(dim_feedforward, dim_feedforward, dim_feedforward, dropout_rate, batchnorm) for _ in range(n_final_mlp_layers - 1)
         ])
         self.final_mlp = nn.Sequential(*final_mlp)
 
