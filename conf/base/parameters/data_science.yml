@@ -19,8 +19,8 @@ gamma: 0.5
 batch_size: 5
 
 factor: True
-tokenize: None
-embedding_dims: None
+tokenize: -1
+embedding_dims: -1
 batchnorm: True
 symmetrize: True
 
