@@ -43,6 +43,10 @@ decay_tree_events:
   type: pickle.PickleDataSet
   filepath: data/02_intermediate/decay_tree_events_small.pkl
   # filepath: data/02_intermediate/decay_tree_events.pkl
+decay_events_seeds:
+  type: pickle.PickleDataSet
+  filepath: data/02_intermediate/decay_events_seeds.pkl
+  # filepath: data/02_intermediate/decay_tree_events.pkl
 
 # --------------------------------
 

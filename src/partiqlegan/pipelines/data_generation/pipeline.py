@@ -20,7 +20,8 @@ def create_artificial_pipeline(**kwargs) -> Pipeline:
                 func=gen_events_from_structure,
                 inputs=["artificial_decay", "decay_tree_structure"],
                 outputs={
-                    "decay_tree_events":"decay_tree_events"
+                    "decay_tree_events":"decay_tree_events",
+                    "decay_events_seeds":"decay_events_seeds"
                 },
                 name="gen_events_from_structure",
         )
