@@ -55,7 +55,11 @@ def log_decay_parameter(
 
 
 def calculate_n_fsps(dataset_lca_and_leaves:Dict) -> int:
-    n_fsps = int(max([len(subset[0]) for _, subset in dataset_lca_and_leaves.items()]))+1
+    n_fsps = 0
+    for _, subset in dataset_lca_and_leaves.items():
+        for lca in subset.y:
+            n_fsps = lca.max() if lca.max() > n_fsps else n_fsps
+    # n_fsps = int(max([len(subset[0]) for _, subset in dataset_lca_and_leaves.items()]))+1
 
     return{
         "n_fsps": n_fsps
