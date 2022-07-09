@@ -83,7 +83,7 @@ class dgnn(nn.Module):
         symmetrize=True,
         **kwargs,
     ):
-        super(bb_NRIModel, self).__init__()
+        super(dgnn, self).__init__()
 
         assert dim_feedforward % 2 == 0, 'dim_feedforward must be an even number'
 
