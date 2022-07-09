@@ -7,7 +7,8 @@ from typing import Dict, Tuple, Any, List
 from phasespace import GenParticle, nbody_decay
 from phasespace.fromdecay import GenMultiDecay
 from decaylanguage import DecFileParser, DecayChainViewer 
-
+import random
+import tensorflow as tf
 
 def gen_decay_from_file(
     decaylanguage: Dict[str, Any]
@@ -83,6 +84,7 @@ def gen_structure_from_parameters(
     min_children:int,
     isp_weight:int,
     iso_retries:int,
+    seed:int,
     generate_unknown:bool,
 ) -> Dict[str, np.ndarray]:
 
@@ -153,6 +155,10 @@ def gen_structure_from_parameters(
         total_topologies = 3 * n_topologies
 
     decay_tree_structure = list()
+
+    rd = np.random.default_rng(seed) #rd.choice #TODO: check that
+    n_seeds = total_topologies*max(1, iso_retries) # TODO: this is chosen on gut feeling.. 
+    seeds = [rd.integers(n_seeds*1000) for i in range(n_seeds)]
     
     for i in range(total_topologies):
         # NOTE generate tree for a topology
@@ -162,11 +168,12 @@ def gen_structure_from_parameters(
             queue.append((root_node, 1))
             name = 1
             next_level = 1
+            l_rd = np.random.default_rng(seeds[i*max(1, iso_retries)+j])
             while len(queue) > 0:
                 node, level = queue.pop(0)
                 if next_level <= level:
                     next_level = level + 1
-                num_children = np.random.randint(min_children, max_children + 1)
+                num_children = l_rd.integers(min_children, max_children + 1)
 
                 total_child_mass = 0
                 children = []
@@ -177,7 +184,9 @@ def gen_structure_from_parameters(
                 if avail_mass <= (2 * min(fsp_masses)):
                     raise ValueError("Any ISP mass given has to be larger than two times the smallest FSP mass.")
 
+                c_seeds = [l_rd.integers(num_children*1000) for nc in range(num_children)]
                 for k in range(num_children):
+                    c_rd = np.random.default_rng(c_seeds[k])
                     # Only want to select children from mass/energy available
                     avail_mass -= total_child_mass
 
@@ -191,9 +200,9 @@ def gen_structure_from_parameters(
                         or avail_mass <= min(masses)
                         or np.random.random() < (1. * len(fsp_masses)) / ((1. * len(fsp_masses)) + (isp_weight * len(masses)))
                     ):
-                        child_mass = np.random.choice([n for n in fsp_masses if (n < avail_mass)])
+                        child_mass = c_rd.choice([n for n in fsp_masses if (n < avail_mass)])
                     else:
-                        child_mass = np.random.choice([n for n in masses if (n < avail_mass)])
+                        child_mass = c_rd.choice([n for n in masses if (n < avail_mass)])
                     total_child_mass += child_mass
 
                     if total_child_mass > node._mass_val:
@@ -270,7 +279,8 @@ def gen_events_from_structure(
     all_events = {mode:list() for mode in modes_names}
 
     rd = np.random.default_rng(seed) #rd.choice #TODO: check that
-    seeds = [rd.integers(9999) for i in range(len(decay_tree_structure)*len(modes_names))]
+    n_seeds = len(decay_tree_structure)*len(modes_names)
+    seeds = [rd.integers(n_seeds*1000) for i in range(n_seeds)]
 
     actual_seeds = []
     for i, root_node in enumerate(decay_tree_structure):
@@ -290,14 +300,16 @@ def gen_events_from_structure(
         for j, mode in enumerate(modes):
             num_events = events_per_mode[mode]
             l_rd = np.random.default_rng(seeds[i*len(modes)+j])
-            seed = l_rd.integers(np.iinfo(np.int32).max)
-
+            l_seed = l_rd.integers(np.iinfo(np.int32).max)
+            
+            random.seed(l_seed)
+            np.random.seed(l_seed)
+            tf.random.set_seed(l_seed)
             weights, events = root_node.generate(
                 num_events,
-                seed=seed
+                seed=l_seed
             )
-
-            actual_seeds.append(seed)
+            actual_seeds.append(l_seed)
 
             all_weights[mode].append(weights)
             all_events[mode].append(events)

@@ -1,3 +1,4 @@
+from pickletools import optimize
 import matplotlib.pyplot as plt
 
 import torch as t
@@ -80,9 +81,7 @@ class Instructor():
                         acc = self.edge_accuracy(prob, labels)
 
                         # do the actual optimization
-                        self.opt.zero_grad()
-                        loss.backward()
-                        self.opt.step()
+                        self.optimize(self.opt, loss)
 
                         if labels.numpy().min() < -1:
                             raise Exception(f"Found graph with negative values: {labels.numpy()}")
@@ -133,6 +132,12 @@ class Instructor():
         return {
             "model_qgnn":result
         }
+
+    @staticmethod
+    def optimize(self, opt, loss):
+        opt.zero_grad()
+        loss.backward()
+        opt.step()
 
     def plotBatchGraphs(self, batch_logits, batch_ref, rows=4, cols=2):
         fig, ax = plt.subplots(rows, cols, figsize=(15,15), gridspec_kw={'width_ratios': [1, 1]})
