@@ -120,7 +120,7 @@ def create_training_qgnn_pipeline(**kwargs) -> Pipeline:
                     "instructor":"instructor"
                     },
                 outputs={
-                    "model_qgnn":"trained_model"
+                    "trained_model":"trained_model"
                 },
                 name="train_qgnn"
         )

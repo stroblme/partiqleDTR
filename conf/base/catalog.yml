@@ -80,7 +80,7 @@ dataset_lca_and_leaves:
 #     type: pickle.PickleDataSet
 #     filepath: data/04_feature/torch_dataset_lca_and_leaves.pkl
 
-model_qgnn:
+trained_model:
   type: kedro_mlflow.io.artifacts.MlflowArtifactDataSet
   data_set:
     type: pickle.PickleDataSet
