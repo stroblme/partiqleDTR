@@ -9,7 +9,7 @@ import mlflow
 from .instructor import Instructor
 from .gnn import gnn
 from .dgnn import dgnn
-from .dqgnn import dqgnn
+# from .dqgnn import dqgnn
 
 from typing import Dict, List
 
