@@ -7,7 +7,9 @@ from torch.nn.parallel import DataParallel
 import mlflow
 
 from .instructor import Instructor
-from .nri_gnn import bb_NRIModel
+from .gnn import gnn
+from .dgnn import dgnn
+from .dqgnn import dqgnn
 
 from typing import Dict, List
 
@@ -20,7 +22,7 @@ def log_git_repo(git_hash_identifier:str):
     mlflow.set_tag(git_hash_identifier, sha)
 
     return {}
-    
+
 def calculate_n_classes(dataset_lca_and_leaves:Dict) -> int:
     n_classes = 0
     for _, subset in dataset_lca_and_leaves.items():
@@ -47,7 +49,7 @@ def create_model(   n_classes,
                     symmetrize=True
                 ) -> DataParallel:
 
-    model = bb_NRIModel(n_momenta=n_momenta,
+    model = dgnn(n_momenta=n_momenta,
                         n_classes=n_classes,
                         n_blocks=n_blocks,
                         dim_feedforward=dim_feedforward,

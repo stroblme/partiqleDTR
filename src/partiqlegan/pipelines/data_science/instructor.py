@@ -9,7 +9,7 @@ from torch.utils.data import Dataset, DataLoader
 
 import mlflow
 
-from .nri_gnn import rel_pad_collate_fn
+from .utils import rel_pad_collate_fn
 from .graph_visualization import GraphVisualization
 
 from typing import Dict
