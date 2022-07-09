@@ -3,6 +3,7 @@ from torch import nn
 import torch.nn.functional as F
 
 from .utils import *
+    
 class MLP(nn.Module):
     """Two-layer fully-connected ELU net with batch norm."""
 
@@ -46,7 +47,7 @@ class MLP(nn.Module):
         return self.batch_norm_layer(x) if self.batchnorm else x  # (b, l, d)
 
 
-class gnn(nn.Module):
+class dgnn(nn.Module):
     ''' NRI model built off the official implementation.
 
     Contains adaptations to make it work with our use case, plus options for extra layers to give it some more oomph
@@ -82,7 +83,7 @@ class gnn(nn.Module):
         symmetrize=True,
         **kwargs,
     ):
-        super(gnn, self).__init__()
+        super(bb_NRIModel, self).__init__()
 
         assert dim_feedforward % 2 == 0, 'dim_feedforward must be an even number'
 
