@@ -20,40 +20,7 @@ def log_git_repo(git_hash_identifier:str):
     mlflow.set_tag(git_hash_identifier, sha)
 
     return {}
-
-# def log_decay_parameter(
-#                         masses:List[int],
-#                         fsp_masses:List[int],
-#                         n_topologies:int,
-#                         max_depth:int,
-#                         max_children:int,
-#                         min_children:int,
-#                         isp_weight:int,
-#                         iso_retries:int,
-#                         generate_unknown: bool,
-#                         modes_names: List[str],
-#                         train_events_per_top: int,
-#                         val_events_per_top: int,
-#                         test_events_per_top: int,
-#                         seed: int):
     
-#     pass # just calling is enough for auto logging
-    # mlflow.log_param("masses", masses)
-    # mlflow.log_param("fsp_masses", fsp_masses)
-    # mlflow.log_param("n_topologies", n_topologies)
-    # mlflow.log_param("max_depth", max_depth)
-    # mlflow.log_param("max_children", max_children)
-    # mlflow.log_param("min_children", min_children)
-    # mlflow.log_param("isp_weight", isp_weight)
-    # mlflow.log_param("iso_retries", iso_retries)
-    # mlflow.log_param("generate_unknown", generate_unknown)
-    # mlflow.log_param("modes_names", modes_names)
-    # mlflow.log_param("train_events_per_top", train_events_per_top)
-    # mlflow.log_param("val_events_per_top", val_events_per_top)
-    # mlflow.log_param("test_events_per_top", test_events_per_top)
-    # mlflow.log_param("seed", seed)
-
-
 def calculate_n_classes(dataset_lca_and_leaves:Dict) -> int:
     n_classes = 0
     for _, subset in dataset_lca_and_leaves.items():
