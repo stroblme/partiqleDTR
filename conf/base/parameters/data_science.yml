@@ -1,11 +1,11 @@
 ---
-epochs: 30
+epochs: 50
 
 # 3 for kuramoto and 4 for spring and charged.
 n_momenta: 4
 
 n_blocks: 3
-dim_feedforward: 128
+dim_feedforward: 64
 n_layers_mlp: 2
 n_additional_mlp_layers: 2
 n_final_mlp_layers: 2
