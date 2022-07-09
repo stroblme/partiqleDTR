@@ -11,7 +11,7 @@ from .gnn import gnn
 from .dgnn import dgnn
 # from .dqgnn import dqgnn
 
-from typing import Dict, List
+from typing import Dict
 
 import logging
 log = logging.getLogger(__name__)
