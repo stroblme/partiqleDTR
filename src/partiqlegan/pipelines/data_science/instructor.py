@@ -134,7 +134,7 @@ class Instructor():
         }
 
     @staticmethod
-    def optimize(self, opt, loss):
+    def optimize(opt, loss):
         opt.zero_grad()
         loss.backward()
         opt.step()
