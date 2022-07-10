@@ -8,18 +8,21 @@ def construct_rel_recvs(ln_leaves, self_interaction=False, device=None):
     pad_len = max(ln_leaves)
     rel_recvs = []
     for l in ln_leaves:
-        rel_recv = t.eye(pad_len, device=device)  # (l, l)
-        rel_recv[:, l:] = 0
-        rel_recv = rel_recv.repeat_interleave(pad_len, dim=1).T  # (l*l, l)
+        rel_recv = t.eye(pad_len, device=device)  # (l, l), identity matrix
+        rel_recv[:, l:] = 0 # set everything "behind" the actual number of classes to zero
+        rel_recv = rel_recv.repeat_interleave(pad_len, dim=1).T  # (l*l, l) # repeat each row of this matrix l times
+
+        # we trim of the "intermediate" ones here
         for j in range(l, pad_len):  # remove padding vertex edges TODO optimize
             rel_recv[j::pad_len] = 0
 
+        # and here we remove the "ones" on the diagonal
         if self_interaction == False:
             rel_recv[0::pad_len + 1] = 0
 
-        rel_recvs.append(rel_recv)
+        rel_recvs.append(rel_recv) # append to form a batch
 
-    return t.stack(rel_recvs)
+    return t.stack(rel_recvs) # convert list to tensor
 
 
 def construct_rel_sends(ln_leaves, self_interaction=False, device=None):
@@ -35,8 +38,8 @@ def construct_rel_sends(ln_leaves, self_interaction=False, device=None):
             # rel_send = rel_send[rel_send.sum(dim=1) > 0]  # (l*l, l)
 
         # padding
-        rel_send[:, l:] = 0
-        rel_send[l*(pad_len):] = 0
+        rel_send[:, l:] = 0 # set everything "behind" the actual number of classes to zero
+        rel_send[l*(pad_len):] = 0 # set everything "below" the actual number of classes repeated pads to zero
         rel_sends.append(rel_send)
     return t.stack(rel_sends)
 
