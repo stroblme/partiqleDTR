@@ -94,7 +94,7 @@ class gnn(nn.Module):
         # self.max_leaves = max_leaves
 
         # Set up embedding for tokens and adjust input dims
-        if self.tokenize is not -1:
+        if self.tokenize != -1:
             assert (embedding_dims is not None) and isinstance(embedding_dims, int), 'embedding_dims must be set to an integer is tokenize is given'
 
             # Initialise the embedding layers, ignoring pad values
@@ -236,7 +236,7 @@ class gnn(nn.Module):
 
         # Create embeddings and merge back into x
         # TODO: Move mask creation to init, optimise this loop
-        if self.tokenize is not -1:
+        if self.tokenize != -1:
             emb_x = []
             # We'll use this to drop tokenized features from x
             mask = t.ones(feats, dtype=t.bool, device=device)
