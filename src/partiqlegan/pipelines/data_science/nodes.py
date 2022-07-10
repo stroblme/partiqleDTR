@@ -1,3 +1,4 @@
+import enum
 import git
 
 import torch as t
@@ -10,6 +11,7 @@ from .instructor import Instructor
 from .gnn import gnn
 from .dgnn import dgnn
 # from .dqgnn import dqgnn
+models = {"gnn":gnn, "dgnn":dgnn}
 
 from typing import Dict
 
@@ -34,8 +36,10 @@ def calculate_n_classes(dataset_lca_and_leaves:Dict) -> int:
         "n_classes": n_classes+1 # +1 for starting counting from zero (len(0..5)=5+1)
     }
 
+
 def create_model(   n_classes,
                     n_momenta,
+                    model_sel,
                     n_blocks=3,
                     dim_feedforward=128,
                     n_layers_mlp=2,
@@ -49,7 +53,7 @@ def create_model(   n_classes,
                     symmetrize=True
                 ) -> DataParallel:
 
-    model = dgnn(n_momenta=n_momenta,
+    model = models[model_sel](n_momenta=n_momenta,
                         n_classes=n_classes,
                         n_blocks=n_blocks,
                         dim_feedforward=dim_feedforward,

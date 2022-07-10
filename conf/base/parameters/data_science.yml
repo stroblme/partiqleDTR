@@ -1,4 +1,6 @@
 ---
+model_sel: "gnn"
+
 epochs: 50
 
 # 3 for kuramoto and 4 for spring and charged.
