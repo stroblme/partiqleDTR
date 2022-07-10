@@ -1,4 +1,3 @@
-import enum
 import git
 
 import torch as t
