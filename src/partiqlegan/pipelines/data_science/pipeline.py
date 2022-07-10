@@ -81,6 +81,7 @@ def create_training_qgnn_pipeline(**kwargs) -> Pipeline:
                 inputs={
                     "n_classes":"n_classes",
                     "n_momenta":"params:n_momenta",
+                    "model_sel":"model_sel",
                     "n_blocks":"params:n_blocks",
                     "dim_feedforward":"params:dim_feedforward",
                     "n_layers_mlp":"params:n_layers_mlp",
