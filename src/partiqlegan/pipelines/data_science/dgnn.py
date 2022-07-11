@@ -2,6 +2,8 @@ import torch as t
 from torch import nn
 import torch.nn.functional as F
 
+import numpy as np
+
 from .utils import *
     
 class MLP(nn.Module):
@@ -95,7 +97,7 @@ class dgnn(nn.Module):
         # self.max_leaves = max_leaves
 
         # Set up embedding for tokens and adjust input dims
-        if self.tokenize is not -1:
+        if self.tokenize != -1:
             assert (embedding_dims is not None) and isinstance(embedding_dims, int), 'embedding_dims must be set to an integer is tokenize is given'
 
             # Initialise the embedding layers, ignoring pad values
@@ -194,6 +196,14 @@ class dgnn(nn.Module):
 
         return edges
 
+    def decompose(self, x):
+        classes = int(np.sqrt(x.shape[1]))
+        x_split = []
+        for c in range(classes-1):
+            x_split.append(x[:,c*c:c*c+classes,:])
+
+        return x_split
+
     def forward(self, inputs):
         '''
         Input: (l, b, d)
@@ -237,7 +247,7 @@ class dgnn(nn.Module):
 
         # Create embeddings and merge back into x
         # TODO: Move mask creation to init, optimise this loop
-        if self.tokenize is not -1:
+        if self.tokenize != -1:
             emb_x = []
             # We'll use this to drop tokenized features from x
             mask = t.ones(feats, dtype=t.bool, device=device)
@@ -263,35 +273,38 @@ class dgnn(nn.Module):
             # Skip connection to jump over all NRI blocks
             x_global_skip = x
 
-            for block in self.blocks:
-                x_skip = x  # (b, l*l, d)
+            x_decomposed = self.decompose(x) 
+            for x in x_decomposed:
 
-                # First MLP sequence
-                x = block[0][0](x)  # (b, l*l, d)
-                if self.block_additional_mlp_layers > 0:
-                    x_first_skip = x  # (b, l*l, d)
-                    x = block[0][1](x)  # (b, l*l, d)
-                    x = x + x_first_skip  # (b, l*l, d)
-                    del x_first_skip
+                for block in self.blocks:
+                    x_skip = x  # (b, l*l, d)
 
-                # Create nodes from edges
-                x = self.edge2node(x, rel_rec)  # (b, l, d)
+                    # First MLP sequence
+                    x = block[0][0](x)  # (b, l*l, d)
+                    if self.block_additional_mlp_layers > 0:
+                        x_first_skip = x  # (b, l*l, d)
+                        x = block[0][1](x)  # (b, l*l, d)
+                        x = x + x_first_skip  # (b, l*l, d)
+                        del x_first_skip
 
-                # Second MLP sequence
-                x = block[1][0](x)  # (b, l, d)
-                if self.block_additional_mlp_layers > 0:
-                    x_second_skip = x  # (b, l*l, d)
-                    x = block[1][1](x)  # (b, l*l, d)
-                    x = x + x_second_skip  # (b, l*l, d)
-                    del x_second_skip
+                    # Create nodes from edges
+                    x = self.edge2node(x, rel_rec)  # (b, l, d)
 
-                # Create edges from nodes
-                x = self.node2edge(x, rel_rec, rel_send)  # (b, l*l, 2d)
+                    # Second MLP sequence
+                    x = block[1][0](x)  # (b, l, d)
+                    if self.block_additional_mlp_layers > 0:
+                        x_second_skip = x  # (b, l*l, d)
+                        x = block[1][1](x)  # (b, l*l, d)
+                        x = x + x_second_skip  # (b, l*l, d)
+                        del x_second_skip
 
-                # Final MLP in block to reduce dimensions again
-                x = t.cat((x, x_skip), dim=2)  # Skip connection  # (b, l*l, 3d)
-                x = block[2](x)  # (b, l*l, d)
-                del x_skip
+                    # Create edges from nodes
+                    x = self.node2edge(x, rel_rec, rel_send)  # (b, l*l, 2d)
+
+                    # Final MLP in block to reduce dimensions again
+                    x = t.cat((x, x_skip), dim=2)  # Skip connection  # (b, l*l, 3d)
+                    x = block[2](x)  # (b, l*l, d)
+                    del x_skip
 
             # Global skip connection
             x = t.cat((x, x_global_skip), dim=2)  # Skip connection  # (b, l*(l-1), 2d)
