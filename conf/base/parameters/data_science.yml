@@ -1,5 +1,5 @@
 ---
-model_sel: "gnn"
+model_sel: "qgnn"
 
 epochs: 50
 
