@@ -8,9 +8,10 @@ import mlflow
 
 from .instructor import Instructor
 from .gnn import gnn
+from .qgnn import qgnn
 from .dgnn import dgnn
 # from .dqgnn import dqgnn
-models = {"gnn":gnn, "dgnn":dgnn}
+models = {"gnn":gnn, "qgnn":qgnn, "dgnn":dgnn}
 
 from typing import Dict
 
