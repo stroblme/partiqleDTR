@@ -42,22 +42,36 @@ class QuantumCircuit:
                 # self.enc_qc.rz(q.circuit.Parameter(f"enc_rz_{l}_{i}"), i)
 
         self.var_qc = q.QuantumCircuit(n_qubits)
-        for l in range(n_layers[1]):
-            # for i in range(n_qubits):
-            #     self.var_qc.rx(q.circuit.Parameter(f"var_rx_0_{l}_{i}"), i, f"var_rx_0_{l}_{i}")
-            for i in range(n_qubits-1):
-                self.var_qc.cx(i, i+1)
-            # self.var_qc.barrier()
-            # for i in range(n_qubits):
-            #     self.var_qc.rz(q.circuit.Parameter(f"var_rz_{l}_{i}"), i)
-            # for i in range(n_qubits-1):
-            #     self.var_qc.cx(i, i+1)
-            # self.var_qc.barrier()
-            # for i in range(n_qubits):
-            #     self.var_qc.rx(q.circuit.Parameter(f"var_rx_1_{l}_{i}"), i, f"var_rx_1_{l}_{i}")
-            # for i in range(n_qubits-1):
-            #     self.var_qc.cx(i, i+1)
-            # self.var_qc.barrier()
+        
+        def swap_registers(circuit, n):
+            for qubit in range(n//2):
+                circuit.swap(qubit, n-qubit-1)
+            return circuit
+
+        def qft_rotations(circuit, n):
+            """Performs qft on the first n qubits in circuit (without swaps)"""
+            if n == 0:
+                return circuit
+            n -= 1
+            circuit.h(n)
+            for qubit in range(n):
+                circuit.cp(np.pi/2**(n-qubit), qubit, n)
+            # At the end of our function, we call the same function again on
+            # the next qubits (we reduced n by one earlier in the function)
+            qft_rotations(circuit, n)
+            
+        def qft(circuit, n):
+            """QFT on the first n qubits in circuit"""
+            qft_rotations(circuit, n)
+            swap_registers(circuit, n)
+            return circuit
+
+
+        qft(self.var_qc,3) # apply qft on the first 3 (momenta) the last one is energy
+        for i in range(n_qubits-1):
+                self.var_qc.cx(i, 3)
+
+        # Let's see how it looks:
 
         self.qc = self.enc_qc.compose(self.var_qc)
         self.qc.measure_all()
