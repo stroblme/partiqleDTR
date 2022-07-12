@@ -32,7 +32,7 @@ class QuantumCircuit:
         # --- Circuit definition ---
         self.shots = shots
         self.backend = backend
-        
+        self.n_qubits = n_qubits
         # parameters = [np.random.uniform(-np.pi, np.pi) for i in range(n_qubits*(n_layers[0]*len(rot_gates_enc)+n_layers[1]*len(rot_gates_pqc)+n_layers[1]*len(ent_gates_pqc)))]
         
         self.enc_qc = q.QuantumCircuit(n_qubits)
@@ -41,7 +41,7 @@ class QuantumCircuit:
                 self.enc_qc.ry(q.circuit.Parameter(f"enc_ry_{l}_{i}"), i, f"enc_ry_{l}_{i}")
                 # self.enc_qc.rz(q.circuit.Parameter(f"enc_rz_{l}_{i}"), i)
 
-        self.var_qc = q.QuantumCircuit(n_qubits)
+        self.qft_qc = q.QuantumCircuit(n_qubits)
         
         def swap_registers(circuit, n):
             for qubit in range(n//2):
@@ -67,14 +67,15 @@ class QuantumCircuit:
             return circuit
 
 
-        qft(self.var_qc,3) # apply qft on the first 3 (momenta) the last one is energy
+        qft(self.qft_qc,3) # apply qft on the first 3 (momenta) the last one is energy
         for i in range(n_qubits-1):
-                self.var_qc.cx(i, 3)
+                self.qft_qc.cx(i, 3)
 
         # Let's see how it looks:
 
-        self.qc = self.enc_qc.compose(self.var_qc)
-        self.qc.measure_all()
+        # self.qc = self.enc_qc.compose(self.var_qc)
+        self.qft_qc.measure_all()
+        self.qft_qc_transpiled = q.transpile(self.qft_qc, self.backend, optimization_level=2)
 
         # self.qc.draw()
     
@@ -89,12 +90,12 @@ class QuantumCircuit:
     def bitstring_decode(self, results):
         shots = sum(results.values())
 
-        average = np.zeros(self.qc.num_qubits)
+        average = np.zeros(self.n_qubits)
         for bitstring, counts in results.items():
             for i, s in enumerate(bitstring):
                 average[i] += counts if s == "1" else 0
 
-        return average/(shots*self.qc.num_qubits)
+        return average/(shots*self.n_qubits)
 
     def run(self, nd_data):
         circuits = []
@@ -105,12 +106,12 @@ class QuantumCircuit:
                 break # shortcut to prevent unnecessary circuit exec.
             else:
                 scaled_data = np.interp(data, (data.min(), data.max()), (0, 2*np.pi))
-                circuits.append(self.qc.assign_parameters(self.circuit_parameters(scaled_data.tolist())))
+                enc_qc_param = self.enc_qc.assign_parameters(self.circuit_parameters(scaled_data.tolist())) # assign parameters to the encoding circuit
+                circuits.append(q.transpile(enc_qc_param, self.backend, optimization_level=1) + self.qft_qc_transpiled) # combine the encoding and qft circuit and append both to the circuit list
 
+        
 
-
-        # backend = q.BasicAer.get_backend('qasm_simulator')
-        results =  q.execute(circuits, self.backend).result()
+        results =  q.execute(circuits, self.backend, shots=self.shots).result()
         expectations = [self.bitstring_decode(results.get_counts(c)) for c in circuits]
         expectations = np.append(expectations, [np.zeros(4)]*(len(nd_data)-ignore_after), axis=0) if ignore_after >= 0 else expectations
         # counts = np.array(list(results.get_counts().values()))
@@ -309,6 +310,7 @@ class qftgnn(nn.Module):
         ])
         self.initial_mlp = nn.Sequential(*initial_mlp)
         self.hybrid = Hybrid(q.Aer.get_backend('aer_simulator'), 100, np.pi / 2)
+        # self.hybrid = Hybrid(q.Aer.get_backend('aer_simulator'), 1, np.pi / 2)
 
         # MLP to reduce feature dimensions from first Node2Edge before blocks begin
         self.pre_blocks_mlp = MLP(dim_feedforward * 2, dim_feedforward, dim_feedforward, dropout_rate, batchnorm)
