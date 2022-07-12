@@ -1,6 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+from enum import Enum
+
 import torch
 from torch.autograd import Function
 from torchvision import datasets, transforms
@@ -22,13 +24,17 @@ import logging
 log = logging.getLogger(__name__)
 log.setLevel(logging.WARNING)
 
+
+class CircuitType(Enum):
+    EdgeNetwork = 1
+    NodeNetwork = 2
 class QuantumCircuit:
     """ 
     This class provides a simple interface for interaction 
     with the quantum circuit 
     """
     
-    def __init__(self, n_qubits, n_layers, backend, shots):
+    def __init__(self, n_qubits:int, circuit_type:CircuitType, backend, shots):
         # --- Circuit definition ---
         self.shots = shots
         self.backend = backend
@@ -36,45 +42,45 @@ class QuantumCircuit:
         # parameters = [np.random.uniform(-np.pi, np.pi) for i in range(n_qubits*(n_layers[0]*len(rot_gates_enc)+n_layers[1]*len(rot_gates_pqc)+n_layers[1]*len(ent_gates_pqc)))]
         
         self.enc_qc = q.QuantumCircuit(n_qubits)
-        for l in range(n_layers[0]):
-            for i in range(n_qubits):
-                self.enc_qc.ry(q.circuit.Parameter(f"enc_ry_{l}_{i}"), i, f"enc_ry_{l}_{i}")
-                # self.enc_qc.rz(q.circuit.Parameter(f"enc_rz_{l}_{i}"), i)
+        for i in range(n_qubits):
+            self.enc_qc.ry(q.circuit.Parameter(f"enc_ry_{i}"), i, f"enc_ry_{i}")
 
-        self.var_qc = q.QuantumCircuit(n_qubits)
+
+
         
-        def swap_registers(circuit, n):
-            for qubit in range(n//2):
-                circuit.swap(qubit, n-qubit-1)
-            return circuit
-
-        def qft_rotations(circuit, n):
-            """Performs qft on the first n qubits in circuit (without swaps)"""
-            if n == 0:
-                return circuit
-            n -= 1
-            circuit.h(n)
-            for qubit in range(n):
-                circuit.cp(np.pi/2**(n-qubit), qubit, n)
-            # At the end of our function, we call the same function again on
-            # the next qubits (we reduced n by one earlier in the function)
-            qft_rotations(circuit, n)
+        def build_mps_circuit(qc):
+            for i in range(n_qubits):
+                qc.ry(q.circuit.Parameter(f"var_ry_0_{i}"), i, f"var_ry_0_{i}") 
             
-        def qft(circuit, n):
-            """QFT on the first n qubits in circuit"""
-            qft_rotations(circuit, n)
-            swap_registers(circuit, n)
-            return circuit
+            for i in range(n_qubits-1):
+                qc.swap(i, i+1)
+                qc.ry(q.circuit.Parameter(f"var_ry_{i+1}_{i}"), i+1, f"var_ry_{i+1}_{i}")
+
+        
+        def build_circuit_19(qc:q.QuantumCircuit):
+            for i in range(n_qubits):
+                qc.rx(q.circuit.Parameter(f"var_rx_0_{i}"), i, f"var_rx_0_{i}") 
+                qc.rz(q.circuit.Parameter(f"var_rz_1_{i}"), i) 
+            
+            for i in range(n_qubits-1):
+                if i == 0:
+                    qc.crx(q.circuit.Parameter(f"var_crx_{i+1}_{i}"), i, n_qubits-1, f"var_crx_{i+1}_{i}")
+                else:
+                    qc.crx(q.circuit.Parameter(f"var_crx_{i+1}_{i}"), n_qubits-i, n_qubits-i-1, f"var_crx_{i+1}_{i}")
 
 
-        qft(self.var_qc,3) # apply qft on the first 3 (momenta) the last one is energy
-        for i in range(n_qubits-1):
-                self.var_qc.cx(i, 3)
+        if circuit_type==CircuitType.NodeNetwork:
+            self.var_qc = q.QuantumCircuit(n_qubits) # no need to add classical since they are automaticallya added later
+            build_circuit_19(self.var_qc)
+            self.qc = self.enc_qc.compose(self.var_qc)
+            self.qc.measure_all()
+        else:
+            self.var_qc = q.QuantumCircuit(n_qubits) 
+            build_mps_circuit(self.var_qc)
+            self.qc = self.enc_qc.compose(self.var_qc)
+            self.qc.add_bits(q.ClassicalRegister(1)) # add one classical bit here so we can do the measurement later
+            self.qc.measure(n_qubits-1, 0)
 
-        # Let's see how it looks:
-
-        self.qc = self.enc_qc.compose(self.var_qc)
-        self.qc.measure_all()
 
         # self.qc.draw()
     
@@ -166,36 +172,21 @@ class HybridFunction(Function):
 class Hybrid(nn.Module):
     """ Hybrid quantum - classical layer definition """
     
-    def __init__(self, backend, shots, shift):
+    def __init__(self, n_in, n_hid, n_out, circuit_type, backend=None, shots=1024, shift=np.pi/2):
         super(Hybrid, self).__init__()
-        self.quantum_circuit = QuantumCircuit(4, [1,1], backend, shots)
+        if backend == None:
+            backend = q.Aer.get_backend('aer_simulator')
+        self.fc_in = nn.Linear(n_in, n_hid)
+        self.fc_out = nn.Linear(n_hid, n_out)
+
+        self.quantum_circuit = QuantumCircuit(4, circuit_type, backend, shots)
         self.shift = shift
         
     def forward(self, input):
-        return HybridFunction.apply(input, self.quantum_circuit, self.shift)
-
-class Net(nn.Module):
-    def __init__(self):
-        super(Net, self).__init__()
-        self.conv1 = nn.Conv2d(1, 6, kernel_size=5)
-        self.conv2 = nn.Conv2d(6, 16, kernel_size=5)
-        self.dropout = nn.Dropout2d()
-        self.fc1 = nn.Linear(256, 64)
-        self.fc2 = nn.Linear(64, 1)
-        self.hybrid = Hybrid(q.Aer.get_backend('aer_simulator'), 100, np.pi / 2)
-
-    def forward(self, x):
-        x = F.relu(self.conv1(x))
-        x = F.max_pool2d(x, 2)
-        x = F.relu(self.conv2(x))
-        x = F.max_pool2d(x, 2)
-        x = self.dropout(x)
-        x = x.view(1, -1)
-        x = F.relu(self.fc1(x))
-        x = self.fc2(x)
-        x = self.hybrid(x)
-        return torch.cat((x, 1 - x), -1)
-
+        x = self.fc_in(input)
+        x = HybridFunction.apply(x, self.quantum_circuit, self.shift)
+        x = self.fc_in(x)
+        return x
 
 class MLP(nn.Module):
     """Two-layer fully-connected ELU net with batch norm."""
@@ -308,7 +299,8 @@ class qgnn(nn.Module):
             MLP(dim_feedforward, dim_feedforward, dim_feedforward, dropout_rate, batchnorm) for _ in range(n_layers_mlp - 1)
         ])
         self.initial_mlp = nn.Sequential(*initial_mlp)
-        self.hybrid = Hybrid(q.Aer.get_backend('aer_simulator'), 100, np.pi / 2)
+        self.node_network = Hybrid(dim_feedforward, 4, dim_feedforward, CircuitType.NodeNetwork)
+        self.edge_network = Hybrid(dim_feedforward, 4, 1, CircuitType.EdgeNetwork)
 
         # MLP to reduce feature dimensions from first Node2Edge before blocks begin
         self.pre_blocks_mlp = MLP(dim_feedforward * 2, dim_feedforward, dim_feedforward, dropout_rate, batchnorm)
@@ -323,14 +315,14 @@ class qgnn(nn.Module):
                     # MLP layers before Edge2Node (start of block)
                     nn.ModuleList([
                         MLP(dim_feedforward, dim_feedforward, dim_feedforward, dropout_rate, batchnorm),
-                        nn.Sequential(*[MLP(dim_feedforward, dim_feedforward, dim_feedforward, dropout_rate, batchnorm) for _ in range(n_additional_mlp_layers)]),
+                        *[Hybrid(dim_feedforward, 4, 1, CircuitType.EdgeNetwork) for _ in range(self.num_classes)]
                         # This is what would be needed for a concat instead of addition of the skip connection
                         # MLP(dim_feedforward * 2, dim_feedforward, dim_feedforward, dropout, batchnorm) if (block_additional_mlp_layers > 0) else None,
                     ]),
                     # MLP layers between Edge2Node and Node2Edge (middle of block)
                     nn.ModuleList([
                         MLP(dim_feedforward, dim_feedforward, dim_feedforward, dropout_rate, batchnorm),
-                        nn.Sequential(*[MLP(dim_feedforward, dim_feedforward, dim_feedforward, dropout_rate, batchnorm) for _ in range(n_additional_mlp_layers)]),
+                        Hybrid(dim_feedforward, 4, dim_feedforward, CircuitType.NodeNetwork)
                         # This is what would be needed for a concat instead of addition of the skip connection
                         # MLP(dim_feedforward * 2, dim_feedforward, dim_feedforward, dropout, batchnorm) if (block_additional_mlp_layers > 0) else None,
                     ]),
@@ -446,7 +438,7 @@ class qgnn(nn.Module):
 
         # Initial set of linear layers
         # (b, l, m) -> (b, l, d)
-        x = self.hybrid(x)
+        # x = self.hybrid(x)
         x = self.initial_mlp(x)  # Series of 2-layer ELU net per node  (b, l, d) optionally includes embeddings
 
         # (b, l, d), (b, l*l, l), (b, l*l, l) -> (b, l, 2*d)
