@@ -89,12 +89,12 @@ class QuantumCircuit:
     def bitstring_decode(self, results):
         shots = sum(results.values())
 
-        average = np.zeros(len(self.qc.qubits))
+        average = np.zeros(self.qc.num_qubits)
         for bitstring, counts in results.items():
             for i, s in enumerate(bitstring):
                 average[i] += counts if s == "1" else 0
 
-        return average/(shots*len(self.qc.qubits))
+        return average/(shots*self.qc.num_qubits)
 
     def run(self, nd_data):
         circuits = []
