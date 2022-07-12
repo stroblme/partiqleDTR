@@ -18,6 +18,10 @@ import qiskit as q
 from qiskit import transpile, assemble
 from qiskit.visualization import *
 
+import logging
+log = logging.getLogger(__name__)
+log.setLevel(logging.WARNING)
+
 class QuantumCircuit:
     """ 
     This class provides a simple interface for interaction 
