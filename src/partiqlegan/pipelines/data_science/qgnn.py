@@ -86,7 +86,8 @@ class QuantumCircuit:
                 ignore_after = i
                 break # shortcut to prevent unnecessary circuit exec.
             else:
-                circuits.append(self.qc.assign_parameters(self.circuit_parameters(data)))
+                scaled_data = np.interp(data, (data.min(), data.max()), (0, 2*np.pi))
+                circuits.append(self.qc.assign_parameters(self.circuit_parameters(scaled_data.tolist())))
 
 
 
@@ -116,7 +117,7 @@ class HybridFunction(Function):
 
         results = []
         for batch in input:
-            expectation_z = ctx.quantum_circuit.run(batch.tolist())
+            expectation_z = ctx.quantum_circuit.run(batch)
             results.append(expectation_z)
 
         results = t.Tensor(results)
