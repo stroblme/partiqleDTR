@@ -36,14 +36,16 @@ class QuantumCircuit:
     
     def __init__(self, n_qubits:int, circuit_type:CircuitType, backend, shots):
         # --- Circuit definition ---
+        self.n_qubits = n_qubits
         self.shots = shots
         self.backend = backend
-        
+        self.circuit_type = circuit_type
+
         # parameters = [np.random.uniform(-np.pi, np.pi) for i in range(n_qubits*(n_layers[0]*len(rot_gates_enc)+n_layers[1]*len(rot_gates_pqc)+n_layers[1]*len(ent_gates_pqc)))]
         
         self.enc_qc = q.QuantumCircuit(n_qubits)
         for i in range(n_qubits):
-            self.enc_qc.ry(q.circuit.Parameter(f"enc_ry_{i}"), i, f"enc_ry_{i}")
+            self.enc_qc.ry(q.circuit.Parameter(f"enc_ry_0_{i}"), i, f"enc_ry_0_{i}")
 
 
 
@@ -54,7 +56,7 @@ class QuantumCircuit:
             
             for i in range(n_qubits-1):
                 qc.swap(i, i+1)
-                qc.ry(q.circuit.Parameter(f"var_ry_{i+1}_{i}"), i+1, f"var_ry_{i+1}_{i}")
+                qc.ry(q.circuit.Parameter(f"var_ry_{i+1}_{i+1}"), i+1, f"var_ry_{i+1}_{i+1}")
 
         
         def build_circuit_19(qc:q.QuantumCircuit):
@@ -69,40 +71,42 @@ class QuantumCircuit:
                     qc.crx(q.circuit.Parameter(f"var_crx_{i+1}_{i}"), n_qubits-i, n_qubits-i-1, f"var_crx_{i+1}_{i}")
 
 
+        self.var_qc = q.QuantumCircuit(n_qubits) # no need to add classical since they are automaticallya added later
         if circuit_type==CircuitType.NodeNetwork:
-            self.var_qc = q.QuantumCircuit(n_qubits) # no need to add classical since they are automaticallya added later
             build_circuit_19(self.var_qc)
             self.qc = self.enc_qc.compose(self.var_qc)
-            self.qc.measure_all()
         else:
-            self.var_qc = q.QuantumCircuit(n_qubits) 
             build_mps_circuit(self.var_qc)
             self.qc = self.enc_qc.compose(self.var_qc)
-            self.qc.add_bits(q.ClassicalRegister(1)) # add one classical bit here so we can do the measurement later
-            self.qc.measure(n_qubits-1, 0)
+            # self.qc.add_bits(q.ClassicalRegister(1)) # add one classical bit here so we can do the measurement later
+            # self.qc.measure(n_qubits-1, 0)
+            self.qc.measure_all()
 
 
         # self.qc.draw()
     
-    def circuit_parameters(self, data):
+    def circuit_parameters(self, data, variational):
         parameters = {}
         for i, p in enumerate(self.enc_qc.parameters):
             parameters[p] = data[i]
-        # for i, p in enumerate(self.var_qc.parameters):
-        #     parameters[p] = variational[i]
+        for i, p in enumerate(self.var_qc.parameters):
+            parameters[p] = variational[i]
         return parameters
 
     def bitstring_decode(self, results):
         shots = sum(results.values())
 
-        average = np.zeros(len(self.qc.qubits))
+        average = np.zeros(self.n_qubits) if self.circuit_type == CircuitType.NodeNetwork else np.zeros(1)
         for bitstring, counts in results.items():
-            for i, s in enumerate(bitstring):
-                average[i] += counts if s == "1" else 0
+            if self.circuit_type == CircuitType.NodeNetwork:
+                for i, s in enumerate(bitstring):
+                    average[i] += counts if s == "1" else 0
+            else:
+                average[0] += counts if bitstring[-1] == "1" else 0
 
-        return average/(shots*len(self.qc.qubits))
+        return average/(shots*len(average))
 
-    def run(self, nd_data):
+    def run(self, nd_data, variational:np.array):
         circuits = []
         ignore_after = -1
         for i, data in enumerate(nd_data):
@@ -110,14 +114,14 @@ class QuantumCircuit:
                 ignore_after = i
                 break # shortcut to prevent unnecessary circuit exec.
             else:
-                scaled_data = np.interp(data, (data.min(), data.max()), (0, 2*np.pi))
-                circuits.append(self.qc.assign_parameters(self.circuit_parameters(scaled_data.tolist())))
+                scaled_data = np.interp(data, (data.min(), data.max()), (0, np.pi))
+                circuits.append(self.qc.assign_parameters(self.circuit_parameters(scaled_data.tolist(), variational.tolist())))
 
 
 
         # backend = q.BasicAer.get_backend('qasm_simulator')
-        results =  q.execute(circuits, self.backend).result()
-        expectations = [self.bitstring_decode(results.get_counts(c)) for c in circuits]
+        jobs_result =  q.execute(circuits, self.backend, shots=self.shots).result()
+        expectations = [self.bitstring_decode(jobs_result.get_counts(c)) for c in circuits]
         expectations = np.append(expectations, [np.zeros(4)]*(len(nd_data)-ignore_after), axis=0) if ignore_after >= 0 else expectations
         # counts = np.array(list(results.get_counts().values()))
         # states = np.array(list(results.get_counts().keys())).astype(float)
@@ -134,14 +138,15 @@ class HybridFunction(Function):
     """ Hybrid quantum - classical function definition """
     
     @staticmethod
-    def forward(ctx, input, quantum_circuit, shift):
+    def forward(ctx, input, quantum_circuit, variational, shift):
         """ Forward pass computation """
         ctx.shift = shift
         ctx.quantum_circuit = quantum_circuit
+        ctx.variational = variational
 
         results = []
         for batch in input:
-            expectation_z = ctx.quantum_circuit.run(batch)
+            expectation_z = ctx.quantum_circuit.run(batch, ctx.variational)
             results.append(expectation_z)
 
         results = t.Tensor(results)
@@ -172,7 +177,7 @@ class HybridFunction(Function):
 class Hybrid(nn.Module):
     """ Hybrid quantum - classical layer definition """
     
-    def __init__(self, n_in, n_hid, n_out, circuit_type, backend=None, shots=1024, shift=np.pi/2):
+    def __init__(self, n_in, n_hid, n_out, circuit_type, backend=None, shots=100, shift=np.pi/2):
         super(Hybrid, self).__init__()
         if backend == None:
             backend = q.Aer.get_backend('aer_simulator')
@@ -181,10 +186,12 @@ class Hybrid(nn.Module):
 
         self.quantum_circuit = QuantumCircuit(4, circuit_type, backend, shots)
         self.shift = shift
+
+        self.variational = np.random.random(self.quantum_circuit.var_qc.num_parameters)
         
     def forward(self, input):
         x = self.fc_in(input)
-        x = HybridFunction.apply(x, self.quantum_circuit, self.shift)
+        x = HybridFunction.apply(x, self.quantum_circuit, self.variational, self.shift)
         x = self.fc_in(x)
         return x
 
