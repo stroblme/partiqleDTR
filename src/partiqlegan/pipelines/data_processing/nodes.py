@@ -4,23 +4,20 @@ generated using Kedro 0.17.7
 """
 import numpy as np
 from typing import Dict, Tuple, List
-from sqlalchemy import Float, desc
 
 # import torch
-import torchvision
-import torchdata as td
-from torch import LongTensor, FloatTensor, cat
+import torchvision as tv
+from torch import LongTensor, FloatTensor
 from torch.utils.data import Dataset
-import copy
 
 import re
 
-data_transform = torchvision.transforms.Compose(
+data_transform = tv.transforms.Compose(
     [
-        torchvision.transforms.RandomResizedCrop(224),
-        torchvision.transforms.RandomHorizontalFlip(),
-        torchvision.transforms.ToTensor(),
-        torchvision.transforms.Normalize(
+        tv.transforms.RandomResizedCrop(224),
+        tv.transforms.RandomHorizontalFlip(),
+        tv.transforms.ToTensor(),
+        tv.transforms.Normalize(
             mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
         ),
     ]
