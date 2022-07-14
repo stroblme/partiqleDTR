@@ -3,24 +3,17 @@ import matplotlib.pyplot as plt
 
 from enum import Enum
 
-import torch
-from torch.autograd import Function
-from torchvision import datasets, transforms
-import torch.optim as optim
-import torch.nn as nn
-import torch.nn.functional as F
 
 import torch as t
 from torch import nn
 import torch.nn.functional as F
+from torch.autograd import Function
 
 from .utils import *
 
 import qiskit as q
 from qiskit import transpile, assemble
 from qiskit.visualization import *
-
-from multiprocessing import Pool
 
 import logging
 log = logging.getLogger(__name__)
@@ -181,7 +174,7 @@ class HybridFunction(Function):
 
         gradients = t.Tensor(gradients)
 
-        return gradients.float() * grad_output.float()
+        return gradients.float() * grad_output.float(), None, None, None
 
 class Hybrid(nn.Module):
     """ Hybrid quantum - classical layer definition """
