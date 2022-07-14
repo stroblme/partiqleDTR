@@ -20,6 +20,8 @@ import qiskit as q
 from qiskit import transpile, assemble
 from qiskit.visualization import *
 
+from multiprocessing import Pool
+
 import logging
 log = logging.getLogger(__name__)
 log.setLevel(logging.WARNING)
@@ -133,10 +135,13 @@ class QuantumCircuit:
 # circuit = QuantumCircuit(1, simulator, 100)
 # print('Expected value for rotation pi {}'.format(circuit.run([np.pi])[0]))
 # circuit._circuit.draw()
+# def poolProcess(circuit_data_variational):
+#     circuit, data, variational = circuit_data_variational
+#     return circuit.run(data, variational)
 
 class HybridFunction(Function):
     """ Hybrid quantum - classical function definition """
-    
+
     @staticmethod
     def forward(ctx, input, quantum_circuit, variational, shift):
         """ Forward pass computation """
@@ -145,6 +150,9 @@ class HybridFunction(Function):
         ctx.variational = variational
 
         results = []
+        # with Pool(len(input)) as p:
+        #     results = p.map(poolProcess, list(zip([ctx.quantum_circuit]*len(input), input, [ctx.variational]*len(input))))
+        # can't use pool processing here since qiskit itself has poolprocessing
         for batch in input:
             expectation_z = ctx.quantum_circuit.run(batch, ctx.variational)
             results.append(expectation_z)
@@ -159,11 +167,11 @@ class HybridFunction(Function):
     def backward(ctx, grad_output):
         """ Backward pass computation """
         input, results = ctx.saved_tensors
+        shift_right = ctx.variational + np.ones(ctx.variational.shape) * ctx.shift
+        shift_left = ctx.variational - np.ones(ctx.variational.shape) * ctx.shift
         
         gradients = []
         for batch in input:
-            shift_right = ctx.variational + np.ones(ctx.variational.shape) * ctx.shift
-            shift_left = ctx.variational - np.ones(ctx.variational.shape) * ctx.shift
 
             expectation_right = ctx.quantum_circuit.run(batch, shift_right)
             expectation_left  = ctx.quantum_circuit.run(batch, shift_left)
@@ -173,7 +181,7 @@ class HybridFunction(Function):
 
         gradients = t.Tensor(gradients)
 
-        return gradients.float() * grad_output.float(), None, None
+        return gradients.float() * grad_output.float()
 
 class Hybrid(nn.Module):
     """ Hybrid quantum - classical layer definition """
