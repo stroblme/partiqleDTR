@@ -80,7 +80,7 @@ class QuantumCircuit:
             self.qc = self.enc_qc.compose(self.var_qc)
             # self.qc.add_bits(q.ClassicalRegister(1)) # add one classical bit here so we can do the measurement later
             # self.qc.measure(n_qubits-1, 0)
-            self.qc.measure_all()
+        self.qc.measure_all() # TODO: we need to measure all since somehow we get an error when evaluating a circuit where not *all* qubits are measured
 
 
         # self.qc.draw()
@@ -159,20 +159,21 @@ class HybridFunction(Function):
     def backward(ctx, grad_output):
         """ Backward pass computation """
         input, expectation_z = ctx.saved_tensors
-        input_list = np.array(input.tolist())
-        
-        shift_right = input_list + np.ones(input_list.shape) * ctx.shift
-        shift_left = input_list - np.ones(input_list.shape) * ctx.shift
         
         gradients = []
-        for i in range(len(input_list)):
-            expectation_right = ctx.quantum_circuit.run(shift_right[i])
-            expectation_left  = ctx.quantum_circuit.run(shift_left[i])
+        for batch in input:
+            shift_right = ctx.variational + np.ones(ctx.variational.shape) * ctx.shift
+            shift_left = ctx.variational - np.ones(ctx.variational.shape) * ctx.shift
+
+            expectation_right = ctx.quantum_circuit.run(batch, shift_right)
+            expectation_left  = ctx.quantum_circuit.run(batch, shift_left)
             
-            gradient = torch.tensor([expectation_right]) - torch.tensor([expectation_left])
+            gradient = torch.tensor([expectation_right]) - torch.tensor([expectation_left]) # parmeter shift rule
             gradients.append(gradient)
-        gradients = np.array([gradients]).T
-        return torch.tensor([gradients]).float() * grad_output.float(), None, None
+
+        gradients = t.Tensor(gradients)
+
+        return gradients.float() * grad_output.float(), None, None
 
 class Hybrid(nn.Module):
     """ Hybrid quantum - classical layer definition """
@@ -182,7 +183,10 @@ class Hybrid(nn.Module):
         if backend == None:
             backend = q.Aer.get_backend('aer_simulator')
         self.fc_in = nn.Linear(n_in, n_hid)
-        self.fc_out = nn.Linear(n_hid, n_out)
+        if circuit_type == CircuitType.NodeNetwork:
+            self.fc_out = nn.Linear(n_hid, n_out)
+        else:
+            self.fc_out = nn.Linear(1, n_out)
 
         self.quantum_circuit = QuantumCircuit(4, circuit_type, backend, shots)
         self.shift = shift
@@ -192,7 +196,7 @@ class Hybrid(nn.Module):
     def forward(self, input):
         x = self.fc_in(input)
         x = HybridFunction.apply(x, self.quantum_circuit, self.variational, self.shift)
-        x = self.fc_in(x)
+        x = self.fc_out(x)
         return x
 
 class MLP(nn.Module):
