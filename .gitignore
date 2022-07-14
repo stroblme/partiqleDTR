@@ -3,6 +3,8 @@ mlruns
 *.pdf
 .ipython
 *.png
+*.tar.gz
+
 ##########################
 # KEDRO PROJECT
 
