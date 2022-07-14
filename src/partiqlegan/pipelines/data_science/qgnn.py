@@ -126,7 +126,7 @@ class QuantumCircuit:
         # counts = np.array(list(results.get_counts().values()))
         # states = np.array(list(results.get_counts().keys())).astype(float)
         
-        return expectations
+        return np.array(expectations)
 
 # simulator = qiskit.Aer.get_backend('aer_simulator')
 
@@ -158,7 +158,7 @@ class HybridFunction(Function):
     @staticmethod
     def backward(ctx, grad_output):
         """ Backward pass computation """
-        input, expectation_z = ctx.saved_tensors
+        input, results = ctx.saved_tensors
         
         gradients = []
         for batch in input:
@@ -168,7 +168,7 @@ class HybridFunction(Function):
             expectation_right = ctx.quantum_circuit.run(batch, shift_right)
             expectation_left  = ctx.quantum_circuit.run(batch, shift_left)
             
-            gradient = torch.tensor([expectation_right]) - torch.tensor([expectation_left]) # parmeter shift rule
+            gradient = expectation_right - expectation_left # parmeter shift rule
             gradients.append(gradient)
 
         gradients = t.Tensor(gradients)
