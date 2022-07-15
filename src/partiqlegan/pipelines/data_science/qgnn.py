@@ -198,8 +198,6 @@ class HybridLayer(nn.Module):
     
     def __init__(self, n_in, n_hid, n_out, circuit_type, backend=None, shots=100, shift=np.pi/2):
         super(HybridLayer, self).__init__()
-        if backend == None:
-            backend = q.Aer.get_backend('aer_simulator')
         self.fc_in = nn.Linear(n_in, n_hid)
         if circuit_type == CircuitType.NodeNetwork:
             self.fc_out = nn.Linear(n_hid, n_out)
@@ -207,10 +205,7 @@ class HybridLayer(nn.Module):
             self.fc_out = nn.Linear(1, n_out)
 
         self.quantum_layer = QuantumLayer(n_hid, circuit_type, backend, shots, shift)
-        self.shift = shift
 
-        self.variational = np.random.random(self.quantum_circuit.var_qc.num_parameters)
-        
     def forward(self, input):
         x = self.fc_in(input)
         x = self.quantum_layer(x)
