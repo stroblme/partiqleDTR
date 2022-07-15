@@ -176,11 +176,28 @@ class HybridFunction(Function):
 
         return gradients.float() * grad_output.float(), None, None, None
 
-class Hybrid(nn.Module):
+class QuantumLayer(nn.Module):
+    """ Hybrid quantum - classical layer definition """
+    
+    def __init__(self, n_hid, circuit_type, backend=None, shots=100, shift=np.pi/2):
+        super(QuantumLayer, self).__init__()
+        if backend == None:
+            backend = q.Aer.get_backend('aer_simulator')
+
+        self.quantum_circuit = QuantumCircuit(n_hid, circuit_type, backend, shots)
+        self.shift = shift
+
+        self.variational = np.random.random(self.quantum_circuit.var_qc.num_parameters)
+        
+    def forward(self, input):
+        x = HybridFunction.apply(input, self.quantum_circuit, self.variational, self.shift)
+        return x
+
+class HybridLayer(nn.Module):
     """ Hybrid quantum - classical layer definition """
     
     def __init__(self, n_in, n_hid, n_out, circuit_type, backend=None, shots=100, shift=np.pi/2):
-        super(Hybrid, self).__init__()
+        super(HybridLayer, self).__init__()
         if backend == None:
             backend = q.Aer.get_backend('aer_simulator')
         self.fc_in = nn.Linear(n_in, n_hid)
@@ -189,14 +206,14 @@ class Hybrid(nn.Module):
         else:
             self.fc_out = nn.Linear(1, n_out)
 
-        self.quantum_circuit = QuantumCircuit(4, circuit_type, backend, shots)
+        self.quantum_layer = QuantumLayer(n_hid, circuit_type, backend, shots, shift)
         self.shift = shift
 
         self.variational = np.random.random(self.quantum_circuit.var_qc.num_parameters)
         
     def forward(self, input):
         x = self.fc_in(input)
-        x = HybridFunction.apply(x, self.quantum_circuit, self.variational, self.shift)
+        x = self.quantum_layer(x)
         x = self.fc_out(x)
         return x
 
@@ -311,8 +328,8 @@ class qgnn(nn.Module):
             MLP(dim_feedforward, dim_feedforward, dim_feedforward, dropout_rate, batchnorm) for _ in range(n_layers_mlp - 1)
         ])
         self.initial_mlp = nn.Sequential(*initial_mlp)
-        self.node_network = Hybrid(dim_feedforward, 4, dim_feedforward, CircuitType.NodeNetwork)
-        self.edge_network = Hybrid(dim_feedforward, 4, 1, CircuitType.EdgeNetwork)
+        self.node_network = HybridLayer(dim_feedforward, 4, dim_feedforward, CircuitType.NodeNetwork)
+        self.edge_network = HybridLayer(dim_feedforward, 4, 1, CircuitType.EdgeNetwork)
 
         # MLP to reduce feature dimensions from first Node2Edge before blocks begin
         self.pre_blocks_mlp = MLP(dim_feedforward * 2, dim_feedforward, dim_feedforward, dropout_rate, batchnorm)
@@ -327,14 +344,14 @@ class qgnn(nn.Module):
                     # MLP layers before Edge2Node (start of block)
                     nn.ModuleList([
                         MLP(dim_feedforward, dim_feedforward, dim_feedforward, dropout_rate, batchnorm),
-                        *[Hybrid(dim_feedforward, 4, 1, CircuitType.EdgeNetwork) for _ in range(self.num_classes)]
+                        *[HybridLayer(dim_feedforward, 4, 1, CircuitType.EdgeNetwork) for _ in range(self.num_classes)]
                         # This is what would be needed for a concat instead of addition of the skip connection
                         # MLP(dim_feedforward * 2, dim_feedforward, dim_feedforward, dropout, batchnorm) if (block_additional_mlp_layers > 0) else None,
                     ]),
                     # MLP layers between Edge2Node and Node2Edge (middle of block)
                     nn.ModuleList([
                         MLP(dim_feedforward, dim_feedforward, dim_feedforward, dropout_rate, batchnorm),
-                        Hybrid(dim_feedforward, 4, dim_feedforward, CircuitType.NodeNetwork)
+                        HybridLayer(dim_feedforward, 4, dim_feedforward, CircuitType.NodeNetwork)
                         # This is what would be needed for a concat instead of addition of the skip connection
                         # MLP(dim_feedforward * 2, dim_feedforward, dim_feedforward, dropout, batchnorm) if (block_additional_mlp_layers > 0) else None,
                     ]),
