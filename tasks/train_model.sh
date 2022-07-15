@@ -17,7 +17,7 @@
 #SBATCH --partition single
 # 
 # expected memory requirements
-#SBATCH --mem=64000MB
+#SBATCH --mem=128000MB
 #
 # output path
 #SBATCH --output="logs/slurm/slurm-%j.out"
