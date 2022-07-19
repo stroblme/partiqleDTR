@@ -75,7 +75,8 @@ class QuantumCircuit:
             self.qc = self.enc_qc.compose(self.var_qc)
             # self.qc.add_bits(q.ClassicalRegister(1)) # add one classical bit here so we can do the measurement later
             # self.qc.measure(n_qubits-1, 0)
-        self.qc.measure_all() # TODO: we need to measure all since somehow we get an error when evaluating a circuit where not *all* qubits are measured
+        if shots is not None:
+            self.qc.measure_all() # TODO: we need to measure all since somehow we get an error when evaluating a circuit where not *all* qubits are measured
 
 
         # self.qc.draw()
@@ -110,13 +111,16 @@ class QuantumCircuit:
                 break # shortcut to prevent unnecessary circuit exec.
             else:
                 scaled_data = np.interp(data, (data.min(), data.max()), (0, np.pi))
-                circuits.append(self.qc.assign_parameters(self.circuit_parameters(scaled_data.tolist(), variational.tolist())))
+                circuits.append(self.qc.assign_parameters(self.circuit_parameters(scaled_data.tolist(), variational[i].tolist())))
 
 
 
         # backend = q.BasicAer.get_backend('qasm_simulator')
         jobs_result =  q.execute(circuits, self.backend, shots=self.shots).result()
+        # jobs_result =  self.backend.execute(circuits, self.backend, shots=self.shots).result()
         expectations = [self.bitstring_decode(jobs_result.get_counts(c)) for c in circuits]
+        # expectations = [self.bitstring_decode(jobs_result.get_statevector(c)) for c in circuits]
+        # expectations = [self.bitstring_decode(jobs_result.get_unitary(c)) for c in circuits]
         expectations = np.append(expectations, [np.zeros(4)]*(len(nd_data)-ignore_after), axis=0) if ignore_after >= 0 else expectations
         # counts = np.array(list(results.get_counts().values()))
         # states = np.array(list(results.get_counts().keys())).astype(float)
@@ -140,55 +144,79 @@ class HybridFunction(Function):
         """ Forward pass computation """
         ctx.shift = shift
         ctx.quantum_circuit = quantum_circuit
-        ctx.variational = variational
+        # variational = variational
 
         results = []
         # with Pool(len(input)) as p:
-        #     results = p.map(poolProcess, list(zip([ctx.quantum_circuit]*len(input), input, [ctx.variational]*len(input))))
+        #     results = p.map(poolProcess, list(zip([ctx.quantum_circuit]*len(input), input, [variational]*len(input))))
         # can't use pool processing here since qiskit itself has poolprocessing
         for batch in input:
-            expectation_z = ctx.quantum_circuit.run(batch, ctx.variational)
+            expectation_z = ctx.quantum_circuit.run(batch, variational)
             results.append(expectation_z)
 
         results = t.Tensor(results)
 
-        ctx.save_for_backward(input, results)
+        ctx.save_for_backward(input, variational)
 
         return results
         
     @staticmethod
     def backward(ctx, grad_output):
         """ Backward pass computation """
-        input, results = ctx.saved_tensors
-        shift_right = ctx.variational + np.ones(ctx.variational.shape) * ctx.shift
-        shift_left = ctx.variational - np.ones(ctx.variational.shape) * ctx.shift
+        input, variational = ctx.saved_tensors
+
         
-        gradients = []
+        var_gradients = []
         for batch in input:
+            dv_dl = []
+            for i in range(variational.shape[1]):
+                modifier = np.zeros(variational.shape)
+                modifier[:,i] += ctx.shift
 
-            expectation_right = ctx.quantum_circuit.run(batch, shift_right)
-            expectation_left  = ctx.quantum_circuit.run(batch, shift_left)
+                var_shift_right = variational + modifier
+                var_shift_left = variational - modifier
+                var_expectation_right = ctx.quantum_circuit.run(batch, var_shift_right) #lx4
+                var_expectation_left  = ctx.quantum_circuit.run(batch, var_shift_left) #lx4
+                var_gradient = var_expectation_right - var_expectation_left # parmeter shift rule
+                dv_dl.append(var_gradient)
+            var_gradients.append(dv_dl)
+
+            # in_shift_right = batch + np.ones(batch.shape) * ctx.shift
+            # in_shift_left = batch - np.ones(batch.shape) * ctx.shift
+
+            # in_expectation_right = ctx.quantum_circuit.run(in_shift_right, variational)
+            # in_expectation_left  = ctx.quantum_circuit.run(in_shift_left, variational)
+            # in_gradient = in_expectation_right - in_expectation_left # parmeter shift rule
+            # in_gradients.append(in_gradient)
             
-            gradient = expectation_right - expectation_left # parmeter shift rule
-            gradients.append(gradient)
+            
+        # var_gradients_batch_f_mean = var_gradients_batch_mean.mean(axis=2)
+        var_gradients = t.Tensor(var_gradients).float() * grad_output.float()
+        var_gradients_mean = var_gradients.mean(axis=(0,2)).transpose(0,1)
+        var_gradients_up = t.zeros(variational.shape)[var_gradients_mean.shape[0]] + var_gradients_mean
+        # in_gradients = t.Tensor(in_gradients)
 
-        gradients = t.Tensor(gradients)
+        # var_gradients_up = var_gradients_up.float() * grad_output.float()
+        # in_gradients_up = in_gradients.float() * grad_output.float()
 
-        return gradients.float() * grad_output.float(), None, None, None
+        return grad_output, None, var_gradients_up, None
 
 class QuantumLayer(nn.Module):
     """ Hybrid quantum - classical layer definition """
     
-    def __init__(self, n_hid, circuit_type, backend=None, shots=100, shift=np.pi/2):
+    def __init__(self, n_hid, n_classes, circuit_type, backend=None, shots=100, shift=np.pi/2):
         super(QuantumLayer, self).__init__()
         if backend == None:
             backend = q.Aer.get_backend('aer_simulator')
+            # backend = q.Aer.get_backend('aer_simulator_statevector')
+            # backend = q.Aer.get_backend('aer_simulator_unitary')
+            # shots=None
 
         self.quantum_circuit = QuantumCircuit(n_hid, circuit_type, backend, shots)
         self.shift = shift
 
-        self.variational = np.random.random(self.quantum_circuit.var_qc.num_parameters)
-        
+        self.variational = t.Tensor(np.random.random((n_classes, self.quantum_circuit.var_qc.num_parameters)))
+        # t.autograd.gradcheck(HybridFunction, )
     def forward(self, input):
         x = HybridFunction.apply(input, self.quantum_circuit, self.variational, self.shift)
         return x
@@ -204,7 +232,7 @@ class HybridLayer(nn.Module):
         else:
             self.fc_out = nn.Linear(1, n_out)
 
-        self.quantum_layer = QuantumLayer(n_hid, circuit_type, backend, shots, shift)
+        self.quantum_layer = QuantumLayer(n_hid, 200, circuit_type, backend, shots, shift)
 
     def forward(self, input):
         x = self.fc_in(input)
