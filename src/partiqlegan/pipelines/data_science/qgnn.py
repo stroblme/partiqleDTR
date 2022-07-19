@@ -193,7 +193,8 @@ class HybridFunction(Function):
         # var_gradients_batch_f_mean = var_gradients_batch_mean.mean(axis=2)
         var_gradients = t.Tensor(var_gradients).float() * grad_output.float()
         var_gradients_mean = var_gradients.mean(axis=(0,2)).transpose(0,1)
-        var_gradients_up = t.zeros(variational.shape)[var_gradients_mean.shape[0]] + var_gradients_mean
+        var_gradients_up = t.zeros(variational.shape)
+        var_gradients_up[:var_gradients_mean.shape[0]] += var_gradients_mean
         # in_gradients = t.Tensor(in_gradients)
 
         # var_gradients_up = var_gradients_up.float() * grad_output.float()
