@@ -121,7 +121,7 @@ class QuantumCircuit:
         expectations = [self.bitstring_decode(jobs_result.get_counts(c)) for c in circuits]
         # expectations = [self.bitstring_decode(jobs_result.get_statevector(c)) for c in circuits]
         # expectations = [self.bitstring_decode(jobs_result.get_unitary(c)) for c in circuits]
-        expectations = np.append(expectations, [np.zeros(4)]*(len(nd_data)-ignore_after), axis=0) if ignore_after >= 0 else expectations
+        expectations = np.append(expectations, [np.zeros(self.n_qubits)]*(len(nd_data)-ignore_after), axis=0) if ignore_after >= 0 else expectations
         # counts = np.array(list(results.get_counts().values()))
         # states = np.array(list(results.get_counts().keys())).astype(float)
         
