@@ -208,10 +208,11 @@ class QuantumLayer(nn.Module):
     def __init__(self, n_hid, n_classes, circuit_type, backend=None, shots=100, shift=np.pi/2):
         super(QuantumLayer, self).__init__()
         if backend == None:
-            backend = q.Aer.get_backend('aer_simulator')
+            # backend = q.Aer.get_backend('aer_simulator')
+            backend = q.Aer.get_backend('statevector_simulator')
             # backend = q.Aer.get_backend('aer_simulator_statevector')
             # backend = q.Aer.get_backend('aer_simulator_unitary')
-            # shots=None
+            shots=None
 
         self.quantum_circuit = QuantumCircuit(n_hid, circuit_type, backend, shots)
         self.shift = shift
