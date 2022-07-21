@@ -368,15 +368,16 @@ class qgnn(nn.Module):
                 nn.ModuleList([
                     # MLP layers before Edge2Node (start of block)
                     nn.ModuleList([
-                        MLP(dim_feedforward, dim_feedforward, dim_feedforward, dropout_rate, batchnorm),
-                        *[HybridLayer(dim_feedforward, 4, 1, CircuitType.EdgeNetwork) for _ in range(self.num_classes)]
+                        # MLP(dim_feedforward, dim_feedforward, dim_feedforward, dropout_rate, batchnorm),
+                        # *[HybridLayer(dim_feedforward, 4, 1, CircuitType.EdgeNetwork) for _ in range(self.num_classes)]
+                        HybridLayer(dim_feedforward, 6, dim_feedforward, CircuitType.NodeNetwork)
                         # This is what would be needed for a concat instead of addition of the skip connection
                         # MLP(dim_feedforward * 2, dim_feedforward, dim_feedforward, dropout, batchnorm) if (block_additional_mlp_layers > 0) else None,
                     ]),
                     # MLP layers between Edge2Node and Node2Edge (middle of block)
                     nn.ModuleList([
-                        MLP(dim_feedforward, dim_feedforward, dim_feedforward, dropout_rate, batchnorm),
-                        HybridLayer(dim_feedforward, 4, dim_feedforward, CircuitType.NodeNetwork)
+                        # MLP(dim_feedforward, dim_feedforward, dim_feedforward, dropout_rate, batchnorm),
+                        HybridLayer(dim_feedforward, 6, dim_feedforward, CircuitType.NodeNetwork)
                         # This is what would be needed for a concat instead of addition of the skip connection
                         # MLP(dim_feedforward * 2, dim_feedforward, dim_feedforward, dropout, batchnorm) if (block_additional_mlp_layers > 0) else None,
                     ]),
