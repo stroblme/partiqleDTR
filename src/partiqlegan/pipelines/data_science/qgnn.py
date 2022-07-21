@@ -16,8 +16,8 @@ from qiskit import transpile, assemble
 from qiskit.visualization import *
 
 import logging
-log = logging.getLogger(__name__)
-log.setLevel(logging.WARNING)
+qiskit_logger = logging.getLogger("qiskit")
+qiskit_logger.setLevel(logging.WARNING)
 
 
 class CircuitType(Enum):
