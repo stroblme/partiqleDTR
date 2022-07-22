@@ -165,7 +165,7 @@ class HybridFunction(Function):
         """ Backward pass computation """
         input, variational = ctx.saved_tensors
 
-        
+        # variational
         var_gradients = []
         for batch in input:
             dv_dl = []
@@ -188,11 +188,14 @@ class HybridFunction(Function):
             # in_expectation_left  = ctx.quantum_circuit.run(in_shift_left, variational)
             # in_gradient = in_expectation_right - in_expectation_left # parmeter shift rule
             # in_gradients.append(in_gradient)
-            
-            
-        # var_gradients_batch_f_mean = var_gradients_batch_mean.mean(axis=2)
-        var_gradients = t.Tensor(var_gradients).float() * grad_output.float()
-        var_gradients_mean = var_gradients.mean(axis=(0,2)).transpose(0,1)
+        
+        var_gradients = t.Tensor(var_gradients)
+        grad_output_reshaped = grad_output.reshape((grad_output.shape[0], 1, grad_output.shape[1], grad_output.shape[2])) #reshape to [b,1,l,c]
+        grad_output_reshaped = t.repeat_interleave(grad_output_reshaped, var_gradients.shape[1], axis=1) # reshape to [b,nv,l,c]
+        var_gradients = var_gradients.float() * grad_output_reshaped.float()
+        
+        # var_gradients_classes_mean = var_gradients.mean(axis=1)
+        var_gradients_mean = var_gradients.mean(axis=(0,2)).transpose(0,1) # average over batches and output
         var_gradients_up = t.zeros(variational.shape)
         var_gradients_up[:var_gradients_mean.shape[0]] += var_gradients_mean
         # in_gradients = t.Tensor(in_gradients)
