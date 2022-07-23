@@ -74,6 +74,8 @@ class gnn(nn.Module):
         n_layers_mlp=2,
         n_additional_mlp_layers=2,
         n_final_mlp_layers=2,
+        skip_block=True,
+        skip_global=True,
         dropout_rate=0.3,
         factor=True,
         tokenize=-1,
@@ -91,6 +93,8 @@ class gnn(nn.Module):
         self.tokenize = tokenize
         self.symmetrize = symmetrize
         self.block_additional_mlp_layers = n_additional_mlp_layers
+        self.skip_block = skip_block
+        self.skip_global = skip_global
         # self.max_leaves = max_leaves
 
         # Set up embedding for tokens and adjust input dims
@@ -118,6 +122,9 @@ class gnn(nn.Module):
         # MLP to reduce feature dimensions from first Node2Edge before blocks begin
         self.pre_blocks_mlp = MLP(dim_feedforward * 2, dim_feedforward, dim_feedforward, dropout_rate, batchnorm)
 
+        block_dim = 3*dim_feedforward if self.skip_block else 2*dim_feedforward
+        global_dim = 2*dim_feedforward if self.skip_global else dim_feedforward
+
         if self.factor:
             # MLPs within NRI blocks
             # The blocks have minimum 1 MLP layer, and if specified they add more with a skip connection
@@ -141,7 +148,7 @@ class gnn(nn.Module):
                     ]),
                     # MLP layer after Node2Edge (end of block)
                     # This is just to reduce feature dim after skip connection was concatenated
-                    MLP(dim_feedforward * 3, dim_feedforward, dim_feedforward, dropout_rate, batchnorm),
+                    MLP(block_dim, dim_feedforward, dim_feedforward, dropout_rate, batchnorm),
                 ]) for _ in range(n_blocks)
             ])
             print("Using factor graph MLP encoder.")
@@ -152,7 +159,7 @@ class gnn(nn.Module):
 
         # Final linear layers as requested
         # self.final_mlp = nn.Sequential(*[MLP(dim_feedforward, dim_feedforward, dim_feedforward, dropout, batchnorm) for _ in range(final_mlp_layers)])
-        final_mlp = [MLP(dim_feedforward * 2, dim_feedforward, dim_feedforward, dropout_rate, batchnorm)]
+        final_mlp = [MLP(global_dim, dim_feedforward, dim_feedforward, dropout_rate, batchnorm)]
         # Add any additional layers as per request
         final_mlp.extend([
             MLP(dim_feedforward, dim_feedforward, dim_feedforward, dropout_rate, batchnorm) for _ in range(n_final_mlp_layers - 1)
@@ -259,6 +266,7 @@ class gnn(nn.Module):
         # All things related to NRI blocks are in here
         if self.factor:
             x = self.pre_blocks_mlp(x)  # (b, l*l, d)
+
             # Skip connection to jump over all NRI blocks
             x_global_skip = x
 
@@ -287,13 +295,15 @@ class gnn(nn.Module):
                 # Create edges from nodes
                 x = self.node2edge(x, rel_rec, rel_send)  # (b, l*l, 2d)
 
-                # Final MLP in block to reduce dimensions again
-                x = t.cat((x, x_skip), dim=2)  # Skip connection  # (b, l*l, 3d)
+                if self.skip_block:
+                    # Final MLP in block to reduce dimensions again
+                    x = t.cat((x, x_skip), dim=2)  # Skip connection  # (b, l*l, 3d)
                 x = block[2](x)  # (b, l*l, d)
                 del x_skip
 
-            # Global skip connection
-            x = t.cat((x, x_global_skip), dim=2)  # Skip connection  # (b, l*(l-1), 2d)
+            if self.skip_global:
+                # Global skip connection
+                x = t.cat((x, x_global_skip), dim=2)  # Skip connection  # (b, l*(l-1), 2d)
 
             # Cleanup
             del rel_rec, rel_send
