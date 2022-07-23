@@ -22,9 +22,16 @@ class DataWrapper(Dataset):
     """
     A wrapper for t.utils.data.Dataset.
     """
-    def __init__(self, data):
+    def __init__(self, data, normalize=False):
+        dmax = 0
+        dmin = 1
         self.data = data
-
+        if normalize:
+            for i, event in enumerate(data.x):
+                dmax = event.max() if event.max() > dmax else dmax
+                dmin = event.min() if event.min() < dmin else dmin
+            for i, event in enumerate(data.x):
+                self.data.x[i] = (event+dmin)/(dmax+dmin)
     def __len__(self):
         return len(self.data)
 
@@ -37,7 +44,7 @@ class Instructor():
     Train the encoder in an supervised manner given the ground truth relations.
     """
     def __init__(self, model: DataParallel, data: dict,
-                learning_rate: float, learning_rate_decay: int, gamma: float, batch_size:int, epochs:int):
+                learning_rate: float, learning_rate_decay: int, gamma: float, batch_size:int, epochs:int, normalize: bool):
         """
         Args:
             model: an auto-encoder
@@ -46,9 +53,12 @@ class Instructor():
             cmd: command line parameters
         """
         self.model = model
+        pytorch_total_params = sum(p.numel() for p in model.parameters())
+        mlflow.log_param("Total trainable parameters", pytorch_total_params)
         
         self.data = data
         self.epochs = epochs
+        self.normalize = normalize
         self.batch_size = batch_size
         self.opt = t.optim.Adam(self.model.parameters(), lr=learning_rate)
         # learning rate scheduler, same as in NRI
@@ -62,7 +72,7 @@ class Instructor():
         for epoch in range(1, 1 + self.epochs):
             for mode in ["train", "val"]:
                 data_batch = DataLoader(
-                                        DataWrapper(self.data[mode]),
+                                        DataWrapper(self.data[mode], normalize=self.normalize),
                                         batch_size=self.batch_size,
                                         shuffle=True,
                                         collate_fn=rel_pad_collate_fn) # to handle varying input size

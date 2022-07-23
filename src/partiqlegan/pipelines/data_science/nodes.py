@@ -11,8 +11,9 @@ from .gnn import gnn
 from .qftgnn import qftgnn
 from .qgnn import qgnn
 from .dgnn import dgnn
+from .sgnn import sgnn
 # from .dqgnn import dqgnn
-models = {"gnn":gnn, "qgnn":qgnn, "qftgnn":qftgnn, "dgnn":dgnn}
+models = {"gnn":gnn, "sgnn":sgnn, "qgnn":qgnn, "qftgnn":qftgnn, "dgnn":dgnn}
 
 from typing import Dict
 
@@ -77,10 +78,10 @@ def create_model(   n_classes,
 def create_instructor(  dataset_lca_and_leaves:Dict,
                         model: DataParallel,
                         learning_rate: float, learning_rate_decay: int, gamma: float,
-                        batch_size:int, epochs:int) -> Instructor:
+                        batch_size:int, epochs:int, normalize:bool) -> Instructor:
     instructor = Instructor(model, dataset_lca_and_leaves, 
                             learning_rate, learning_rate_decay, gamma, 
-                            batch_size, epochs)
+                            batch_size, epochs, normalize)
 
     return{
         "instructor":instructor

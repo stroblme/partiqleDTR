@@ -108,7 +108,8 @@ def create_training_qgnn_pipeline(**kwargs) -> Pipeline:
                     "learning_rate_decay":"params:learning_rate_decay",
                     "gamma":"params:gamma",
                     "batch_size":"params:batch_size",
-                    "epochs":"params:epochs"
+                    "epochs":"params:epochs",
+                    "normalize":"params:normalize"
                 },
                 outputs={
                     "instructor":"instructor"
