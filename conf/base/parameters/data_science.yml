@@ -2,15 +2,15 @@
 model_sel: "qgnn"
 
 epochs: 50
+normalize: True
 
-# 3 for kuramoto and 4 for spring and charged.
 n_momenta: 4
 
 n_blocks: 3
-dim_feedforward: 64
-n_layers_mlp: 2
-n_additional_mlp_layers: 0
-n_final_mlp_layers: 2
+dim_feedforward: 256
+n_layers_mlp: 2 # initial mlp layers before the blocks
+n_additional_mlp_layers: 0 # additional layers within a block
+n_final_mlp_layers: 2 # layers after the blocks
 
 
 # Scale the loss to avoid gradient explosion.
@@ -18,7 +18,7 @@ dropout_rate: 0.3
 learning_rate: 0.002
 learning_rate_decay: 200
 gamma: 0.5
-batch_size: 5
+batch_size: 10
 
 factor: True
 tokenize: -1
