@@ -102,30 +102,38 @@ class QuantumCircuit:
 
         return average/(shots*len(average))
 
-    def run(self, nd_data, variational:np.array):
+    def run(self, data, variational:np.array):
         circuits = []
         ignore_after = -1
-        for i, data in enumerate(nd_data):
-            if max(data) == 0.0:
-                ignore_after = i
-                break # shortcut to prevent unnecessary circuit exec.
-            else:
-                scaled_data = np.interp(data, (data.min(), data.max()), (0, np.pi))
-                circuits.append(self.qc.assign_parameters(self.circuit_parameters(scaled_data.tolist(), variational[i].tolist())))
-
+        batch_index = []
+        for batch in data:
+            for i, batch_data in enumerate(batch):
+                if max(batch_data) == 0.0:
+                    ignore_after = i
+                    break # shortcut to prevent unnecessary circuit exec.
+                else:
+                    scaled_data = np.interp(batch_data, (batch_data.min(), batch_data.max()), (0, np.pi))
+                    circuits.append(self.qc.assign_parameters(self.circuit_parameters(scaled_data.tolist(), variational[i].tolist())))
+            batch_index.append(len(circuits))
 
 
         # backend = q.BasicAer.get_backend('qasm_simulator')
         jobs_result =  q.execute(circuits, self.backend, shots=self.shots).result()
         # jobs_result =  self.backend.execute(circuits, self.backend, shots=self.shots).result()
-        expectations = [self.bitstring_decode(jobs_result.get_counts(c)) for c in circuits]
-        # expectations = [self.bitstring_decode(jobs_result.get_statevector(c)) for c in circuits]
-        # expectations = [self.bitstring_decode(jobs_result.get_unitary(c)) for c in circuits]
-        expectations = np.append(expectations, [np.zeros(self.n_qubits)]*(len(nd_data)-ignore_after), axis=0) if ignore_after >= 0 else expectations
-        # counts = np.array(list(results.get_counts().values()))
-        # states = np.array(list(results.get_counts().keys())).astype(float)
-        
-        return np.array(expectations)
+
+        results = []
+        last_idx = 0
+        for idx in batch_index:
+            expectations = [self.bitstring_decode(jobs_result.get_counts(c)) for c in circuits[last_idx:idx]]
+
+            # expectations = [self.bitstring_decode(jobs_result.get_statevector(c)) for c in circuits]
+            # expectations = [self.bitstring_decode(jobs_result.get_unitary(c)) for c in circuits]
+            expectations = np.append(expectations, [np.zeros(self.n_qubits)]*(data.shape[1]-ignore_after), axis=0) if ignore_after >= 0 else expectations
+            # counts = np.array(list(results.get_counts().values()))
+            # states = np.array(list(results.get_counts().keys())).astype(float)
+            last_idx = idx
+            results.append(np.array(expectations))
+        return np.array(results)
 
 # simulator = qiskit.Aer.get_backend('aer_simulator')
 
@@ -146,15 +154,13 @@ class HybridFunction(Function):
         ctx.quantum_circuit = quantum_circuit
         # variational = variational
 
-        results = []
         # with Pool(len(input)) as p:
         #     results = p.map(poolProcess, list(zip([ctx.quantum_circuit]*len(input), input, [variational]*len(input))))
         # can't use pool processing here since qiskit itself has poolprocessing
-        for batch in input:
-            expectation_z = ctx.quantum_circuit.run(batch, variational)
-            results.append(expectation_z)
+        # for batch in input:
+        results = t.Tensor(ctx.quantum_circuit.run(input, variational))
+        # results.append(expectation_z)
 
-        results = t.Tensor(results)
 
         ctx.save_for_backward(input, variational)
 
@@ -167,19 +173,19 @@ class HybridFunction(Function):
 
         # variational
         var_gradients = []
-        for batch in input:
-            dv_dl = []
-            for i in range(variational.shape[1]):
-                modifier = np.zeros(variational.shape)
-                modifier[:,i] += ctx.shift
+        # for batch in input:
+        dv_dl = []
+        for i in range(variational.shape[1]):
+            modifier = np.zeros(variational.shape)
+            modifier[:,i] += ctx.shift
 
-                var_shift_right = variational + modifier
-                var_shift_left = variational - modifier
-                var_expectation_right = ctx.quantum_circuit.run(batch, var_shift_right) #lx4
-                var_expectation_left  = ctx.quantum_circuit.run(batch, var_shift_left) #lx4
-                var_gradient = var_expectation_right - var_expectation_left # parmeter shift rule
-                dv_dl.append(var_gradient)
-            var_gradients.append(dv_dl)
+            var_shift_right = variational + modifier
+            var_shift_left = variational - modifier
+            var_expectation_right = ctx.quantum_circuit.run(input, var_shift_right) #lx4
+            var_expectation_left  = ctx.quantum_circuit.run(input, var_shift_left) #lx4
+            var_gradient = var_expectation_right - var_expectation_left # parmeter shift rule
+            var_gradients.append(var_gradient)
+        # var_gradients.append(dv_dl)
 
             # in_shift_right = batch + np.ones(batch.shape) * ctx.shift
             # in_shift_left = batch - np.ones(batch.shape) * ctx.shift
@@ -189,13 +195,13 @@ class HybridFunction(Function):
             # in_gradient = in_expectation_right - in_expectation_left # parmeter shift rule
             # in_gradients.append(in_gradient)
         
-        var_gradients = t.Tensor(var_gradients)
-        grad_output_reshaped = grad_output.reshape((grad_output.shape[0], 1, grad_output.shape[1], grad_output.shape[2])) #reshape to [b,1,l,c]
-        grad_output_reshaped = t.repeat_interleave(grad_output_reshaped, var_gradients.shape[1], axis=1) # reshape to [b,nv,l,c]
+        var_gradients = t.Tensor(var_gradients) # [params, b, l, c]
+        grad_output_reshaped = grad_output.reshape((1, grad_output.shape[0], grad_output.shape[1], grad_output.shape[2])) #reshape to [b,1,l,c]
+        grad_output_reshaped = t.repeat_interleave(grad_output_reshaped, var_gradients.shape[0], axis=0) # reshape to [b,nv,l,c]
         var_gradients = var_gradients.float() * grad_output_reshaped.float()
         
         # var_gradients_classes_mean = var_gradients.mean(axis=1)
-        var_gradients_mean = var_gradients.mean(axis=(0,2)).transpose(0,1) # average over batches and output
+        var_gradients_mean = var_gradients.mean(axis=(1,2)).transpose(0,1) # average over batches and output
         var_gradients_up = t.zeros(variational.shape)
         var_gradients_up[:var_gradients_mean.shape[0]] += var_gradients_mean
         # in_gradients = t.Tensor(in_gradients)
@@ -371,9 +377,9 @@ class qgnn(nn.Module):
                 nn.ModuleList([
                     # MLP layers before Edge2Node (start of block)
                     nn.ModuleList([
-                        # MLP(dim_feedforward, dim_feedforward, dim_feedforward, dropout_rate, batchnorm),
+                        MLP(dim_feedforward, dim_feedforward, dim_feedforward, dropout_rate, batchnorm),
                         # *[HybridLayer(dim_feedforward, 4, 1, CircuitType.EdgeNetwork) for _ in range(self.num_classes)]
-                        HybridLayer(dim_feedforward, 6, dim_feedforward, CircuitType.NodeNetwork)
+                        # HybridLayer(dim_feedforward, 6, dim_feedforward, CircuitType.NodeNetwork)
                         # This is what would be needed for a concat instead of addition of the skip connection
                         # MLP(dim_feedforward * 2, dim_feedforward, dim_feedforward, dropout, batchnorm) if (block_additional_mlp_layers > 0) else None,
                     ]),
