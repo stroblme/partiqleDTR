@@ -225,12 +225,12 @@ class QuantumLayer(nn.Module):
 
         self.quantum_circuit = QuantumCircuit(n_hid, circuit_type, backend, shots)
         self.shift = shift
-
         self.variational = t.Tensor(np.random.random((n_classes, self.quantum_circuit.var_qc.num_parameters)))
         # t.autograd.gradcheck(HybridFunction, )
     def forward(self, input):
-        x = HybridFunction.apply(input, self.quantum_circuit, self.variational, self.shift)
-        return x
+        device = input.device
+        x = HybridFunction.apply(input.cpu(), self.quantum_circuit, self.variational, self.shift)
+        return x.to(device)
 
 class HybridLayer(nn.Module):
     """ Hybrid quantum - classical layer definition """
