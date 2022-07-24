@@ -101,6 +101,7 @@ class Instructor():
                         # do the actual optimization
                         self.optimize(self.opt, loss)
 
+                        labels = labels.cpu()
                         if labels.numpy().min() < -1:
                             raise Exception(f"Found graph with negative values: {labels.numpy()}")
                     elif mode == "val":
@@ -130,7 +131,7 @@ class Instructor():
                         best_acc = acc
                         result = self.model
                         try:
-                            c_plt = self.plotBatchGraphs(prob, labels)
+                            c_plt = self.plotBatchGraphs(prob.cpu(), labels)
                         except Exception as e:
                             log.error(f"Exception occured when trying to plot graphs: {e}\n\tThe lcag matrices were:\n\t{labels.numpy()}\n\tand\n\t{prob.numpy()}")
 
