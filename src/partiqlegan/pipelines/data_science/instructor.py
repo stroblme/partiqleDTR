@@ -52,7 +52,11 @@ class Instructor():
             es: edge list
             cmd: command line parameters
         """
+        self.device = t.device('cuda' if t.cuda.is_available() else 'cpu')
+
         self.model = model
+        self.model.module.to(self.device)
+        
         pytorch_total_params = sum(p.numel() for p in model.parameters())
         mlflow.log_param("Total trainable parameters", pytorch_total_params)
         
@@ -82,6 +86,9 @@ class Instructor():
 
                 log.info(f"Running epoch {epoch} in mode {mode}")
                 for states, labels in data_batch:
+                    states = [s.to(self.device) for s in states]
+                    labels = labels.to(self.device)
+
                     scale = 1 / labels.size(1) # get the scaling dependend on the number of classes
 
                     if mode == "train":
