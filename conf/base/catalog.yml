@@ -85,3 +85,22 @@ trained_model:
   data_set:
     type: pickle.PickleDataSet
     filepath: data/06_models/trained_model.pkl
+
+trained_classical_model:
+  type: kedro_mlflow.io.artifacts.MlflowArtifactDataSet
+  data_set:
+    type: pickle.PickleDataSet
+    filepath: data/06_models/classical_model.pkl
+
+# TODO: <class 'partiqlegan.pipelines.data_science.instructor.Instructor'> was not serialised due to: Can't pickle local object 'CircuitQNN.set_interpret.<locals>.<lambda>'
+# quantum_instructor:
+#   type: kedro_mlflow.io.artifacts.MlflowArtifactDataSet
+#   data_set:
+#     type: pickle.PickleDataSet
+#     filepath: data/05_model_input/quantum_instructor.pkl
+
+trained_quantum_model:
+  type: kedro_mlflow.io.artifacts.MlflowArtifactDataSet
+  data_set:
+    type: pickle.PickleDataSet
+    filepath: data/06_models/trained_quantum_model.pkl
