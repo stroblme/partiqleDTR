@@ -157,11 +157,14 @@ class sgnn(nn.Module):
         final_mlp = [MLP(2*dim_feedforward, dim_feedforward, dim_feedforward, dropout_rate, batchnorm)]
         # Add any additional layers as per request
         final_mlp.extend([
-            MLP(dim_feedforward, dim_feedforward, dim_feedforward, dropout_rate, batchnorm) for _ in range(n_final_mlp_layers - 1)
+            MLP(dim_feedforward, dim_feedforward, dim_feedforward, dropout_rate, batchnorm) for _ in range(n_final_mlp_layers - 2)
+        ])
+        final_mlp.extend([
+            MLP(dim_feedforward, dim_feedforward//2, dim_feedforward//4, dropout_rate, batchnorm)
         ])
         self.final_mlp = nn.Sequential(*final_mlp)
 
-        self.fc_out = nn.Linear(dim_feedforward, self.num_classes)
+        self.fc_out = nn.Linear(dim_feedforward//4, self.num_classes)
 
         self.init_weights()
 
