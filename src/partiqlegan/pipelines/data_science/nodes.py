@@ -40,6 +40,17 @@ def calculate_n_classes(dataset_lca_and_leaves:Dict) -> int:
         "n_classes": n_classes+1 # +1 for starting counting from zero (len(0..5)=5+1)
     }
 
+def calculate_n_fsps(dataset_lca_and_leaves:Dict) -> int:
+    n_fsps = 0
+    for _, subset in dataset_lca_and_leaves.items():
+        for lca in subset.y:
+            n_fsps = lca.shape[0] if lca.shape[0] > n_fsps else n_fsps
+    # n_fsps = int(max([len(subset[0]) for _, subset in dataset_lca_and_leaves.items()]))+1
+
+    return{
+        "n_fsps": n_fsps
+    }
+
 
 def create_model(   n_classes,
                     n_momenta,
@@ -55,7 +66,8 @@ def create_model(   n_classes,
                     embedding_dims=None,
                     batchnorm=True,
                     symmetrize=True,
-                    pre_trained_model:DataParallel=None
+                    pre_trained_model:DataParallel=None,
+                    n_fsps:int=-1
                 ) -> DataParallel:
 
     if pre_trained_model: #TODO: check if this case decision is necessary
@@ -72,7 +84,8 @@ def create_model(   n_classes,
                         embedding_dims=embedding_dims,
                         batchnorm=batchnorm,
                         symmetrize=symmetrize,
-                        pre_trained_model=pre_trained_model)
+                        pre_trained_model=pre_trained_model,
+                        n_fsps=n_fsps)
     else:
         model = models[model_sel](n_momenta=n_momenta,
                             n_classes=n_classes,
