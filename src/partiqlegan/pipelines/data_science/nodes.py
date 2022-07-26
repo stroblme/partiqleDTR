@@ -10,10 +10,12 @@ from .instructor import Instructor
 from .gnn import gnn
 from .qftgnn import qftgnn
 from .qgnn import qgnn
+from .dqgnn import dqgnn
 from .dgnn import dgnn
+from .pqgnn import pqgnn
 from .sgnn import sgnn
 # from .dqgnn import dqgnn
-models = {"gnn":gnn, "sgnn":sgnn, "qgnn":qgnn, "qftgnn":qftgnn, "dgnn":dgnn}
+models = {"gnn":gnn, "sgnn":sgnn, "qgnn":qgnn, "dqgnn":dqgnn, "qftgnn":qftgnn, "dgnn":dgnn, "pqgnn":pqgnn}
 
 from typing import Dict
 
@@ -52,10 +54,12 @@ def create_model(   n_classes,
                     tokenize=None,
                     embedding_dims=None,
                     batchnorm=True,
-                    symmetrize=True
+                    symmetrize=True,
+                    pre_trained_model:DataParallel=None
                 ) -> DataParallel:
 
-    model = models[model_sel](n_momenta=n_momenta,
+    if pre_trained_model: #TODO: check if this case decision is necessary
+        model = models[model_sel](n_momenta=n_momenta,
                         n_classes=n_classes,
                         n_blocks=n_blocks,
                         dim_feedforward=dim_feedforward,
@@ -67,7 +71,22 @@ def create_model(   n_classes,
                         tokenize=tokenize,
                         embedding_dims=embedding_dims,
                         batchnorm=batchnorm,
-                        symmetrize=symmetrize)
+                        symmetrize=symmetrize,
+                        pre_trained_model=pre_trained_model)
+    else:
+        model = models[model_sel](n_momenta=n_momenta,
+                            n_classes=n_classes,
+                            n_blocks=n_blocks,
+                            dim_feedforward=dim_feedforward,
+                            n_layers_mlp=n_layers_mlp,
+                            n_additional_mlp_layers=n_additional_mlp_layers,
+                            n_final_mlp_layers=n_final_mlp_layers,
+                            dropout_rate=dropout_rate,
+                            factor=factor,
+                            tokenize=tokenize,
+                            embedding_dims=embedding_dims,
+                            batchnorm=batchnorm,
+                            symmetrize=symmetrize)
 
     nri_model = DataParallel(model)
 
@@ -94,6 +113,3 @@ def train_qgnn(instructor:Instructor):
     return{
         "trained_model":trained_model
     }
-
-
-
