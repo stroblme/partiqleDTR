@@ -172,6 +172,17 @@ def create_split_training_qgnn_pipeline(**kwargs) -> Pipeline:
                 name="calculate_n_classes",
                 tags="split_run"
         ),
+        node(
+                func=calculate_n_fsps,
+                inputs={
+                    "dataset_lca_and_leaves":"dataset_lca_and_leaves",
+                },
+                outputs={
+                    "n_fsps":"n_fsps"
+                },
+                name="calculate_n_fsps",
+                tags="split_run"
+        ),
         # node(
         #         func=create_model,
         #         inputs={
@@ -239,7 +250,8 @@ def create_split_training_qgnn_pipeline(**kwargs) -> Pipeline:
                     "embedding_dims":"params:embedding_dims",
                     "batchnorm":"params:batchnorm",
                     "symmetrize":"params:symmetrize",
-                    "pre_trained_model":"trained_model"
+                    "pre_trained_model":"trained_model",
+                    "n_fsps":"n_fsps"
                 },
                 outputs={
                         "nri_model":"quantum_model"
