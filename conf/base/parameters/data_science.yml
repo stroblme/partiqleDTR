@@ -1,5 +1,6 @@
 ---
-model_sel: "qgnn"
+model_sel: "sgnn"
+post_model_sel: "pqgnn"
 
 epochs: 50
 normalize: True
