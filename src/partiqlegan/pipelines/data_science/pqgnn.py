@@ -2,12 +2,14 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from enum import Enum
-
+import time
 
 import torch as t
 from torch import nn
 import torch.nn.functional as F
 from torch.autograd import Function
+
+import mlflow
 
 from .utils import *
 
@@ -343,12 +345,14 @@ class pqgnn(nn.Module):
         batchnorm=True,
         symmetrize=True,
         pre_trained_model=None,
+        n_fsps=-1,
         **kwargs,
     ):
         super(pqgnn, self).__init__()
 
         assert dim_feedforward % 2 == 0, 'dim_feedforward must be an even number'
-        self.layers = dim_feedforward//4
+        # n_fsps = 4
+        self.layers = dim_feedforward//8
         self.num_classes = n_classes
         self.factor = factor
         self.tokenize = tokenize
@@ -368,8 +372,8 @@ class pqgnn(nn.Module):
         self.enc_params = []
         self.var_params = []
         def dataReupload(qc, n_qubits, identifier):
-            for i in range(n_qubits):
-                param = (q.circuit.Parameter(f"{identifier}_rxy_{i}"), i, f"{identifier}_rxy_{i}")
+            for i in range(n_qubits**2):
+                param = (q.circuit.Parameter(f"{identifier}_rxy_{i}"), i//n_qubits, f"{identifier}_rxy_{i}")
                 qc.rx(*param) 
                 # qc.ry(*param) 
                 
@@ -383,11 +387,15 @@ class pqgnn(nn.Module):
                 qc.ry(q.circuit.Parameter(f"{identifier}_ry_{i+1}_{i+1}"), i+1, f"{identifier}_ry_{i+1}_{i+1}")
 
         def build_circuit_19(qc, n_qubits, identifier):
+            for i in range(n_qubits):
+                qc.rx(q.circuit.Parameter(f"{identifier}_rx_0_{i}"), i, f"{identifier}_rx_0_{i}") 
+                qc.rz(q.circuit.Parameter(f"{identifier}_rz_1_{i}"), i) 
+
             for i in range(n_qubits-1):
                 if i == 0:
-                    qc.crx(q.circuit.Parameter(f"{identifier}__crx_{i+1}_{i}"), i, n_qubits-1, f"{identifier}__crx_{i+1}_{i}")
+                    qc.crx(q.circuit.Parameter(f"{identifier}_crx_{i+1}_{i}"), i, n_qubits-1, f"{identifier}_crx_{i+1}_{i}")
                 else:
-                    qc.crx(q.circuit.Parameter(f"{identifier}__crx_{i+1}_{i}"), n_qubits-i, n_qubits-i-1, f"{identifier}__crx_{i+1}_{i}")
+                    qc.crx(q.circuit.Parameter(f"{identifier}_crx_{i+1}_{i}"), n_qubits-i, n_qubits-i-1, f"{identifier}_crx_{i+1}_{i}")
 
 
 
@@ -400,28 +408,33 @@ class pqgnn(nn.Module):
 
 
         log.info(f"Building Quantum Circuit with {self.layers} layers and {n_classes} qubits")
-        self.qc = q.QuantumCircuit(n_classes)
-        circuit_builder(self.qc, n_classes, self.layers)
+        self.qc = q.QuantumCircuit(n_fsps)
+        circuit_builder(self.qc, n_fsps, self.layers)
+
+        mlflow.log_figure(self.qc.draw(output="mpl"), f"circuit.png")
 
         for param in self.qc.parameters:
             if "dru" in param.name:
                 self.enc_params.append(param)
             else:
                 self.var_params.append(param)
+        log.info(f"Encoding Parameters: {len(self.enc_params)}, Variational Parameters: {len(self.var_params)}")
 
         def interpreter(x):
-            print(x)
+            print(f"Interpreter Input {x}")
+            return x
 
+        start = time.time()
         self.qnn = CircuitQNN(  self.qc,
                                 self.enc_params, self.var_params,
                                 quantum_instance=self.qi,
-                                interpret=interpreter,
-                                sampling=True,
+                                # interpret=interpreter,
+                                # output_shape=(n_fsps**2, n_classes),
+                                # sampling=True,
                                 input_gradients=True
                             )
         self.initial_weights = 0.1 * (2 * q.utils.algorithm_globals.random.random(self.qnn.num_weights) - 1)
-        log.info(f"Encoding Parameters: {len(self.enc_params)}, Variational Parameters: {len(self.var_params)}")
-
+        log.info(f"Transpilation took {time.time() - start}")
         self.quantum_layer = TorchConnector(self.qnn, initial_weights=self.initial_weights)
         log.info(f"Initialization done")
 
@@ -538,7 +551,14 @@ class pqgnn(nn.Module):
 
             # Output what will be used for LCA
             # x = self.fc_out(x)  # (b, l*l, c)
+        x = x.flatten()
+        x = t.nn.functional.pad(x, ((512-x.shape[0])//2, (512-x.shape[0])//2), mode='constant', value=0)
         x = self.quantum_layer(x)
+        b = t.tensor([[i] for i in range(self.num_classes)])
+        b = b.repeat(1,n_leaves**2).reshape(1,n_leaves**2,self.num_classes)
+        x = x[:n_leaves**2].repeat(1,self.num_classes).reshape(1,n_leaves**2,self.num_classes)
+        x = x - b/self.num_classes
+        # x = t.max(x, t.ones(x.shape)*(-1))
         out = x.reshape(batch, n_leaves, n_leaves, self.num_classes)
 
         # Change to LCA shape
