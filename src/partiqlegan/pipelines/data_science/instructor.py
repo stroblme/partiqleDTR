@@ -1,3 +1,5 @@
+import time
+
 from pickletools import optimize
 import matplotlib.pyplot as plt
 
@@ -16,7 +18,6 @@ from typing import Dict
 
 import logging
 log = logging.getLogger(__name__)
-log.setLevel(logging.WARNING)
 
 class DataWrapper(Dataset):
     """
@@ -53,6 +54,7 @@ class Instructor():
             cmd: command line parameters
         """
         self.device = t.device('cuda' if t.cuda.is_available() else 'cpu')
+        self.device = 'cpu'
 
         self.model = model
         self.model.module.to(self.device)
@@ -84,8 +86,9 @@ class Instructor():
                 epoch_loss = 0.
                 epoch_acc = 0.
 
-                log.info(f"Running epoch {epoch} in mode {mode}")
+                log.info(f"Running epoch {epoch} in mode {mode} over {len(data_batch)} samples")
                 for states, labels in data_batch:
+                    start = time.time()
                     states = [s.to(self.device) for s in states]
                     labels = labels.to(self.device)
 
@@ -136,6 +139,8 @@ class Instructor():
                             log.error(f"Exception occured when trying to plot graphs: {e}\n\tThe lcag matrices were:\n\t{labels.numpy()}\n\tand\n\t{prob.numpy()}")
 
                         mlflow.log_figure(c_plt.gcf(), f"e{epoch}_sample_graph.png")
+
+                    log.info(f"Sample evaluation took {time.time() - start} seconds")
 
                 epoch_loss /= len(data_batch) # to the already scaled loss, apply the batch size scaling
                 epoch_acc /= len(data_batch) # to the already scaled accuracy, apply the batch size scaling
