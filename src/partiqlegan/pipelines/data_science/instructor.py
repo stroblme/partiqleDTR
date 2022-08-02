@@ -54,7 +54,7 @@ class Instructor():
             cmd: command line parameters
         """
         self.device = t.device('cuda' if t.cuda.is_available() else 'cpu')
-        self.device = 'cpu'
+        # self.device = 'cpu'
 
         self.model = model
         self.model.module.to(self.device)
@@ -140,7 +140,7 @@ class Instructor():
 
                         mlflow.log_figure(c_plt.gcf(), f"e{epoch}_sample_graph.png")
 
-                    log.info(f"Sample evaluation took {time.time() - start} seconds")
+                    log.info(f"Sample evaluation took {time.time() - start} seconds. Loss was {loss.item()}")
 
                 epoch_loss /= len(data_batch) # to the already scaled loss, apply the batch size scaling
                 epoch_acc /= len(data_batch) # to the already scaled accuracy, apply the batch size scaling
