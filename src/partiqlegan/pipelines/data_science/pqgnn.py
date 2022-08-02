@@ -556,6 +556,7 @@ class pqgnn(nn.Module):
         x = self.quantum_layer(x)
         b = t.tensor([[i] for i in range(self.num_classes)])
         b = b.repeat(1,n_leaves**2).reshape(1,n_leaves**2,self.num_classes)
+        b = b.to(x.device)
         x = x[:n_leaves**2].repeat(1,self.num_classes).reshape(1,n_leaves**2,self.num_classes)
         x = x - b/self.num_classes
         # x = t.max(x, t.ones(x.shape)*(-1))
