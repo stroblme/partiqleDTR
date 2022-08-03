@@ -1,6 +1,7 @@
 import time
 
 from pickletools import optimize
+from xxlimited import Str
 import matplotlib.pyplot as plt
 
 import torch as t
@@ -45,7 +46,8 @@ class Instructor():
     Train the encoder in an supervised manner given the ground truth relations.
     """
     def __init__(self, model: DataParallel, data: dict,
-                learning_rate: float, learning_rate_decay: int, gamma: float, batch_size:int, epochs:int, normalize: bool):
+                learning_rate: float, learning_rate_decay: int, gamma: float, batch_size:int, epochs:int, normalize: bool,
+                plot_mode:str="val"):
         """
         Args:
             model: an auto-encoder
@@ -62,6 +64,7 @@ class Instructor():
         pytorch_total_params = sum(p.numel() for p in model.parameters())
         mlflow.log_param("Total trainable parameters", pytorch_total_params)
         
+        self.plot_mode = plot_mode
         self.data = data
         self.epochs = epochs
         self.normalize = normalize
@@ -129,7 +132,7 @@ class Instructor():
                     epoch_loss += scale * loss
                     epoch_acc += scale * acc
 
-                    if acc > best_acc and mode == "val":
+                    if acc > best_acc and mode == self.plot_mode:
                         # update the current best model when approaching a higher accuray
                         best_acc = acc
                         result = self.model
@@ -138,7 +141,7 @@ class Instructor():
                         except Exception as e:
                             log.error(f"Exception occured when trying to plot graphs: {e}\n\tThe lcag matrices were:\n\t{labels.numpy()}\n\tand\n\t{prob.numpy()}")
 
-                        mlflow.log_figure(c_plt.gcf(), f"e{epoch}_sample_graph.png")
+                        mlflow.log_figure(c_plt.gcf(), f"{mode}_e{epoch}_sample_graph.png")
 
                     log.info(f"Sample evaluation took {time.time() - start} seconds. Loss was {loss.item()}")
 

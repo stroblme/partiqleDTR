@@ -27,4 +27,6 @@ embedding_dims: -1
 batchnorm: True
 symmetrize: True
 
+plot_mode: "train"
+
 git_hash_identifier: "git_hash"

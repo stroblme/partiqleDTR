@@ -270,6 +270,7 @@ def create_split_training_qgnn_pipeline(**kwargs) -> Pipeline:
                     "batch_size":"params:batch_size",
                     "epochs":"params:epochs",
                     "normalize":"params:normalize",
+                    "plot_mode":"params:plot_mode",
                 },
                 outputs={
                     "instructor":"quantum_instructor"
