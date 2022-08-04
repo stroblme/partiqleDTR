@@ -111,7 +111,7 @@ class sqgnn(nn.Module):
 
         assert dim_feedforward % 2 == 0, 'dim_feedforward must be an even number'
         # n_fsps = 4
-        self.layers = dim_feedforward//8
+        self.layers = 4 #dim_feedforward//8
         self.num_classes = n_classes
         self.factor = factor
         self.tokenize = tokenize
@@ -121,7 +121,6 @@ class sqgnn(nn.Module):
         self.skip_global = skip_global
         # self.max_leaves = max_leaves
 
-        self.pre_trained_module = pre_trained_model["model_qgnn"].module
         # self.initial_mlp = pre_trained_module.initial_mlp
         # self.blocks = pre_trained_module.blocks
         # self.final_mlp = pre_trained_module.final_mlp
@@ -138,7 +137,7 @@ class sqgnn(nn.Module):
                 qc.rx(*px) 
                 py = (q.circuit.Parameter(f"{identifier}_ry_{i}") * (1-1/energy), i, f"{identifier}_ry_{i}")
                 qc.ry(*py) 
-                pz = (q.circuit.Parameter(f"{identifier}_rz_{i}") * (1-1/energy), i, f"{identifier}_rz_{i}")
+                pz = (q.circuit.Parameter(f"{identifier}_rz_{i}") * (1-1/energy), i) # rz does not accept identifier
                 qc.rz(*pz) 
                 # qc.ry(*param) 
 
@@ -169,7 +168,7 @@ class sqgnn(nn.Module):
         mlflow.log_figure(self.qc.draw(output="mpl"), f"circuit.png")
 
         for param in self.qc.parameters:
-            if "dru" in param.name:
+            if "enc" in param.name:
                 self.enc_params.append(param)
             else:
                 self.var_params.append(param)
@@ -248,86 +247,9 @@ class sqgnn(nn.Module):
             # rel_send = rel_send[rel_send.sum(dim=1) > 0]  # (l*(l-1), l)
             # rel_send = rel_send.unsqueeze(0).expand(inputs.size(1), -1, -1)
             rel_send = construct_rel_sends([inputs.size(0)], device=device)
-        # inputs=inputs.view(inputs.size(1), inputs.size(0), -1)
-        with t.no_grad():
+        
 
-            # Input shape: [batch, num_atoms, num_timesteps, num_dims]
-            # Input shape: [num_sims, num_atoms, num_timesteps, num_dims]
-            # x = inputs.view(inputs.size(0), inputs.size(1), -1)
-            # New shape: [num_sims, num_atoms, num_timesteps*num_dims]
-            # Need to match expected shape
-            # TODO should batch_first be a dataset parameter?
-            # (l, b, m) -> (b, l, m)
-            x = inputs.permute(1, 0, 2)  # (b, l, m)
-
-            # Initial set of linear layers
-            # (b, l, m) -> (b, l, d)
-            x = self.pre_trained_module.initial_mlp(x)  # Series of 2-layer ELU net per node  (b, l, d) optionally includes embeddings
-
-            # (b, l, d), (b, l*l, l), (b, l*l, l) -> (b, l, 2*d)
-            x = self.pre_trained_module.node2edge(x, rel_rec, rel_send)  # (b, l*l, 2d)
-
-            # All things related to NRI blocks are in here
-            if self.pre_trained_module.factor:
-                # x = self.pre_trained_module.pre_blocks_mlp(x)  # (b, l*l, d)
-
-                # Skip connection to jump over all NRI blocks
-                x_global_skip = x
-
-                for block in self.pre_trained_module.blocks:
-                    # First MLP sequence
-                    x = block[0][0](x)  # (b, l*l, d)
-           
-
-                    # Create nodes from edges
-                    x = self.pre_trained_module.edge2node(x, rel_rec)  # (b, l, d)
-
-                    # Second MLP sequence
-                    x = block[1][0](x)  # (b, l, d)
-             
-
-                    # Create edges from nodes
-                    x = self.node2edge(x, rel_rec, rel_send)  # (b, l*l, 2d)
-
-                if self.skip_global:
-                    # Global skip connection
-                    x = t.cat((x, x_global_skip), dim=2)  # Skip connection  # (b, l*(l-1), 2d)
-
-                # Cleanup
-                del rel_rec, rel_send
-
-            # else:
-            #     x = self.mlp3(x)  # (b, l*(l-1), d)
-            #     x = t.cat((x, x_skip), dim=2)  # Skip connection  # (b, l*(l-1), 2d)
-            #     x = self.mlp4(x)  # (b, l*(l-1), d)
-
-            # Final set of linear layers
-            x = self.pre_trained_module.final_mlp(x)  # Series of 2-layer ELU net per node (b, l, d)
-
-            # Output what will be used for LCA
-            # x = self.fc_out(x)  # (b, l*l, c)
-        x = x.flatten()
-        x = t.nn.functional.pad(x, ((512-x.shape[0])//2, (512-x.shape[0])//2), mode='constant', value=0)
-        x = self.quantum_layer(x)
-        b = t.tensor([[i] for i in range(self.num_classes)])
-        b = b.repeat(1,n_leaves**2).reshape(1,n_leaves**2,self.num_classes)
-        b = b.to(x.device)
-        x = x[:n_leaves**2].repeat(1,self.num_classes).reshape(1,n_leaves**2,self.num_classes)
-        x = x - b/self.num_classes
-        # x = t.max(x, t.ones(x.shape)*(-1))
-        out = x.reshape(batch, n_leaves, n_leaves, self.num_classes)
-
-        # Change to LCA shape
-        # x is currently the flattened rows of the predicted LCA but without the diagonal
-        # We need to create an empty LCA then populate the off-diagonals with their corresponding values
-        # out = t.zeros((batch, n_leaves, n_leaves, self.num_classes), device=device)  # (b, l, l, c)
-        # ind_upper = t.triu_indices(n_leaves, n_leaves, offset=1)
-        # ind_lower = t.tril_indices(n_leaves, n_leaves, offset=-1)
-
-        # Assign the values to their corresponding position in the LCA
-        # The right side is just some quick mafs to get the correct edge predictions from the flattened x array
-        # out[:, ind_upper[0], ind_upper[1], :] = x[:, (ind_upper[0] * (n_leaves - 1)) + ind_upper[1] - 1, :]
-        # out[:, ind_lower[0], ind_lower[1], :] = x[:, (ind_lower[0] * (n_leaves - 1)) + ind_lower[1], :]
+        x = self.quantum_layer(inputs.flatten())
 
         # Need in the order for cross entropy loss
         out = out.permute(0, 3, 1, 2)  # (b, c, l, l)
