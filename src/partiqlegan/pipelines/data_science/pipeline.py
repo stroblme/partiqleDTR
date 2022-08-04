@@ -77,6 +77,17 @@ def create_training_qgnn_pipeline(**kwargs) -> Pipeline:
                 name="calculate_n_classes"
         ),
         node(
+                func=calculate_n_fsps,
+                inputs={
+                    "dataset_lca_and_leaves":"dataset_lca_and_leaves",
+                },
+                outputs={
+                    "n_fsps":"n_fsps"
+                },
+                name="calculate_n_fsps",
+                tags="split_run"
+        ),
+        node(
                 func=create_model,
                 inputs={
                     "n_classes":"n_classes",
@@ -93,6 +104,7 @@ def create_training_qgnn_pipeline(**kwargs) -> Pipeline:
                     "embedding_dims":"params:embedding_dims",
                     "batchnorm":"params:batchnorm",
                     "symmetrize":"params:symmetrize",
+                    "n_fsps":"n_fsps"
                 },
                 outputs={
                         "nri_model":"nri_model"
@@ -109,7 +121,8 @@ def create_training_qgnn_pipeline(**kwargs) -> Pipeline:
                     "gamma":"params:gamma",
                     "batch_size":"params:batch_size",
                     "epochs":"params:epochs",
-                    "normalize":"params:normalize"
+                    "normalize":"params:normalize",
+                    "plot_mode":"params:plot_mode"
                 },
                 outputs={
                     "instructor":"instructor"
@@ -270,7 +283,7 @@ def create_split_training_qgnn_pipeline(**kwargs) -> Pipeline:
                     "batch_size":"params:batch_size",
                     "epochs":"params:epochs",
                     "normalize":"params:normalize",
-                    "plot_mode":"params:plot_mode",
+                    "plot_mode":"params:plot_mode"
                 },
                 outputs={
                     "instructor":"quantum_instructor"
