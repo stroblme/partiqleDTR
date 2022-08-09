@@ -157,7 +157,7 @@ class sqgnn(nn.Module):
         def circuit_builder(qc, n_qubits, n_hidden):
             encoding(qc, n_qubits, f"enc")
             qc.barrier()
-            for i in range(n_hidden):
+            for i in range(1):
                 variational(qc, n_qubits, f"var_{i}")
 
 
@@ -248,14 +248,37 @@ class sqgnn(nn.Module):
             # rel_send = rel_send.unsqueeze(0).expand(inputs.size(1), -1, -1)
             rel_send = construct_rel_sends([inputs.size(0)], device=device)
         
+        x = inputs.permute(1, 0, 2)  # (b, l, m)
 
-        x = self.quantum_layer(inputs.flatten())
+        x = x.flatten()
+        x = t.nn.functional.pad(x, (0, 16-x.shape[0]), mode='constant', value=0)
 
-        # Need in the order for cross entropy loss
-        out = out.permute(0, 3, 1, 2)  # (b, c, l, l)
+        x = self.quantum_layer(x)
 
-        # Symmetrize
-        if self.symmetrize:
-            out = t.div(out + t.transpose(out, 2, 3), 2)  # (b, c, l, l)
+        def build_binary_permutation_indices(digits):
+            n_permutations = (digits**2 - digits)//2
+            permutations_indices = []
+            for i in range(2**digits):
+                if bin(i).count("1") == 2:
+                    permutations_indices.append(i)
+            assert len(permutations_indices) == n_permutations
+            return permutations_indices
 
-        return out
+        def get_binary_shots(result, permutations_indices, out_shape):
+            lcag = t.zeros(out_shape)
+            lcag=lcag.to(result.device)
+            lcag[np.tril_indices_from(lcag, k=-1)] = result[permutations_indices]
+            lcag = lcag + t.transpose(lcag, 0, 1)
+            lcag = lcag - t.diag(t.ones(out_shape[0]).to(result.device))
+            return lcag
+
+        x = get_binary_shots(x, build_binary_permutation_indices(n_leaves), (n_leaves, n_leaves))
+
+        b = t.tensor([[i] for i in range(self.num_classes)]).repeat(1,n_leaves**2).reshape(batch,self.num_classes,n_leaves,n_leaves)
+        b = b.to(x.device)
+
+        x = x.repeat(1,self.num_classes).reshape(batch,self.num_classes,n_leaves,n_leaves)
+        x = x - b/self.num_classes
+        # x = t.max(x, t.ones(x.shape)*(-1))
+
+        return x
