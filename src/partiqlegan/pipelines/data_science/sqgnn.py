@@ -276,9 +276,20 @@ class sqgnn(nn.Module):
 
         b = t.tensor([[i] for i in range(self.num_classes)]).repeat(1,n_leaves**2).reshape(batch,self.num_classes,n_leaves,n_leaves)
         b = b.to(x.device)
+        
+        ea = t.eye(x.shape[0]).repeat(1,self.num_classes).transpose(0,1).reshape(batch,self.num_classes,n_leaves,n_leaves)
+        ed = t.ones(x.shape).repeat(1,self.num_classes).transpose(0,1).reshape(batch,self.num_classes,n_leaves,n_leaves) - ea
+        ea = ea.to(x.device)
+        ed = ed.to(x.device)
 
-        x = x.repeat(1,self.num_classes).reshape(batch,self.num_classes,n_leaves,n_leaves)
-        x = x - b/self.num_classes
+
+        x = x.repeat(1,self.num_classes).transpose(0,1).reshape(batch,self.num_classes,n_leaves,n_leaves)
+        x = x - b/self.num_classes/n_leaves
         # x = t.max(x, t.ones(x.shape)*(-1))
+
+        # out = x.permute(0, 3, 1, 2)  # (b, c, l, l)
+
+        x = x*ed
+        x = x-ea
 
         return x
