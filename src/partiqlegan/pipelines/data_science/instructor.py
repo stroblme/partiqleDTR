@@ -56,7 +56,7 @@ class Instructor():
             cmd: command line parameters
         """
         self.device = t.device('cuda' if t.cuda.is_available() else 'cpu')
-        # self.device = 'cpu'
+        self.device = 'cpu'
 
         self.model = model
         self.model.module.to(self.device)
@@ -100,9 +100,9 @@ class Instructor():
                     if mode == "train":
                         self.model.train() # set the module in training mode
 
-                        prob = self.model.module(states)
-                        loss = cross_entropy(prob, labels, ignore_index=-1)
-                        acc = self.edge_accuracy(prob, labels)
+                        logits = self.model.module(states)
+                        loss = cross_entropy(logits, labels, ignore_index=-1)
+                        acc = self.edge_accuracy(logits, labels)
 
                         # do the actual optimization
                         self.optimize(self.opt, loss)
@@ -114,18 +114,18 @@ class Instructor():
                         self.model.module.eval() # trigger evaluation forward mode
                         with t.no_grad(): # disable autograd in tensors
 
-                            prob = self.model.module(states)
+                            logits = self.model.module(states)
 
-                            loss = cross_entropy(prob, labels, ignore_index=-1)
-                            acc = self.edge_accuracy(prob, labels)
+                            loss = cross_entropy(logits, labels, ignore_index=-1)
+                            acc = self.edge_accuracy(logits, labels)
                     elif mode == "test":
                         self.model.module.eval() # trigger evaluation forward mode
                         with t.no_grad(): # disable autograd in tensors
 
-                            prob = self.model.module(states)
+                            logits = self.model.module(states)
 
-                            loss = cross_entropy(prob, labels, ignore_index=-1)
-                            acc = self.edge_accuracy(prob, labels)
+                            loss = cross_entropy(logits, labels, ignore_index=-1)
+                            acc = self.edge_accuracy(logits, labels)
                     else:
                         log.error("Unknown mode")
 
@@ -137,11 +137,11 @@ class Instructor():
                         best_acc = acc
                         result = self.model
                         try:
-                            c_plt = self.plotBatchGraphs(prob.cpu(), labels)
+                            c_plt = self.plotBatchGraphs(logits.cpu(), labels)
+                            mlflow.log_figure(c_plt.gcf(), f"{mode}_e{epoch}_sample_graph.png")
                         except Exception as e:
-                            log.error(f"Exception occured when trying to plot graphs: {e}\n\tThe lcag matrices were:\n\t{labels.numpy()}\n\tand\n\t{prob.numpy()}")
+                            log.error(f"Exception occured when trying to plot graphs: {e}\n\tThe lcag matrices were:\n\t{labels.numpy()}\n\tand\n\t{logits.cpu().detach().numpy()}")
 
-                        mlflow.log_figure(c_plt.gcf(), f"{mode}_e{epoch}_sample_graph.png")
 
                     log.info(f"Sample evaluation took {time.time() - start} seconds. Loss was {loss.item()}")
 
