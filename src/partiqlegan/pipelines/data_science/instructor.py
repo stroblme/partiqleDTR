@@ -109,7 +109,12 @@ class Instructor():
                         acc = self.edge_accuracy(logits, labels)
 
                         # do the actual optimization
-                        self.optimize(self.opt, loss)
+                        self.opt.zero_grad()
+                        loss.backward()
+                        self.opt.step()
+
+                        gradients = [p.grad.norm() for p in self.model.parameters()]
+                        log.info(f"Graients: {gradients}")
 
                         labels = labels.cpu()
                         if labels.numpy().min() < -1:
