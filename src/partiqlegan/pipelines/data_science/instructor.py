@@ -152,7 +152,7 @@ class Instructor():
                             log.error(f"Exception occured when trying to plot graphs: {e}\n\tThe lcag matrices were:\n\t{labels.numpy()}\n\tand\n\t{logits.cpu().detach().numpy()}")
 
 
-                    log.info(f"Sample evaluation took {time.time() - start} seconds. Loss was {loss.item()}")
+                    log.info(f"Sample evaluation took {time.time() - start} seconds. Loss was {scale*loss.item()}")
 
                 epoch_loss /= len(data_batch) # to the already scaled loss, apply the batch size scaling
                 epoch_acc /= len(data_batch) # to the already scaled accuracy, apply the batch size scaling
@@ -168,12 +168,6 @@ class Instructor():
         return {
             "model_qgnn":result
         }
-
-    @staticmethod
-    def optimize(opt, loss):
-        opt.zero_grad()
-        loss.backward()
-        opt.step()
 
     def plotBatchGraphs(self, batch_logits, batch_ref, rows=4, cols=2):
         fig, ax = plt.subplots(rows, cols, figsize=(15,15), gridspec_kw={'width_ratios': [1, 1]})
