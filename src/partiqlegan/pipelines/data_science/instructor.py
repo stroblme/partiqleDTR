@@ -65,6 +65,9 @@ class Instructor():
         self.model = model
         self.model.module.to(self.device)
         
+        for p in self.model.parameters():
+            p.register_hook(lambda grad: t.clamp(grad, -1000, 1000))
+        
         pytorch_total_params = sum(p.numel() for p in model.parameters())
         mlflow.log_param("Total trainable parameters", pytorch_total_params)
         
