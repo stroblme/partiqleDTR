@@ -111,7 +111,7 @@ class sqgnn(nn.Module):
 
         assert dim_feedforward % 2 == 0, 'dim_feedforward must be an even number'
         # n_fsps = 4
-        self.layers = 4 #dim_feedforward//8
+        self.layers = n_fsps #dim_feedforward//8
         self.num_classes = n_classes
         self.factor = factor
         self.tokenize = tokenize
@@ -142,7 +142,7 @@ class sqgnn(nn.Module):
                 # qc.ry(*param) 
 
         def variational(qc, n_qubits, identifier):
-            for i in range(n_qubits-1):
+            for i in range(n_qubits):
                 if i == 0:
                     qc.crx(q.circuit.Parameter(f"{identifier}_crx_{i+1}_{i}"), i, n_qubits-1, f"{identifier}_crx_{i+1}_{i}")
                     qc.cry(q.circuit.Parameter(f"{identifier}_cry_{i+1}_{i}"), i, n_qubits-1, f"{identifier}_cry_{i+1}_{i}")
@@ -157,8 +157,9 @@ class sqgnn(nn.Module):
         def circuit_builder(qc, n_qubits, n_hidden):
             encoding(qc, n_qubits, f"enc")
             qc.barrier()
-            for i in range(1):
+            for i in range(n_hidden):
                 variational(qc, n_qubits, f"var_{i}")
+                qc.barrier()
 
 
         log.info(f"Building Quantum Circuit with {self.layers} layers and {n_classes} qubits")
@@ -191,6 +192,11 @@ class sqgnn(nn.Module):
         log.info(f"Transpilation took {time.time() - start}")
         self.quantum_layer = TorchConnector(self.qnn, initial_weights=self.initial_weights)
         log.info(f"Initialization done")
+
+        self.fc1_out = MLP(self.num_classes, self.num_classes, self.num_classes, dropout_rate, batchnorm)
+        self.fc2_out = MLP(self.num_classes, 2*self.num_classes, self.num_classes, dropout_rate, batchnorm)
+        self.fc3_out = MLP(self.num_classes, self.num_classes, self.num_classes, dropout_rate, batchnorm)
+
 
         # self.fc_out = nn.Linear(dim_feedforward, self.num_classes)
 
@@ -272,24 +278,35 @@ class sqgnn(nn.Module):
             lcag = lcag - t.diag(t.ones(out_shape[0]).to(result.device))
             return lcag
 
+        # x = x.reshape(batch, x.shape[0], 1)
+        # x = self.fc_out(x)
+
         x = get_binary_shots(x, build_binary_permutation_indices(n_leaves), (n_leaves, n_leaves))
 
-        b = t.tensor([[i] for i in range(self.num_classes)]).repeat(1,n_leaves**2).reshape(batch,self.num_classes,n_leaves,n_leaves)
-        b = b.to(x.device)
+        # b = t.tensor([[i] for i in range(self.num_classes)]).repeat(1,n_leaves**2).reshape(batch,self.num_classes,n_leaves*n_leaves)
+        # b = b.to(x.device)
         
-        ea = t.eye(x.shape[0]).repeat(1,self.num_classes).transpose(0,1).reshape(batch,self.num_classes,n_leaves,n_leaves)
-        ed = t.ones(x.shape).repeat(1,self.num_classes).transpose(0,1).reshape(batch,self.num_classes,n_leaves,n_leaves) - ea
-        ea = ea.to(x.device)
-        ed = ed.to(x.device)
+        # ea = t.eye(x.shape[0]).repeat(1,self.num_classes).transpose(0,1).reshape(batch,self.num_classes,n_leaves*n_leaves)
+        # ed = t.ones(x.shape).repeat(1,self.num_classes).transpose(0,1).reshape(batch,self.num_classes,n_leaves*n_leaves) - ea
+        # ea = ea.to(x.device)
+        # ed = ed.to(x.device)
 
 
-        x = x.repeat(1,self.num_classes).transpose(0,1).reshape(batch,self.num_classes,n_leaves,n_leaves)
-        x = x - b/self.num_classes/n_leaves
+        x = x.repeat(1,self.num_classes).transpose(0,1).reshape(batch,self.num_classes,n_leaves*n_leaves)
+        x = x.permute(0, 2, 1)  # (b, c, l, l)
+        x = self.fc1_out(x)
+        x = self.fc2_out(x)
+        x = self.fc3_out(x)
+        x = x.reshape(batch, n_leaves, n_leaves, self.num_classes)
+        # x = x - b/self.num_classes/n_leaves
         # x = t.max(x, t.ones(x.shape)*(-1))
 
-        # out = x.permute(0, 3, 1, 2)  # (b, c, l, l)
 
-        x = x*ed
-        x = x-ea
+        # x = x*ed
+        # x = x-ea
+
+        x = x.permute(0, 3, 1, 2)  # (b, c, l, l)
+        if self.symmetrize:
+            x = t.div(x + t.transpose(x, 2, 3), 2)  # (b, c, l, l)
 
         return x
