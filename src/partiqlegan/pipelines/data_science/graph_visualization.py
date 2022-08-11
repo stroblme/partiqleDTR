@@ -157,6 +157,8 @@ class GraphVisualization:
 
             lca -= 1
             if len(directPairs) == 0:
+                if lca.max() == 0:
+                    raise RuntimeError(f"Invalid LCAG detected. LCAG was {lca}")
                 lca += t.diag(t.ones(lca.size(0), dtype=t.long))
             # processed = []
 
