@@ -64,12 +64,12 @@ class Instructor():
 
         self.model = model
         self.model.module.to(self.device)
-        
+
         for p in self.model.parameters():
             p.register_hook(lambda grad: t.clamp(grad, -1000, 1000))
         
-        pytorch_total_params = sum(p.numel() for p in model.parameters())
-        mlflow.log_param("Total trainable parameters", pytorch_total_params)
+        self.pytorch_total_params = sum(p.numel() for p in model.parameters())
+        mlflow.log_param("Total trainable parameters", self.pytorch_total_params)
         
         self.plot_mode = plot_mode
         self.data = data
@@ -95,13 +95,14 @@ class Instructor():
 
                 epoch_loss = 0.
                 epoch_acc = 0.
+                epoch_grad = []
 
                 log.info(f"Running epoch {epoch} in mode {mode} over {len(data_batch)} samples")
                 for states, labels in data_batch:
                     start = time.time()
                     states = [s.to(self.device) for s in states]
                     labels = labels.to(self.device)
-
+                    gradients = t.zeros(len([p for p in self.model.parameters()]))
                     scale = 1 / labels.size(1) # get the scaling dependend on the number of classes
 
                     if mode == "train":
@@ -116,7 +117,7 @@ class Instructor():
                         loss.backward()
                         self.opt.step()
 
-                        gradients = [p.grad.norm() for p in self.model.parameters()]
+                        gradients += t.Tensor([p.grad.norm() for p in self.model.parameters()])
                         log.info(f"Graients: {gradients}")
 
                         labels = labels.cpu()
@@ -143,6 +144,7 @@ class Instructor():
 
                     epoch_loss += scale * loss
                     epoch_acc += scale * acc
+                    epoch_grad.append(scale * gradients)
 
                     if acc > best_acc and mode == self.plot_mode:
                         # update the current best model when approaching a higher accuray
