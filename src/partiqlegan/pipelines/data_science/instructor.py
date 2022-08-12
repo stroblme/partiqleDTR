@@ -84,9 +84,13 @@ class Instructor():
         self.opt = t.optim.Adam(self.model.parameters(), lr=learning_rate)
         # learning rate scheduler, same as in NRI
         self.scheduler = StepLR(self.opt, step_size=learning_rate_decay, gamma=gamma)
-
+        self.detectAnomaly = True #TODO: introduce as parameter if helpful
 
     def train(self):
+        if self.detectAnomaly:
+            log.info(f'Anomaly detection enabled')
+            t.autograd.set_detect_anomaly(True)
+
         log.info(f'Training started with a batch size of {self.batch_size}')
         result = None            
         best_acc = 0
