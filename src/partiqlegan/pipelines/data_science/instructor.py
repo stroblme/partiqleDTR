@@ -200,6 +200,9 @@ class Instructor():
             g_plt = self.plotGradients(all_grads)
             mlflow.log_figure(g_plt.gcf(), f"gradients.png")
 
+        if result == None:
+            result = self.model
+
         return {
             "model_qgnn":result
         }
