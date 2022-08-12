@@ -133,11 +133,11 @@ class sqgnn(nn.Module):
             for i in range(n_qubits):
                 energy = q.circuit.Parameter(f"{identifier}_bias_{i}")
 
-                px = (q.circuit.Parameter(f"{identifier}_rx_{i}") * (1-1/energy), i, f"{identifier}_rx_{i}")
+                px = (q.circuit.Parameter(f"{identifier}_rx_{i}") * (1-1/energy) * 2*t.pi, i, f"{identifier}_rx_{i}")
                 qc.rx(*px) 
-                py = (q.circuit.Parameter(f"{identifier}_ry_{i}") * (1-1/energy), i, f"{identifier}_ry_{i}")
+                py = (q.circuit.Parameter(f"{identifier}_ry_{i}") * (1-1/energy) * 2*t.pi, i, f"{identifier}_ry_{i}")
                 qc.ry(*py) 
-                pz = (q.circuit.Parameter(f"{identifier}_rz_{i}") * (1-1/energy), i) # rz does not accept identifier
+                pz = (q.circuit.Parameter(f"{identifier}_rz_{i}") * (1-1/energy) * 2*t.pi, i) # rz does not accept identifier
                 qc.rz(*pz) 
                 # qc.ry(*param) 
 
