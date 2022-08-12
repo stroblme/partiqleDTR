@@ -128,8 +128,10 @@ class Instructor():
                             self.opt.step()
 
                             epoch_grad += t.Tensor([p.grad.norm() for p in self.model.parameters()])
-                            if t.any(t.isnan(epoch_grad)):
-                                log.error(f"Gradients became nan in epoch {epoch} after iteration {i}")
+                            if t.all(t.isnan(epoch_grad)):
+                                log.error(f"All gradients became nan in epoch {epoch} after iteration {i}.\nInput was\n{states}.\nPredicted was\n{logits}.\nGradients are\n{epoch_grad}")
+                            elif t.any(t.isnan(epoch_grad)): #TODO: we are checking for "all" instead of "any" since there were cases where the gradients became nan but training successfully continued (investigate in samples!)
+                                log.error(f"At least one gradient became nan in epoch {epoch} after iteration {i}.\nInput was\n{states}.\nPredicted was\n{logits}.\nGradients are\n{epoch_grad}")
                                 raise GradientsNanException
                             else:
                                 log.info(f"Gradients: {epoch_grad}")
