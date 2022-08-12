@@ -2,7 +2,7 @@
 model_sel: "sqgnn"
 post_model_sel: "pqgnn"
 
-epochs: 50
+epochs: 10
 normalize: True
 
 n_momenta: 4
