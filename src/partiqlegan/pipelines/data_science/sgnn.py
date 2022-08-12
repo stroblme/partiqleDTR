@@ -68,7 +68,7 @@ class sgnn(nn.Module):
     def __init__(
         self,
         n_momenta, # d
-        n_classes, # l
+        n_classes, # c
         n_blocks=3,
         dim_feedforward=128, # ff
         n_layers_mlp=2,
