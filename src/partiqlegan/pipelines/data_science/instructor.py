@@ -10,13 +10,18 @@ from torch.utils.data import Dataset, DataLoader
 
 import mlflow
 
+
 from .utils import rel_pad_collate_fn
 from .graph_visualization import GraphVisualization
+from .gradients_visualization import heatmap, annotate_heatmap
 
 from typing import Dict
 
 import logging
 log = logging.getLogger(__name__)
+
+class GradientsNanException(RuntimeError):
+    pass
 
 class DataWrapper(Dataset):
     """
@@ -85,94 +90,128 @@ class Instructor():
         log.info(f'Training started with a batch size of {self.batch_size}')
         result = None            
         best_acc = 0
-        for epoch in range(1, 1 + self.epochs):
-            for mode in ["train", "val"]:
-                data_batch = DataLoader(
-                                        DataWrapper(self.data[mode], normalize=self.normalize),
-                                        batch_size=self.batch_size,
-                                        shuffle=True,
-                                        collate_fn=rel_pad_collate_fn) # to handle varying input size
+        all_grads = []
+        try:
+            for epoch in range(1, 1 + self.epochs):
+                for mode in ["train", "val"]:
+                    data_batch = DataLoader(
+                                            DataWrapper(self.data[mode], normalize=self.normalize),
+                                            batch_size=self.batch_size,
+                                            shuffle=True,
+                                            collate_fn=rel_pad_collate_fn) # to handle varying input size
 
-                epoch_loss = 0.
-                epoch_acc = 0.
-                epoch_grad = []
+                    epoch_loss = 0.
+                    epoch_acc = 0.
+                    epoch_grad = t.zeros(len([p for p in self.model.parameters()]))
 
-                log.info(f"Running epoch {epoch} in mode {mode} over {len(data_batch)} samples")
-                for states, labels in data_batch:
-                    start = time.time()
-                    states = [s.to(self.device) for s in states]
-                    labels = labels.to(self.device)
-                    gradients = t.zeros(len([p for p in self.model.parameters()]))
-                    scale = 1 / labels.size(1) # get the scaling dependend on the number of classes
+                    log.info(f"Running epoch {epoch} in mode {mode} over {len(data_batch)} samples")
+                    for i, (states, labels) in enumerate(data_batch):
+                        start = time.time()
+                        states = [s.to(self.device) for s in states]
+                        labels = labels.to(self.device)
+                        scale = 1 / labels.size(1) # get the scaling dependend on the number of classes
+
+                        if mode == "train":
+                            self.model.train() # set the module in training mode
+
+                            logits = self.model.module(states)
+                            loss = cross_entropy(logits, labels, ignore_index=-1)
+                            acc = self.edge_accuracy(logits, labels)
+
+                            # do the actual optimization
+                            self.opt.zero_grad()
+                            loss.backward()
+                            self.opt.step()
+
+                            epoch_grad += t.Tensor([p.grad.norm() for p in self.model.parameters()])
+                            if t.any(t.isnan(epoch_grad)):
+                                log.error(f"Gradients became nan in epoch {epoch} after iteration {i}")
+                                raise GradientsNanException
+                            else:
+                                log.info(f"Gradients: {epoch_grad}")
+            
+                            
+
+
+                            labels = labels.cpu()
+                            if labels.numpy().min() < -1:
+                                raise Exception(f"Found graph with negative values: {labels.numpy()}")
+                        elif mode == "val":
+                            self.model.module.eval() # trigger evaluation forward mode
+                            with t.no_grad(): # disable autograd in tensors
+
+                                logits = self.model.module(states)
+
+                                loss = cross_entropy(logits, labels, ignore_index=-1)
+                                acc = self.edge_accuracy(logits, labels)
+                        elif mode == "test":
+                            self.model.module.eval() # trigger evaluation forward mode
+                            with t.no_grad(): # disable autograd in tensors
+
+                                logits = self.model.module(states)
+
+                                loss = cross_entropy(logits, labels, ignore_index=-1)
+                                acc = self.edge_accuracy(logits, labels)
+                        else:
+                            log.error("Unknown mode")
+
+                        epoch_loss += scale * loss.item()
+                        epoch_acc += scale * acc
+
+                        if acc > best_acc and mode == self.plot_mode:
+                            # update the current best model when approaching a higher accuray
+                            best_acc = acc
+                            result = self.model
+                            try:
+                                c_plt = self.plotBatchGraphs(logits.cpu(), labels)
+                                mlflow.log_figure(c_plt.gcf(), f"{mode}_e{epoch}_sample_graph.png")
+                            except Exception as e:
+                                log.error(f"Exception occured when trying to plot graphs: {e}\n\tThe lcag matrices were:\n\t{labels.numpy()}\n\tand\n\t{logits.cpu().detach().numpy()}")
+
+
+                        log.info(f"Sample evaluation in iteration {i} took {time.time() - start} seconds. Loss was {scale*loss.item()}")
+
+                    epoch_loss /= len(data_batch) # to the already scaled loss, apply the batch size scaling
+                    epoch_acc /= len(data_batch) # to the already scaled accuracy, apply the batch size scaling
 
                     if mode == "train":
-                        self.model.train() # set the module in training mode
+                        all_grads.append(scale * epoch_grad)
 
-                        logits = self.model.module(states)
-                        loss = cross_entropy(logits, labels, ignore_index=-1)
-                        acc = self.edge_accuracy(logits, labels)
+                    mlflow.log_metric(key=f"{mode}_accuracy", value=epoch_acc.item(), step=epoch)
+                    mlflow.log_metric(key=f"{mode}_loss", value=epoch_loss.item(), step=epoch)
 
-                        # do the actual optimization
-                        self.opt.zero_grad()
-                        loss.backward()
-                        self.opt.step()
+                    # learning rate scheduling
+                    self.scheduler.step()
+                    
 
-                        gradients += t.Tensor([p.grad.norm() for p in self.model.parameters()])
-                        log.info(f"Graients: {gradients}")
+        except GradientsNanException as e:
+            log.error(f"Gradients became NAN during training\n{e}")
+        except Exception as e:
+            log.error(f"Exception occured during training\n{e}")
 
-                        labels = labels.cpu()
-                        if labels.numpy().min() < -1:
-                            raise Exception(f"Found graph with negative values: {labels.numpy()}")
-                    elif mode == "val":
-                        self.model.module.eval() # trigger evaluation forward mode
-                        with t.no_grad(): # disable autograd in tensors
-
-                            logits = self.model.module(states)
-
-                            loss = cross_entropy(logits, labels, ignore_index=-1)
-                            acc = self.edge_accuracy(logits, labels)
-                    elif mode == "test":
-                        self.model.module.eval() # trigger evaluation forward mode
-                        with t.no_grad(): # disable autograd in tensors
-
-                            logits = self.model.module(states)
-
-                            loss = cross_entropy(logits, labels, ignore_index=-1)
-                            acc = self.edge_accuracy(logits, labels)
-                    else:
-                        log.error("Unknown mode")
-
-                    epoch_loss += scale * loss
-                    epoch_acc += scale * acc
-                    epoch_grad.append(scale * gradients)
-
-                    if acc > best_acc and mode == self.plot_mode:
-                        # update the current best model when approaching a higher accuray
-                        best_acc = acc
-                        result = self.model
-                        try:
-                            c_plt = self.plotBatchGraphs(logits.cpu(), labels)
-                            mlflow.log_figure(c_plt.gcf(), f"{mode}_e{epoch}_sample_graph.png")
-                        except Exception as e:
-                            log.error(f"Exception occured when trying to plot graphs: {e}\n\tThe lcag matrices were:\n\t{labels.numpy()}\n\tand\n\t{logits.cpu().detach().numpy()}")
-
-
-                    log.info(f"Sample evaluation took {time.time() - start} seconds. Loss was {scale*loss.item()}")
-
-                epoch_loss /= len(data_batch) # to the already scaled loss, apply the batch size scaling
-                epoch_acc /= len(data_batch) # to the already scaled accuracy, apply the batch size scaling
-
-                mlflow.log_metric(key=f"{mode}_accuracy", value=epoch_acc.item(), step=epoch)
-                mlflow.log_metric(key=f"{mode}_loss", value=epoch_loss.item(), step=epoch)
-
-                # learning rate scheduling
-                self.scheduler.step()
-
-    
+        # quickly print the gradients..
+        if len(all_grads) > 0:
+            g_plt = self.plotGradients(all_grads)
+            mlflow.log_figure(g_plt.gcf(), f"gradients.png")
 
         return {
             "model_qgnn":result
         }
+
+    def plotGradients(self, epoch_gradients):
+
+        X = [i for i in range(len(epoch_gradients))]
+        Y = [i for i in range(len(epoch_gradients[0]))]
+        Z = t.log(t.stack(epoch_gradients))
+
+        fig, ax = plt.subplots()
+        im, cbar = heatmap(Z, X, Y, ax=ax,
+                        cmap="magma_r", cbarlabel=f"Gradients Normalized",
+                        axis_labels=("Parameters", "Epochs"),
+                        title= "Gradient Values over Epochs")
+        # texts = annotate_heatmap(im, valfmt="{x:.1f} s")
+        fig.tight_layout()
+        return plt
 
     def plotBatchGraphs(self, batch_logits, batch_ref, rows=4, cols=2):
         fig, ax = plt.subplots(rows, cols, figsize=(15,15), gridspec_kw={'width_ratios': [1, 1]})
