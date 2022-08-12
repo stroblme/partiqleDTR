@@ -56,7 +56,7 @@ class Instructor():
     """
     def __init__(self, model: DataParallel, data: dict,
                 learning_rate: float, learning_rate_decay: int, gamma: float, batch_size:int, epochs:int, normalize: bool,
-                plot_mode:str="val"):
+                plot_mode:str="val", detectAnomaly:bool=False):
         """
         Args:
             model: an auto-encoder

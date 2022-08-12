@@ -122,7 +122,8 @@ def create_training_qgnn_pipeline(**kwargs) -> Pipeline:
                     "batch_size":"params:batch_size",
                     "epochs":"params:epochs",
                     "normalize":"params:normalize",
-                    "plot_mode":"params:plot_mode"
+                    "plot_mode":"params:plot_mode",
+                    "detectAnomaly":"params:detect_anomaly"
                 },
                 outputs={
                     "instructor":"instructor"
@@ -283,7 +284,8 @@ def create_split_training_qgnn_pipeline(**kwargs) -> Pipeline:
                     "batch_size":"params:batch_size",
                     "epochs":"params:epochs",
                     "normalize":"params:normalize",
-                    "plot_mode":"params:plot_mode"
+                    "plot_mode":"params:plot_mode",
+                    "detectAnomaly":"params:detect_anomaly"
                 },
                 outputs={
                     "instructor":"quantum_instructor"
