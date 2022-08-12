@@ -313,13 +313,12 @@ class pqgnn(nn.Module):
         x = x.flatten()
         x = t.nn.functional.pad(x, ((512-x.shape[0])//2, (512-x.shape[0])//2), mode='constant', value=0)
         x = self.quantum_layer(x)
-        b = t.tensor([[i] for i in range(self.num_classes)])
-        b = b.repeat(1,n_leaves**2).reshape(1,n_leaves**2,self.num_classes)
+        b = t.tensor([[i] for i in range(self.num_classes)]).repeat(1,n_leaves**2).reshape(batch,self.num_classes,n_leaves,n_leaves)
         b = b.to(x.device)
-        x = x[:n_leaves**2].repeat(1,self.num_classes).reshape(1,n_leaves**2,self.num_classes)
+        x = x.repeat(1,self.num_classes).transpose(0,1).reshape(batch,self.num_classes,n_leaves,n_leaves)
         x = x - b/self.num_classes
         # x = t.max(x, t.ones(x.shape)*(-1))
-        out = x.reshape(batch, n_leaves, n_leaves, self.num_classes)
+        # out = x.reshape(batch, n_leaves, n_leaves, self.num_classes)
 
         # Change to LCA shape
         # x is currently the flattened rows of the predicted LCA but without the diagonal
@@ -334,7 +333,7 @@ class pqgnn(nn.Module):
         # out[:, ind_lower[0], ind_lower[1], :] = x[:, (ind_lower[0] * (n_leaves - 1)) + ind_lower[1], :]
 
         # Need in the order for cross entropy loss
-        out = out.permute(0, 3, 1, 2)  # (b, c, l, l)
+        out = x.permute(0, 3, 1, 2)  # (b, c, l, l)
 
         # Symmetrize
         if self.symmetrize:
