@@ -27,7 +27,7 @@ log = logging.getLogger(__name__)
 class MLP(nn.Module):
     """Two-layer fully-connected ELU net with batch norm."""
 
-    def __init__(self, n_in, n_hid, n_out, do_prob, batchnorm=True):
+    def __init__(self, n_in, n_hid, n_out, do_prob, batchnorm=True, activation=F.elu):
         super(MLP, self).__init__()
 
         self.batchnorm = batchnorm
@@ -38,7 +38,7 @@ class MLP(nn.Module):
             self.bn = nn.BatchNorm1d(n_out, momentum=0.1, track_running_stats=True)
             # self.bn = nn.BatchNorm1d(n_out, momentum=0.1, track_running_stats=False)  # Use this to overfit
         self.dropout_prob = do_prob
-
+        self.activation = activation
         self.init_weights()
 
     def init_weights(self):
@@ -61,9 +61,9 @@ class MLP(nn.Module):
         Output: (b, l, d)
         '''
         # Input shape: [num_sims, num_things, num_features]
-        x = F.elu(self.fc1(inputs))  # (b, l, d)
+        x = self.activation(self.fc1(inputs))  # (b, l, d)
         x = F.dropout(x, self.dropout_prob, training=self.training)  # (b, l, d)
-        x = F.elu(self.fc2(x))  # (b, l, d)
+        x = self.activation(self.fc2(x))  # (b, l, d)
         return self.batch_norm_layer(x) if self.batchnorm else x  # (b, l, d)
 
 
