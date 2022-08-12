@@ -127,10 +127,10 @@ def create_model(   n_classes,
 def create_instructor(  dataset_lca_and_leaves:Dict,
                         model: DataParallel,
                         learning_rate: float, learning_rate_decay: int, gamma: float,
-                        batch_size:int, epochs:int, normalize:bool, plot_mode:str) -> Instructor:
+                        batch_size:int, epochs:int, normalize:bool, plot_mode:str, detectAnomaly:bool) -> Instructor:
     instructor = Instructor(model, dataset_lca_and_leaves, 
                             learning_rate, learning_rate_decay, gamma, 
-                            batch_size, epochs, normalize, plot_mode)
+                            batch_size, epochs, normalize, plot_mode, detectAnomaly)
 
     return{
         "instructor":instructor
