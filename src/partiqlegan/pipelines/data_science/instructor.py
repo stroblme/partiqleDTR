@@ -84,7 +84,7 @@ class Instructor():
         self.opt = t.optim.Adam(self.model.parameters(), lr=learning_rate)
         # learning rate scheduler, same as in NRI
         self.scheduler = StepLR(self.opt, step_size=learning_rate_decay, gamma=gamma)
-        self.detectAnomaly = True #TODO: introduce as parameter if helpful
+        self.detectAnomaly = detectAnomaly #TODO: introduce as parameter if helpful
 
     def train(self):
         if self.detectAnomaly:
@@ -95,7 +95,9 @@ class Instructor():
         result = None            
         best_acc = 0
         all_grads = []
-        try:
+
+
+        try: # catch things like gradient nan exceptions
             for epoch in range(1, 1 + self.epochs):
                 for mode in ["train", "val"]:
                     data_batch = DataLoader(
@@ -110,7 +112,7 @@ class Instructor():
 
                     log.info(f"Running epoch {epoch} in mode {mode} over {len(data_batch)} samples")
                     for i, (states, labels) in enumerate(data_batch):
-                        start = time.time()
+                        sample_start = time.time()
                         states = [s.to(self.device) for s in states]
                         labels = labels.to(self.device)
                         scale = 1 / labels.size(1) # get the scaling dependend on the number of classes
@@ -134,7 +136,7 @@ class Instructor():
                                 log.error(f"At least one gradient became nan in epoch {epoch} after iteration {i}.\nInput was\n{states}.\nPredicted was\n{logits}.\nGradients are\n{epoch_grad}")
                                 raise GradientsNanException
                             else:
-                                log.info(f"Gradients: {epoch_grad}")
+                                log.debug(f"Gradients in epoch {e}, iteration {i}: {epoch_grad}")
             
                             
 
@@ -174,8 +176,8 @@ class Instructor():
                             except Exception as e:
                                 log.error(f"Exception occured when trying to plot graphs: {e}\n\tThe lcag matrices were:\n\t{labels.numpy()}\n\tand\n\t{logits.cpu().detach().numpy()}")
 
-
-                        log.info(f"Sample evaluation in iteration {i} took {time.time() - start} seconds. Loss was {scale*loss.item()}")
+                        if mode == "train":
+                            log.debug(f"Sample evaluation in epoch {e}, iteration {i} took {time.time() - sample_start} seconds. Loss was {scale*loss.item()}")
 
                     epoch_loss /= len(data_batch) # to the already scaled loss, apply the batch size scaling
                     epoch_acc /= len(data_batch) # to the already scaled accuracy, apply the batch size scaling
