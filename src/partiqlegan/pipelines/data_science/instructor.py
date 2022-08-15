@@ -108,7 +108,7 @@ class Instructor():
 
                     epoch_loss = 0.
                     epoch_acc = 0.
-                    epoch_grad = t.zeros(len([p for p in self.model.parameters()]))
+                    epoch_grad = t.zeros(len([p for p in self.model.parameters()][0]))
 
                     log.info(f"Running epoch {epoch} in mode {mode} over {len(data_batch)} samples")
                     for i, (states, labels) in enumerate(data_batch):
@@ -129,14 +129,14 @@ class Instructor():
                             loss.backward()
                             self.opt.step()
 
-                            epoch_grad += t.Tensor([p.grad.norm() for p in self.model.parameters()])
+                            epoch_grad += t.Tensor([p.grad for p in self.model.parameters()][0]) # only log the first layer (vqc)
                             if t.all(t.isnan(epoch_grad)):
                                 log.error(f"All gradients became nan in epoch {epoch} after iteration {i}.\nInput was\n{states}.\nPredicted was\n{logits}.\nGradients are\n{epoch_grad}")
+                                raise GradientsNanException
                             elif t.any(t.isnan(epoch_grad)): #TODO: we are checking for "all" instead of "any" since there were cases where the gradients became nan but training successfully continued (investigate in samples!)
                                 log.error(f"At least one gradient became nan in epoch {epoch} after iteration {i}.\nInput was\n{states}.\nPredicted was\n{logits}.\nGradients are\n{epoch_grad}")
-                                raise GradientsNanException
                             else:
-                                log.debug(f"Gradients in epoch {e}, iteration {i}: {epoch_grad}")
+                                log.debug(f"Gradients in epoch {epoch}, iteration {i}: {epoch_grad}")
             
                             
 
@@ -164,7 +164,7 @@ class Instructor():
                             log.error("Unknown mode")
 
                         epoch_loss += scale * loss.item()
-                        epoch_acc += scale * acc
+                        epoch_acc += scale * acc.item()
 
                         if acc > best_acc and mode == self.plot_mode:
                             # update the current best model when approaching a higher accuray
@@ -174,10 +174,10 @@ class Instructor():
                                 c_plt = self.plotBatchGraphs(logits.cpu(), labels)
                                 mlflow.log_figure(c_plt.gcf(), f"{mode}_e{epoch}_sample_graph.png")
                             except Exception as e:
-                                log.error(f"Exception occured when trying to plot graphs: {e}\n\tThe lcag matrices were:\n\t{labels.numpy()}\n\tand\n\t{logits.cpu().detach().numpy()}")
+                                log.error(f"Exception occured when trying to plot graphs in epoch {epoch}: {e}\n\tThe lcag matrices were:\n\t{labels.numpy()}\n\tand\n\t{logits.cpu().detach().numpy()}")
 
                         if mode == "train":
-                            log.debug(f"Sample evaluation in epoch {e}, iteration {i} took {time.time() - sample_start} seconds. Loss was {scale*loss.item()}")
+                            log.debug(f"Sample evaluation in epoch {epoch}, iteration {i} took {time.time() - sample_start} seconds. Loss was {scale*loss.item()}")
 
                     epoch_loss /= len(data_batch) # to the already scaled loss, apply the batch size scaling
                     epoch_acc /= len(data_batch) # to the already scaled accuracy, apply the batch size scaling
@@ -185,8 +185,8 @@ class Instructor():
                     if mode == "train":
                         all_grads.append(scale * epoch_grad)
 
-                    mlflow.log_metric(key=f"{mode}_accuracy", value=epoch_acc.item(), step=epoch)
-                    mlflow.log_metric(key=f"{mode}_loss", value=epoch_loss.item(), step=epoch)
+                    mlflow.log_metric(key=f"{mode}_accuracy", value=epoch_acc, step=epoch)
+                    mlflow.log_metric(key=f"{mode}_loss", value=epoch_loss, step=epoch)
 
                     # learning rate scheduling
                     self.scheduler.step()
