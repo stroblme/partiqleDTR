@@ -275,7 +275,7 @@ class sqgnn(nn.Module):
             lcag=lcag.to(result.device)
             lcag[np.tril_indices_from(lcag, k=-1)] = result[permutations_indices]
             lcag = lcag + t.transpose(lcag, 0, 1)
-            lcag = lcag - t.diag(t.ones(out_shape[0]).to(result.device))
+            # lcag = lcag - t.diag(t.ones(out_shape[0]).to(result.device))
             return lcag
 
         # x = x.reshape(batch, x.shape[0], 1)
