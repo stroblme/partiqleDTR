@@ -193,8 +193,9 @@ class sqgnn(nn.Module):
         self.quantum_layer = TorchConnector(self.qnn, initial_weights=self.initial_weights)
         log.info(f"Initialization done")
 
-        self.fc1_out = MLP(self.num_classes, self.num_classes, self.num_classes, dropout_rate, batchnorm, activation=F.leaky_relu)
-        # self.fc2_out = MLP(self.num_classes, 2*self.num_classes, self.num_classes, dropout_rate, batchnorm)
+        self.fc1_out = MLP(self.num_classes, self.num_classes, self.num_classes, dropout_rate, batchnorm, activation=F.relu)
+        self.fc2_out = MLP(self.num_classes, 2*self.num_classes, 2*self.num_classes, dropout_rate, batchnorm, activation=F.elu)
+        self.fc3_out = MLP(2*self.num_classes, 2*self.num_classes, self.num_classes, dropout_rate, batchnorm, activation=F.elu)
         # self.fc3_out = MLP(self.num_classes, self.num_classes, self.num_classes, dropout_rate, batchnorm)
 
 
@@ -295,8 +296,8 @@ class sqgnn(nn.Module):
         x = x.repeat(1,self.num_classes).transpose(0,1).reshape(batch,self.num_classes,n_leaves*n_leaves)
         x = x.permute(0, 2, 1)  # (b, c, l, l)
         x = self.fc1_out(x)
-        # x = self.fc2_out(x)
-        # x = self.fc3_out(x)
+        x = self.fc2_out(x)
+        x = self.fc3_out(x)
         x = x.reshape(batch, n_leaves, n_leaves, self.num_classes)
         # x = x - b/self.num_classes/n_leaves
         # x = t.max(x, t.ones(x.shape)*(-1))
