@@ -80,6 +80,7 @@ class Instructor():
 
         for p in self.model.parameters():
             p.register_hook(lambda grad: t.clamp(grad, -1000, 1000))
+            p.register_hook(lambda grad: t.where(grad<1e-10, t.rand(1)*1e-9, grad))
         
         self.pytorch_total_params = sum(p.numel() for p in model.parameters())
         mlflow.log_param("Total trainable parameters", self.pytorch_total_params)
