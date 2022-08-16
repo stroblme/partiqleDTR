@@ -83,7 +83,7 @@ dataset_lca_and_leaves:
 trained_model:
   type: kedro_mlflow.io.artifacts.MlflowArtifactDataSet
   data_set:
-    type: pickle.PickleDataSet
+    type: partiqlegan.pipelines.data_science.utils.HybridTorchModelDataset
     filepath: data/06_models/trained_model.pkl
 
 trained_classical_model:
@@ -102,5 +102,5 @@ trained_classical_model:
 trained_quantum_model:
   type: kedro_mlflow.io.artifacts.MlflowArtifactDataSet
   data_set:
-    type: pickle.PickleDataSet
+    type: partiqlegan.pipelines.data_science.utils.HybridTorchModelDataset
     filepath: data/06_models/trained_quantum_model.pkl
