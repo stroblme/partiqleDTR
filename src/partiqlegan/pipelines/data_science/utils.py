@@ -1,5 +1,50 @@
 import torch as t
+from pathlib import Path, PurePosixPath
+from typing import Any, Callable, Dict, Optional, OrderedDict, Tuple
+from kedro.io import AbstractDataSet
+import dill
+class HybridTorchModel:
+    def __init__(
+        self,
+        setup_fn: Callable,
+        *args,
+        state_dict: Optional[OrderedDict[str, t.Tensor]] = None,
+        **kwargs,
+    ):
+        self._setup_fn = setup_fn
+        self._model = self._setup_fn(*args, **kwargs)
+        if state_dict is not None:
+            self._model.load_state_dict(state_dict)
 
+    @property
+    def model(self) -> t.nn.Sequential:
+        return self._model
+
+class HybridTorchModelDataset(AbstractDataSet):
+    def __init__(self, filepath):
+        self._filepath = PurePosixPath(filepath)
+
+    def _load(self):
+        weights = t.load(Path(self._filepath, "weights.pt"))
+        with open(Path(self._filepath, "setup_fn.pkl"), "rb") as dill_file:
+            setup_fn = dill.load(dill_file)
+        model = HybridTorchModel(setup_fn=setup_fn, state_dict=weights)
+        return model
+
+    def _save(self, data: HybridTorchModel):
+        if not self._exists():
+            Path(self._filepath.as_posix()).mkdir()
+        with open(Path(self._filepath.as_posix(), "setup_fn.pkl"), "wb") as output:
+            output.write(dill.dumps(data._setup_fn))
+        t.save(
+            data.model.state_dict(), Path(self._filepath.as_posix(), "weights.pt")
+        )
+
+    def _exists(self) -> bool:
+        return Path(self._filepath.as_posix()).exists()
+
+    def _describe(self) -> Dict[str, Any]:
+        ...
 
 def construct_rel_recvs(ln_leaves, self_interaction=False, device=None):
     """
