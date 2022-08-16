@@ -29,6 +29,8 @@ symmetrize: True
 
 plot_mode: "train"
 
-detect_anomaly: False
+detect_anomaly: False # enables torch' anomaly detector
+
+device: 'cpu' # anything but 'cpu' to use cuda devices instead
 
 git_hash_identifier: "git_hash"

@@ -104,7 +104,8 @@ def create_training_qgnn_pipeline(**kwargs) -> Pipeline:
                     "embedding_dims":"params:embedding_dims",
                     "batchnorm":"params:batchnorm",
                     "symmetrize":"params:symmetrize",
-                    "n_fsps":"n_fsps"
+                    "n_fsps":"n_fsps",
+                    "device":"params:device",
                 },
                 outputs={
                         "nri_model":"nri_model"
@@ -123,7 +124,9 @@ def create_training_qgnn_pipeline(**kwargs) -> Pipeline:
                     "epochs":"params:epochs",
                     "normalize":"params:normalize",
                     "plot_mode":"params:plot_mode",
-                    "detectAnomaly":"params:detect_anomaly"
+                    "detectAnomaly":"params:detect_anomaly",
+                    "device":"params:device",
+                    "n_fsps":"n_fsps"
                 },
                 outputs={
                     "instructor":"instructor"
@@ -265,7 +268,8 @@ def create_split_training_qgnn_pipeline(**kwargs) -> Pipeline:
                     "batchnorm":"params:batchnorm",
                     "symmetrize":"params:symmetrize",
                     "pre_trained_model":"trained_model",
-                    "n_fsps":"n_fsps"
+                    "n_fsps":"n_fsps",
+                    "device":"params:device"
                 },
                 outputs={
                         "nri_model":"quantum_model"
@@ -285,7 +289,9 @@ def create_split_training_qgnn_pipeline(**kwargs) -> Pipeline:
                     "epochs":"params:epochs",
                     "normalize":"params:normalize",
                     "plot_mode":"params:plot_mode",
-                    "detectAnomaly":"params:detect_anomaly"
+                    "detectAnomaly":"params:detect_anomaly",
+                    "device":"params:device",
+                    "n_fsps":"n_fsps",
                 },
                 outputs={
                     "instructor":"quantum_instructor"

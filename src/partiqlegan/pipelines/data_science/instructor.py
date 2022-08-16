@@ -10,6 +10,7 @@ from torch.utils.data import Dataset, DataLoader
 
 import mlflow
 
+import torchinfo
 
 from .utils import rel_pad_collate_fn
 from .graph_visualization import GraphVisualization
@@ -64,7 +65,7 @@ class Instructor():
     """
     def __init__(self, model: DataParallel, data: dict,
                 learning_rate: float, learning_rate_decay: int, gamma: float, batch_size:int, epochs:int, normalize: bool,
-                plot_mode:str="val", detectAnomaly:bool=False):
+                plot_mode:str="val", detectAnomaly:bool=False, device='cpu', n_fsps=-1):
         """
         Args:
             model: an auto-encoder
@@ -72,12 +73,10 @@ class Instructor():
             es: edge list
             cmd: command line parameters
         """
-        self.device = t.device('cuda' if t.cuda.is_available() else 'cpu')
-        self.device = 'cpu'
+        self.device = t.device('cuda' if t.cuda.is_available() and device!="cpu" else device)
 
-        self.model = model
-        self.model.module.to(self.device)
-
+        self.model = model # model is already on the proper device
+        mlflow.log_text(str(torchinfo.summary(model, input_size=(n_fsps, batch_size, 4))), "model_printout.txt")
         for p in self.model.parameters():
             p.register_hook(lambda grad: t.clamp(grad, -1000, 1000))
             p.register_hook(lambda grad: t.where(grad<1e-10, t.rand(1)*1e-9, grad))

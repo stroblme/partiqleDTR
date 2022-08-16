@@ -68,7 +68,8 @@ def create_model(   n_classes,
                     batchnorm=True,
                     symmetrize=True,
                     pre_trained_model:DataParallel=None,
-                    n_fsps:int=-1
+                    n_fsps:int=-1,
+                    device="cpu"
                 ) -> DataParallel:
 
     model = models[model_sel](  n_momenta=n_momenta,
@@ -118,7 +119,10 @@ def create_model(   n_classes,
     #                         batchnorm=batchnorm,
     #                         symmetrize=symmetrize)
 
-    nri_model = DataParallel(model)
+    if device == 'cpu':
+        nri_model = model
+    else:
+        nri_model = DataParallel(model)
 
     return{
         "nri_model":nri_model
@@ -127,10 +131,10 @@ def create_model(   n_classes,
 def create_instructor(  dataset_lca_and_leaves:Dict,
                         model: DataParallel,
                         learning_rate: float, learning_rate_decay: int, gamma: float,
-                        batch_size:int, epochs:int, normalize:bool, plot_mode:str, detectAnomaly:bool) -> Instructor:
+                        batch_size:int, epochs:int, normalize:bool, plot_mode:str, detectAnomaly:bool, device:str, n_fsps:int) -> Instructor:
     instructor = Instructor(model, dataset_lca_and_leaves, 
                             learning_rate, learning_rate_decay, gamma, 
-                            batch_size, epochs, normalize, plot_mode, detectAnomaly)
+                            batch_size, epochs, normalize, plot_mode, detectAnomaly, device, n_fsps)
 
     return{
         "instructor":instructor
