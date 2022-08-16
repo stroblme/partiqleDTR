@@ -32,17 +32,25 @@ class DataWrapper(Dataset):
         dmin = 1
         self.data = data
         if normalize:
+            # for i, event in enumerate(data.x):
+            #     dmax = event.max() if event.max() > dmax else dmax
+            #     dmin = event.min() if event.min() < dmin else dmin
+            # for i, event in enumerate(data.x):
+            #     self.data.x[i] = (event-dmin)/(dmax-dmin)
+            # dmax = 0
+            # dmin = 1
+            # for i, event in enumerate(data.x):
+            #     dmax = event.max() if event.max() > dmax else dmax
+            #     dmin = event.min() if event.min() < dmin else dmin
+            # assert dmax==1 and dmin==0
+
+
             for i, event in enumerate(data.x):
-                dmax = event.max() if event.max() > dmax else dmax
-                dmin = event.min() if event.min() < dmin else dmin
-            for i, event in enumerate(data.x):
+                dmax = event.max()
+                dmin = event.min()
+              
                 self.data.x[i] = (event-dmin)/(dmax-dmin)
-            dmax = 0
-            dmin = 1
-            for i, event in enumerate(data.x):
-                dmax = event.max() if event.max() > dmax else dmax
-                dmin = event.min() if event.min() < dmin else dmin
-            assert dmax==1 and dmin==0
+            
     def __len__(self):
         return len(self.data)
 
