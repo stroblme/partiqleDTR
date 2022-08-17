@@ -76,6 +76,7 @@ class Instructor():
         self.device = t.device('cuda' if t.cuda.is_available() and device!="cpu" else device)
 
         self.model = model # model is already on the proper device
+        self.model.to(self.device)
         mlflow.log_text(str(torchinfo.summary(model, input_size=(n_fsps, batch_size, 4))), "model_printout.txt")
         for p in self.model.parameters():
             p.register_hook(lambda grad: t.clamp(grad, -1000, 1000))
@@ -128,7 +129,7 @@ class Instructor():
                         if mode == "train":
                             self.model.train() # set the module in training mode
 
-                            logits = self.model.module(states)
+                            logits = self.model(states)
                             loss = cross_entropy(logits, labels, ignore_index=-1)
                             acc = self.edge_accuracy(logits, labels)
 
@@ -153,18 +154,18 @@ class Instructor():
                             if labels.numpy().min() < -1:
                                 raise Exception(f"Found graph with negative values: {labels.numpy()}")
                         elif mode == "val":
-                            self.model.module.eval() # trigger evaluation forward mode
+                            self.model.eval() # trigger evaluation forward mode
                             with t.no_grad(): # disable autograd in tensors
 
-                                logits = self.model.module(states)
+                                logits = self.model(states)
 
                                 loss = cross_entropy(logits, labels, ignore_index=-1)
                                 acc = self.edge_accuracy(logits, labels)
                         elif mode == "test":
-                            self.model.module.eval() # trigger evaluation forward mode
+                            self.model.eval() # trigger evaluation forward mode
                             with t.no_grad(): # disable autograd in tensors
 
-                                logits = self.model.module(states)
+                                logits = self.model(states)
 
                                 loss = cross_entropy(logits, labels, ignore_index=-1)
                                 acc = self.edge_accuracy(logits, labels)
