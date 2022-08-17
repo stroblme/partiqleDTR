@@ -17,9 +17,7 @@ data_transform = tv.transforms.Compose(
         tv.transforms.RandomResizedCrop(224),
         tv.transforms.RandomHorizontalFlip(),
         tv.transforms.ToTensor(),
-        tv.transforms.Normalize(
-            mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
-        ),
+        tv.transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
     ]
 )
 
@@ -27,7 +25,7 @@ data_transform = tv.transforms.Compose(
 #     def __init__(self, dataset:Dict[str, np.ndarray]):
 
 #         self.decayTreeDataset = dataset
-        
+
 #         raise NotImplementedError("Sorry, not yet..")
 
 #     def __len__(self):
@@ -38,11 +36,12 @@ data_transform = tv.transforms.Compose(
 #             idx = idx.tolist()
 
 #         raise NotImplementedError("Sorry, not yet..")
-        
+
 allowed_fsps = ["e+", "e-", "pi+", "pi-", "gamma"]
 allowed_nodes = ["e+", "e-", "pi+", "pi-", "pi0", "gamma", "omega", "mu+", "mu-", "eta"]
 
-class particle_node():
+
+class particle_node:
     def __init__(self, name, parent_node=None, fsp=False):
         self.name = name
         self.parent_node = parent_node
@@ -53,6 +52,7 @@ class particle_node():
     #         return (self.name == __o.name) and (self.parent_node == __o.parent_node)
     #     except:
     #         return False
+
 
 def tree_data_to_adjacency_list(
     decay_tree_structure: Tuple[List, List]
@@ -76,9 +76,10 @@ def tree_data_to_adjacency_list(
     def append_list(list_to_append, other_list):
         list_to_append.append(other_list)
         return list_to_append[-1]
-    
 
-    def create_adj_list_from_tree(tree, adj_list, parent_node=particle_node(name="origin")):
+    def create_adj_list_from_tree(
+        tree, adj_list, parent_node=particle_node(name="origin")
+    ):
 
         first_key = list(tree.keys())[0]
 
@@ -88,7 +89,9 @@ def tree_data_to_adjacency_list(
             adj_list[-1].append(list())
 
             # strings are moved to the very beginning. This is important to not mixup with the [-1] calls
-            type_sorted_values=sorted(tree["fs"], key=lambda x: not isinstance(x,str))
+            type_sorted_values = sorted(
+                tree["fs"], key=lambda x: not isinstance(x, str)
+            )
             for node_name in type_sorted_values:
                 # A string? add it directly to the list
                 if type(node_name) == str:
@@ -96,7 +99,9 @@ def tree_data_to_adjacency_list(
                 # Special treating for the dicts
                 else:
                     # these are only 1 dim dicts, thus it's fair enough to just get the first key
-                    node = append_node(adj_list[-1][-1], list(node_name.keys())[0], parent_node)
+                    node = append_node(
+                        adj_list[-1][-1], list(node_name.keys())[0], parent_node
+                    )
                     # a recursive call at this point is ok, since there should be no strings anymore due to the sorting prior to the iteration
                     create_adj_list_from_tree(node_name, adj_list, node)
         # key is a node
@@ -115,15 +120,15 @@ def tree_data_to_adjacency_list(
 
     return (particles, adjacency_list)
 
+
 def adjacency_list_to_adjacency_matrix(
-    particles: List,
-    adjacency_list: List
+    particles: List, adjacency_list: List
 ) -> np.ndarray:
     adjacency_matrix = np.zeros((len(particles), len(particles)))
 
     def create_adj_mat_from_adj_list(adj_list, adj_matrix):
         np.fill_diagonal(adj_matrix, 1)
-        
+
         for edge in adj_list:
             idx_a = particles.index(edge[0])
             for set_of_childs in edge[1:]:
@@ -132,42 +137,31 @@ def adjacency_list_to_adjacency_matrix(
                     adj_matrix[idx_a, idx_b] += 1
                     adj_matrix[idx_b, idx_a] += 1
 
-
     create_adj_mat_from_adj_list(adjacency_list, adjacency_matrix)
-    
+
     return adjacency_matrix
 
-def filter_fsps(
-    particles: List
-) -> List:
+
+def filter_fsps(particles: List) -> List:
     fsps = [particle for particle in particles if particle.fsp]
 
     return fsps
-    
 
-def adjacency_list_to_lca(
-    particles: List,
-    adjacency_list: List
-) -> np.ndarray:
-    
+
+def adjacency_list_to_lca(particles: List, adjacency_list: List) -> np.ndarray:
+
     fsps = filter_fsps(particles)
 
-def adjacency_list_to_lcas(
-    particles: List,
-    adjacency_list: List
-) -> np.ndarray:
-    pass
 
-def adjacency_list_to_lcag(
-    particles: List,
-    adjacency_list: List
-) -> np.ndarray:
+def adjacency_list_to_lcas(particles: List, adjacency_list: List) -> np.ndarray:
     pass
 
 
+def adjacency_list_to_lcag(particles: List, adjacency_list: List) -> np.ndarray:
+    pass
 
 
-def conv_structure_to_lca_and_names(pad_to:int, decay_tree_structure):
+def conv_structure_to_lca_and_names(pad_to: int, decay_tree_structure):
     all_lca = list()
     all_names = list()
 
@@ -176,12 +170,8 @@ def conv_structure_to_lca_and_names(pad_to:int, decay_tree_structure):
 
         all_lca.append(lca)
         all_names.append(names)
-                
 
-    return {
-        "all_lca": all_lca,
-        "all_names": all_names
-    }
+    return {"all_lca": all_lca, "all_names": all_names}
 
 
 def lca_and_leaves_sort_into_modes(
@@ -193,8 +183,9 @@ def lca_and_leaves_sort_into_modes(
     generate_unknown: bool,
     all_lca: List,
     all_names: List,
-    decay_tree_events: Tuple[List, List]):
-    
+    decay_tree_events: Tuple[List, List],
+):
+
     # n_topologies = decay_parameters["N_TOPOLOGIES"] if "N_TOPOLOGIES" in decay_parameters else None
     # modes_names = decay_parameters["MODES_NAMES"] if "MODES_NAMES" in decay_parameters else None
     # train_events_per_top = decay_parameters["TRAIN_EVENTS_PER_TOP"] if "TRAIN_EVENTS_PER_TOP" in decay_parameters else None
@@ -202,12 +193,16 @@ def lca_and_leaves_sort_into_modes(
     # test_events_per_top = decay_parameters["TEST_EVENTS_PER_TOP"] if "TEST_EVENTS_PER_TOP" in decay_parameters else None
     # generate_unknown = decay_parameters["GENERATE_UNKNOWN"] if "GENERATE_UNKNOWN" in decay_parameters else None
 
-    events_per_mode = {'train': train_events_per_top, 'val': val_events_per_top, 'test': test_events_per_top}
+    events_per_mode = {
+        "train": train_events_per_top,
+        "val": val_events_per_top,
+        "test": test_events_per_top,
+    }
 
     _, all_events = decay_tree_events
 
-    all_lca_mode_sorted = {mode:list() for mode in modes_names}
-    all_leaves_mode_sorted = {mode:list() for mode in modes_names}
+    all_lca_mode_sorted = {mode: list() for mode in modes_names}
+    all_leaves_mode_sorted = {mode: list() for mode in modes_names}
 
     for i, (lca, names) in enumerate(zip(all_lca, all_names)):
         # NOTE generate leaves and labels for training, validation, and testing
@@ -223,11 +218,17 @@ def lca_and_leaves_sort_into_modes(
             modes = modes_names[2:]
         # save_dir.mkdir(parents=True, exist_ok=True)
 
-
         for mode in modes:
             num_events = events_per_mode[mode]
-    
-            leaves = np.asarray([all_events[mode][i][name] if name in all_events[mode][i] else np.zeros((num_events, 4)) for name in names])
+
+            leaves = np.asarray(
+                [
+                    all_events[mode][i][name]
+                    if name in all_events[mode][i]
+                    else np.zeros((num_events, 4))
+                    for name in names
+                ]
+            )
             leaves = leaves.swapaxes(0, 1)
             # assert leaves.shape == (num_events, _count_leaves(root_node), 4)
 
@@ -236,44 +237,45 @@ def lca_and_leaves_sort_into_modes(
 
             all_lca_mode_sorted[mode].append(lca)
             all_leaves_mode_sorted[mode].append(leaves)
-                
 
     return {
         "all_lca_mode_sorted": all_lca_mode_sorted,
-        "all_leaves_mode_sorted": all_leaves_mode_sorted
+        "all_leaves_mode_sorted": all_leaves_mode_sorted,
     }
 
+
 def shuffle_lca_and_leaves_in_mode(
-    modes_names: List[str],
-    all_lca_mode_sorted: List,
-    all_leaves_mode_sorted: List):
-    
+    modes_names: List[str], all_lca_mode_sorted: List, all_leaves_mode_sorted: List
+):
+
     # modes_names = decay_parameters["MODES_NAMES"] if "MODES_NAMES" in decay_parameters else None
 
-    all_lca_shuffled = {mode:list() for mode in modes_names}
-    all_leaves_shuffled = {mode:list() for mode in modes_names}
+    all_lca_shuffled = {mode: list() for mode in modes_names}
+    all_leaves_shuffled = {mode: list() for mode in modes_names}
 
     for mode in modes_names:
 
-        for (lca, leaves) in zip(all_lca_mode_sorted[mode], all_leaves_mode_sorted[mode]):
+        for (lca, leaves) in zip(
+            all_lca_mode_sorted[mode], all_leaves_mode_sorted[mode]
+        ):
             # NOTE shuffle leaves for each sample
             leaves_shuffled, lca_shuffled = _shuffle_lca_and_leaves(leaves, lca)
 
             all_lca_shuffled[mode].append(lca_shuffled)
             all_leaves_shuffled[mode].append(leaves_shuffled)
-                
 
     return {
         "all_lca_shuffled": all_lca_shuffled,
-        "all_leaves_shuffled": all_leaves_shuffled
+        "all_leaves_shuffled": all_leaves_shuffled,
     }
+
 
 # def shuffle_lca_and_leaves(
 #     decay_parameters: List,
 #     all_lca: List,
 #     all_names: List,
 #     decay_tree_events: Tuple[List, List]):
-    
+
 #     N_TOPOLOGIES = decay_parameters["N_TOPOLOGIES"] if "N_TOPOLOGIES" in decay_parameters else None
 #     MODES_NAMES = decay_parameters["MODES_NAMES"] if "MODES_NAMES" in decay_parameters else None
 #     TRAIN_EVENTS_PER_TOP = decay_parameters["TRAIN_EVENTS_PER_TOP"] if "TRAIN_EVENTS_PER_TOP" in decay_parameters else None
@@ -305,7 +307,7 @@ def shuffle_lca_and_leaves_in_mode(
 
 #         for mode in modes:
 #             num_events = events_per_mode[mode]
-    
+
 #             leaves = np.asarray([all_events[mode][i][name] if name in all_events[mode][i] else np.zeros((num_events, 4)) for name in names])
 #             leaves = leaves.swapaxes(0, 1)
 #             # assert leaves.shape == (num_events, _count_leaves(root_node), 4)
@@ -315,15 +317,16 @@ def shuffle_lca_and_leaves_in_mode(
 
 #             all_lca_shuffled[mode].append(lca_shuffled)
 #             all_leaves_shuffled[mode].append(leaves_shuffled)
-                
+
 
 #     return {
 #         "all_lca_shuffled": all_lca_shuffled,
 #         "all_leaves_shuffled": all_leaves_shuffled
 #     }
 
+
 def _conv_decay_to_lca(root, pad_to=-1):
-    ''' Return the LCA matrix of a decay
+    """Return the LCA matrix of a decay
 
     Args:
         root (phasespace.GenParticle): the root particle of a decay tree
@@ -332,19 +335,22 @@ def _conv_decay_to_lca(root, pad_to=-1):
         numpy.ndarray, list: the lca matrix of the decay and the list of
         GenParticle names corresponding to each row and column
 
-    '''
+    """
     # NOTE find all leaf nodes
     node_list = [root]
     leaf_nodes = []
-    parents = {root.name: None, }
+    parents = {
+        root.name: None,
+    }
     generations = {root.name: 0}
-    while len(node_list)>0:
+    while len(node_list) > 0:
         node = node_list.pop(0)
         # NOTE since there is no get parent
         for c in node.children:
-            if c.name in parents: raise(ValueError('Node names have to be unique!'))
+            if c.name in parents:
+                raise (ValueError("Node names have to be unique!"))
             parents[c.name] = node
-            generations[c.name] = generations[node.name]+1
+            generations[c.name] = generations[node.name] + 1
         if len(node.children) == 0:
             leaf_nodes.append(node)
         else:
@@ -359,28 +365,35 @@ def _conv_decay_to_lca(root, pad_to=-1):
     for name in names:
         generations[name] = depth
     node_list = [l for l in leaf_nodes]
-    while len(node_list)>0:
+    while len(node_list) > 0:
         node = node_list.pop(0)
         parent = parents[node.name]
         if parent is not None:
             node_list.append(parent)
-            if len(node.children)>0:
-                generations[node.name] = min({generations[n.name] for n in node.children})-1
+            if len(node.children) > 0:
+                generations[node.name] = (
+                    min({generations[n.name] for n in node.children}) - 1
+                )
 
     # NOTE trace ancestry for all leaves to root
     for i in range(len(leaf_nodes)):
-        for j in range(i+1, len(leaf_nodes)):
+        for j in range(i + 1, len(leaf_nodes)):
             _lca = _find_lca(leaf_nodes[i], leaf_nodes[j], parents, generations)
             lca_mat[i, j] = _lca
             lca_mat[j, i] = _lca
 
     if pad_to > 0:
-        #increase pad_to parameter if an error occurs here
-        lca_res = np.pad(lca_mat, [(0,pad_to-lca_mat.shape[0]), (0,pad_to-lca_mat.shape[1])], 'constant')
-        names_res = np.pad(names, (0, pad_to-len(names)), 'constant')
+        # increase pad_to parameter if an error occurs here
+        lca_res = np.pad(
+            lca_mat,
+            [(0, pad_to - lca_mat.shape[0]), (0, pad_to - lca_mat.shape[1])],
+            "constant",
+        )
+        names_res = np.pad(names, (0, pad_to - len(names)), "constant")
         return lca_res, names_res
 
     return lca_mat, names
+
 
 def _shuffle_lca_and_leaves(leaves, lca):
     """
@@ -402,7 +415,9 @@ def _shuffle_lca_and_leaves(leaves, lca):
     return shuff_leaves, shuff_lca
 
 
-def _count_leaves(node,):
+def _count_leaves(
+    node,
+):
     num_leaves = 0
     if node.has_grandchildren:
         for child in node.children:
@@ -442,10 +457,12 @@ def _find_lca(node1, node2, parents, generations):
 
     return 0
 
+
 class TreeSet(Dataset):
-    """ Dataset holding trees to feed to network"""
+    """Dataset holding trees to feed to network"""
+
     def __init__(self, x, y):
-        """ In our use x will be the array of leaf attributes and y the LCA matrix, i.e. the labels"""
+        """In our use x will be the array of leaf attributes and y the LCA matrix, i.e. the labels"""
         self.x = x
         self.y = y
         return
@@ -474,9 +491,8 @@ def lca_and_leaves_to_tuple_dataset(
 
         dataset_lca_and_leaves[mode] = TreeSet(x_data, y_data)
 
-    return {
-        "dataset_lca_and_leaves":dataset_lca_and_leaves
-    }
+    return {"dataset_lca_and_leaves": dataset_lca_and_leaves}
+
 
 def tuple_dataset_to_torch_tensor_dataset(
     tuple_dataset: Dict[str, Tuple[List, List]]
@@ -493,9 +509,7 @@ def tuple_dataset_to_torch_tensor_dataset(
 
     #     torch_dataset_lca_and_leaves[key] = (v_0_accum, v_1_accum)
 
-    return {
-        "torch_dataset_lca_and_leaves":tuple_dataset
-    }
+    return {"torch_dataset_lca_and_leaves": tuple_dataset}
 
 
 def tree_data_to_discriminator(
@@ -509,9 +523,7 @@ def tree_data_to_discriminator(
     lcas_matrix = adjacency_list_to_lcas()
 
 
-def tree_data_to_generator(
-    decay_tree_events: Dict
-) -> Dict[str, np.ndarray]:
+def tree_data_to_generator(decay_tree_events: Dict) -> Dict[str, np.ndarray]:
 
     # raise NotImplementedError("Sorry, not yet..")
 
@@ -532,7 +544,7 @@ def tree_data_to_generator(
                     idx = [f in particle for f in allowed_fsps].index(True)
                 except ValueError:
                     idx = None
-                    particles[set_i].pop(particle)  #remove the particle from the set
+                    particles[set_i].pop(particle)  # remove the particle from the set
                     num_removed_particles += 1
 
                 if particles[set_i] == {}:
@@ -540,27 +552,30 @@ def tree_data_to_generator(
 
         shifter = 0
         for set_i in empty_sets:
-            particles.pop(set_i-shifter)
-            weights.pop(set_i-shifter)
+            particles.pop(set_i - shifter)
+            weights.pop(set_i - shifter)
             shifter += 1
 
-        print(f"Removed {num_removed_particles} particles from the events as they are not in the list of allowed fsps: {allowed_fsps}")
+        print(
+            f"Removed {num_removed_particles} particles from the events as they are not in the list of allowed fsps: {allowed_fsps}"
+        )
 
     combine_weights_and_particles(*decay_tree_events)
 
     return decay_tree_events
 
 
-def normalize_event(
-    decay_parameters: Dict,
-    data: Dict
-) -> Dict:
+def normalize_event(decay_parameters: Dict, data: Dict) -> Dict:
 
-    MODES_NAMES = decay_parameters["MODES_NAMES"] if "MODES_NAMES" in decay_parameters else None
+    MODES_NAMES = (
+        decay_parameters["MODES_NAMES"] if "MODES_NAMES" in decay_parameters else None
+    )
 
     for mode in MODES_NAMES:
         for i_topology in range(len(data[mode])):
-            data[mode][i_topology] = data[mode][i_topology]/max(data[mode][i_topology].max(), abs(data[mode][i_topology].min()))
+            data[mode][i_topology] = data[mode][i_topology] / max(
+                data[mode][i_topology].max(), abs(data[mode][i_topology].min())
+            )
 
     return data
 
@@ -583,6 +598,6 @@ def normalize_event(
 #                     padded = np.pad(data[mode][i][j], [(0,PAD_TO-shape[0]), (0,PAD_TO-shape[1])], mode="constant")
 #                     data[mode][i][j].resize((PAD_TO, PAD_TO), refcheck=False)
 #                     data[mode][i][j] = padded
-                
+
 
 #     return data

@@ -1,6 +1,7 @@
 from torch import nn
 import torch.nn.functional as F
 
+
 class MLP(nn.Module):
     """Two-layer fully-connected ELU net with batch norm."""
 
@@ -33,10 +34,10 @@ class MLP(nn.Module):
         return x.view(inputs.size(0), inputs.size(1), -1)
 
     def forward(self, inputs):
-        '''
+        """
         Input: (b, l, c)
         Output: (b, l, d)
-        '''
+        """
         # Input shape: [num_sims, num_things, num_features]
         x = self.activation(self.fc1(inputs))  # (b, l, d)
         x = F.dropout(x, self.dropout_prob, training=self.training)  # (b, l, d)

@@ -6,17 +6,18 @@ import numpy as np
 from typing import Dict, Tuple, Any, List
 from phasespace import GenParticle, nbody_decay
 from phasespace.fromdecay import GenMultiDecay
-from decaylanguage import DecFileParser, DecayChainViewer 
+from decaylanguage import DecFileParser, DecayChainViewer
 import random
 import tensorflow as tf
 
 
-
-def gen_decay_from_file(
-    decaylanguage: Dict[str, Any]
-) -> Dict[Dict, Tuple[List, List]]:
-    MOTHER_PARTICLE = decaylanguage["MOTHER_PARTICLE"] if "MOTHER_PARTICLE" in decaylanguage else None
-    STABLE_PARTICLES = decaylanguage["STABLE_PARTICLES"] if "STABLE_PARTICLES" in decaylanguage else ()
+def gen_decay_from_file(decaylanguage: Dict[str, Any]) -> Dict[Dict, Tuple[List, List]]:
+    MOTHER_PARTICLE = (
+        decaylanguage["MOTHER_PARTICLE"] if "MOTHER_PARTICLE" in decaylanguage else None
+    )
+    STABLE_PARTICLES = (
+        decaylanguage["STABLE_PARTICLES"] if "STABLE_PARTICLES" in decaylanguage else ()
+    )
     DECAY_FILE = decaylanguage["DECAY_FILE"] if "DECAY_FILE" in decaylanguage else None
     N_EVENTS = decaylanguage["N_EVENTS"] if "N_EVENTS" in decaylanguage else None
     VIEW_GRAPH = decaylanguage["VIEW_GRAPH"] if "VIEW_GRAPH" in decaylanguage else None
@@ -24,20 +25,18 @@ def gen_decay_from_file(
     parser = DecFileParser(DECAY_FILE)
     parser.parse()
 
-    decay_chain = parser.build_decay_chains(MOTHER_PARTICLE, stable_particles=STABLE_PARTICLES)
+    decay_chain = parser.build_decay_chains(
+        MOTHER_PARTICLE, stable_particles=STABLE_PARTICLES
+    )
 
     dcv = DecayChainViewer(decay_chain)
-    dcv.graph.render(filename='decayGraph', format='pdf', view=VIEW_GRAPH, cleanup=True)
+    dcv.graph.render(filename="decayGraph", format="pdf", view=VIEW_GRAPH, cleanup=True)
 
     decay_process = GenMultiDecay.from_dict(decay_chain)
 
     weights, events = decay_process.generate(n_events=N_EVENTS)
 
-
-    return {
-        "decay_tree_structure": decay_chain,
-        "decay_tree_events": (weights, events)
-    }
+    return {"decay_tree_structure": decay_chain, "decay_tree_events": (weights, events)}
 
 
 # def gen_nbody_decay_data(
@@ -76,18 +75,17 @@ def gen_decay_from_file(
 #     }
 
 
-
 def gen_structure_from_parameters(
-    masses:List[int],
-    fsp_masses:List[int],
-    n_topologies:int,
-    max_depth:int,
-    max_children:int,
-    min_children:int,
-    isp_weight:int,
-    iso_retries:int,
-    seed:int,
-    generate_unknown:bool,
+    masses: List[int],
+    fsp_masses: List[int],
+    n_topologies: int,
+    max_depth: int,
+    max_children: int,
+    min_children: int,
+    isp_weight: int,
+    iso_retries: int,
+    seed: int,
+    generate_unknown: bool,
 ) -> Dict[str, np.ndarray]:
 
     # particles = dict()
@@ -106,10 +104,7 @@ def gen_structure_from_parameters(
     # iso_retries = parameters["ISO_RETRIES"] if "ISO_RETRIES" in parameters else None
     # generate_unknown = parameters["GENERATE_UNKNOWN"] if "GENERATE_UNKNOWN" in parameters else None
 
-   
-
-
-    """ Generate a PhaseSpace dataset
+    """Generate a PhaseSpace dataset
 
     Args:
         root (str or Path): root folder
@@ -133,10 +128,10 @@ def gen_structure_from_parameters(
     # import tensorflow as tf
 
     # if SEED is not None:
-        # np.random.seed(SEED)
-        # This is supposed to be supported as a global seed for Phasespace but doesn't work
-        # Instead we set the seed below in the calls to generate()
-        # tf.random.set_seed(np.random.randint(np.iinfo(np.int32).max))
+    # np.random.seed(SEED)
+    # This is supposed to be supported as a global seed for Phasespace but doesn't work
+    # Instead we set the seed below in the calls to generate()
+    # tf.random.set_seed(np.random.randint(np.iinfo(np.int32).max))
 
     if int(max_depth) <= 1:
         raise ValueError("Tree needs to have at least two levels")
@@ -147,8 +142,9 @@ def gen_structure_from_parameters(
     masses = sorted(masses, reverse=True)
     fsp_masses = sorted(fsp_masses, reverse=True)
     if not set(masses).isdisjoint(set(fsp_masses)):
-        raise ValueError("Particles are only identified by their masses. Final state particle masses can not occur in intermediate particle masses.")
-
+        raise ValueError(
+            "Particles are only identified by their masses. Final state particle masses can not occur in intermediate particle masses."
+        )
 
     topology_isomorphism_invariates = []
 
@@ -158,19 +154,21 @@ def gen_structure_from_parameters(
 
     decay_tree_structure = list()
 
-    rd = np.random.default_rng(seed) #rd.choice #TODO: check that
-    n_seeds = total_topologies*max(1, iso_retries) # TODO: this is chosen on gut feeling.. 
-    seeds = [rd.integers(n_seeds*1000) for i in range(n_seeds)]
-    
+    rd = np.random.default_rng(seed)  # rd.choice #TODO: check that
+    n_seeds = total_topologies * max(
+        1, iso_retries
+    )  # TODO: this is chosen on gut feeling..
+    seeds = [rd.integers(n_seeds * 1000) for i in range(n_seeds)]
+
     for i in range(total_topologies):
         # NOTE generate tree for a topology
         for j in range(max(1, iso_retries)):
             queue = []
-            root_node = GenParticle('root', masses[0])
+            root_node = GenParticle("root", masses[0])
             queue.append((root_node, 1))
             name = 1
             next_level = 1
-            l_rd = np.random.default_rng(seeds[i*max(1, iso_retries)+j])
+            l_rd = np.random.default_rng(seeds[i * max(1, iso_retries) + j])
             while len(queue) > 0:
                 node, level = queue.pop(0)
                 if next_level <= level:
@@ -184,9 +182,13 @@ def gen_structure_from_parameters(
                 avail_mass = node._mass_val
                 # Add an insurance to make sure it's actually possible to generate two children
                 if avail_mass <= (2 * min(fsp_masses)):
-                    raise ValueError("Any ISP mass given has to be larger than two times the smallest FSP mass.")
+                    raise ValueError(
+                        "Any ISP mass given has to be larger than two times the smallest FSP mass."
+                    )
 
-                c_seeds = [l_rd.integers(num_children*1000) for nc in range(num_children)]
+                c_seeds = [
+                    l_rd.integers(num_children * 1000) for nc in range(num_children)
+                ]
                 for k in range(num_children):
                     c_rd = np.random.default_rng(c_seeds[k])
                     # Only want to select children from mass/energy available
@@ -200,11 +202,17 @@ def gen_structure_from_parameters(
                     if (
                         next_level == max_depth
                         or avail_mass <= min(masses)
-                        or np.random.random() < (1. * len(fsp_masses)) / ((1. * len(fsp_masses)) + (isp_weight * len(masses)))
+                        or np.random.random()
+                        < (1.0 * len(fsp_masses))
+                        / ((1.0 * len(fsp_masses)) + (isp_weight * len(masses)))
                     ):
-                        child_mass = c_rd.choice([n for n in fsp_masses if (n < avail_mass)])
+                        child_mass = c_rd.choice(
+                            [n for n in fsp_masses if (n < avail_mass)]
+                        )
                     else:
-                        child_mass = c_rd.choice([n for n in masses if (n < avail_mass)])
+                        child_mass = c_rd.choice(
+                            [n for n in masses if (n < avail_mass)]
+                        )
                     total_child_mass += child_mass
 
                     if total_child_mass > node._mass_val:
@@ -224,7 +232,9 @@ def gen_structure_from_parameters(
                 topology_isomorphism_invariates.append(top_iso_invar)
                 break
             if j == (iso_retries - 1):
-                raise RuntimeError("Could not find sufficient number of non-isomorphic topologies.")
+                raise RuntimeError(
+                    "Could not find sufficient number of non-isomorphic topologies."
+                )
                 # print("Could not find sufficient number of non-isomorphic topologies.")
                 # continue
 
@@ -233,9 +243,8 @@ def gen_structure_from_parameters(
     # event_data = gen_train_data(parameters, decay_tree_structure)
     # convert_to_lca(parameters, decay_tree_structure, event_data["decay_tree_events"])
 
-    return {
-        "decay_tree_structure": decay_tree_structure
-    }
+    return {"decay_tree_structure": decay_tree_structure}
+
 
 def assign_parenthetical_weight_tuples(node):
     """
@@ -247,25 +256,25 @@ def assign_parenthetical_weight_tuples(node):
 
     """
     if not node.has_children:
-        return f'({node.get_mass()})'
+        return f"({node.get_mass()})"
 
     child_tuples = [assign_parenthetical_weight_tuples(c) for c in node.children]
     child_tuples.sort()
-    child_tuples = ''.join(child_tuples)
+    child_tuples = "".join(child_tuples)
 
-    return f'({node.get_mass()}{child_tuples})'
+    return f"({node.get_mass()}{child_tuples})"
 
 
-
-def gen_events_from_structure(  
-                                n_topologies: int,
-                                modes_names: List[str],
-                                train_events_per_top: int,
-                                val_events_per_top: int,
-                                test_events_per_top: int,
-                                generate_unknown: bool,
-                                seed: int,
-                                decay_tree_structure: Dict[str, np.ndarray]):
+def gen_events_from_structure(
+    n_topologies: int,
+    modes_names: List[str],
+    train_events_per_top: int,
+    val_events_per_top: int,
+    test_events_per_top: int,
+    generate_unknown: bool,
+    seed: int,
+    decay_tree_structure: Dict[str, np.ndarray],
+):
     # n_topologies = parameters["N_TOPOLOGIES"] if "N_TOPOLOGIES" in parameters else None
     # modes_names = parameters["MODES_NAMES"] if "MODES_NAMES" in parameters else None
     # train_events_per_top = parameters["TRAIN_EVENTS_PER_TOP"] if "TRAIN_EVENTS_PER_TOP" in parameters else None
@@ -274,15 +283,18 @@ def gen_events_from_structure(
     # generate_unknown = parameters["GENERATE_UNKNOWN"] if "GENERATE_UNKNOWN" in parameters else None
     # seed = parameters["SEEDS"] if "SEEDS" in parameters else None
 
-    events_per_mode = {'train': train_events_per_top, 'val': val_events_per_top, 'test': test_events_per_top}
+    events_per_mode = {
+        "train": train_events_per_top,
+        "val": val_events_per_top,
+        "test": test_events_per_top,
+    }
 
-    
-    all_weights = {mode:list() for mode in modes_names}
-    all_events = {mode:list() for mode in modes_names}
+    all_weights = {mode: list() for mode in modes_names}
+    all_events = {mode: list() for mode in modes_names}
 
-    rd = np.random.default_rng(seed) #rd.choice #TODO: check that
-    n_seeds = len(decay_tree_structure)*len(modes_names)
-    seeds = [rd.integers(n_seeds*1000) for i in range(n_seeds)]
+    rd = np.random.default_rng(seed)  # rd.choice #TODO: check that
+    n_seeds = len(decay_tree_structure) * len(modes_names)
+    seeds = [rd.integers(n_seeds * 1000) for i in range(n_seeds)]
 
     actual_seeds = []
     for i, root_node in enumerate(decay_tree_structure):
@@ -301,16 +313,13 @@ def gen_events_from_structure(
 
         for j, mode in enumerate(modes):
             num_events = events_per_mode[mode]
-            l_rd = np.random.default_rng(seeds[i*len(modes)+j])
+            l_rd = np.random.default_rng(seeds[i * len(modes) + j])
             l_seed = l_rd.integers(np.iinfo(np.int32).max)
-            
+
             random.seed(l_seed)
             np.random.seed(l_seed)
             tf.random.set_seed(l_seed)
-            weights, events = root_node.generate(
-                num_events,
-                seed=l_seed
-            )
+            weights, events = root_node.generate(num_events, seed=l_seed)
             actual_seeds.append(l_seed)
 
             all_weights[mode].append(weights)
@@ -318,9 +327,5 @@ def gen_events_from_structure(
 
     return {
         "decay_tree_events": (all_weights, all_events),
-        "decay_events_seeds": actual_seeds
+        "decay_events_seeds": actual_seeds,
     }
-
-
-
-

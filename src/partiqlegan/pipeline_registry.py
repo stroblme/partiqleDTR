@@ -7,6 +7,7 @@ from partiqlegan.pipelines import data_generation as dg
 from partiqlegan.pipelines import data_processing as dp
 from partiqlegan.pipelines import data_science as ds
 
+
 def register_pipelines() -> Dict[str, Pipeline]:
     """Register the project's pipelines.
 
@@ -24,8 +25,12 @@ def register_pipelines() -> Dict[str, Pipeline]:
     # training_qgnn_pipeline_no_param_log = ds.create_training_qgnn_pipeline_no_param_log()
 
     return {
-        "__default__": data_generation_artificial_pipeline+data_processing_artificial_pipeline+training_qgnn_pipeline,
-        "default": data_generation_artificial_pipeline+data_processing_artificial_pipeline+training_qgnn_pipeline,
+        "__default__": data_generation_artificial_pipeline
+        + data_processing_artificial_pipeline
+        + training_qgnn_pipeline,
+        "default": data_generation_artificial_pipeline
+        + data_processing_artificial_pipeline
+        + training_qgnn_pipeline,
         "data_generation_artificial_pipeline": data_generation_artificial_pipeline,
         # "data_generation_belleII_pipeline": data_generation_belleII_pipeline,
         "data_processing_artificial_pipeline": data_processing_artificial_pipeline,
