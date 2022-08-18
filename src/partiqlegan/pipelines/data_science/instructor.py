@@ -79,7 +79,7 @@ class Instructor:
         normalize: bool,
         plot_mode: str = "val",
         detectAnomaly: bool = False,
-        device="cpu",
+        device: str="cpu",
         n_fsps=-1,
     ):
         """
@@ -89,14 +89,18 @@ class Instructor:
             es: edge list
             cmd: command line parameters
         """
+        
+
+
         self.device = t.device(
-            "cuda" if t.cuda.is_available() and device != "cpu" else device
+            "cuda" if t.cuda.is_available() and device != "cpu" else "cpu"
         )
 
-        self.model = model  # model is already on the proper device
-        self.model.to(self.device)
+
+        self.model = model
+        # self.model.to(self.device)
         mlflow.log_text(
-            str(torchinfo.summary(model, input_size=(n_fsps, batch_size, 4))),
+            str(torchinfo.summary(model, input_size=(n_fsps, batch_size, 4), device=self.device)),
             "model_printout.txt",
         )
         for p in self.model.parameters():

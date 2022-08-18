@@ -1,4 +1,5 @@
 import git
+import os
 
 import torch as t
 from torch.nn.parallel import DataParallel
@@ -101,6 +102,7 @@ def create_model(
         symmetrize=symmetrize,
         pre_trained_model=pre_trained_model,
         n_fsps=n_fsps,
+        device=device
     )
 
     # if pre_trained_model: #TODO: check if this case decision is necessary
@@ -135,9 +137,12 @@ def create_model(
     #                         symmetrize=symmetrize)
 
     if device == "cpu":
-        nri_model = model
-    else:
+        nri_model = model.to(t.device(device))
+        # os.environ["CUDA_VISIBLE_DEVICES"]=""
+    elif t.cuda.is_available():
         nri_model = DataParallel(model)
+    else:
+        raise ValueError(f"Specified device {device} although no cuda support detected")
 
     return {"nri_model": nri_model}
 

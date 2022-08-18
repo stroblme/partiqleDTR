@@ -25,17 +25,19 @@ qiskit_logger = logging.getLogger("qiskit")
 qiskit_logger.setLevel(logging.WARNING)
 log = logging.getLogger(__name__)
 
+import os
+os.environ["CUDA_VISIBLE_DEVICES"]=""
 
 class MLP(nn.Module):
     """Two-layer fully-connected ELU net with batch norm."""
 
-    def __init__(self, n_in, n_hid, n_out, do_prob, batchnorm=True, activation=F.elu):
+    def __init__(self, n_in, n_hid, n_out, do_prob, batchnorm=True, activation=F.elu, device=t.device("cpu")):
         super(MLP, self).__init__()
 
         self.batchnorm = batchnorm
 
-        self.fc1 = nn.Linear(n_in, n_hid)
-        self.fc2 = nn.Linear(n_hid, n_out)
+        self.fc1 = nn.Linear(n_in, n_hid, device=device)
+        self.fc2 = nn.Linear(n_hid, n_out, device=device)
         if self.batchnorm:
             self.bn = nn.BatchNorm1d(n_out, momentum=0.1, track_running_stats=True)
             # self.bn = nn.BatchNorm1d(n_out, momentum=0.1, track_running_stats=False)  # Use this to overfit
@@ -107,7 +109,8 @@ class sqgnn(nn.Module):
         batchnorm=True,
         symmetrize=True,
         pre_trained_model=None,
-        n_fsps=-1,
+        n_fsps:int=-1,
+        device:str="cpu",
         **kwargs,
     ):
         super(sqgnn, self).__init__()
@@ -134,6 +137,10 @@ class sqgnn(nn.Module):
 
         self.enc_params = []
         self.var_params = []
+
+        self.device = t.device(
+            "cuda" if t.cuda.is_available() and device != "cpu" else "cpu"
+        )
 
         def encoding(qc, n_qubits, identifier):
             for i in range(n_qubits):
@@ -254,6 +261,7 @@ class sqgnn(nn.Module):
             dropout_rate,
             batchnorm,
             activation=F.elu,
+            device=self.device
         )
         self.fc2_out = MLP(
             self.num_classes,
@@ -262,6 +270,7 @@ class sqgnn(nn.Module):
             dropout_rate,
             batchnorm,
             activation=F.elu,
+            device=self.device
         )
         self.fc3_out = MLP(
             2 * self.num_classes,
@@ -270,6 +279,7 @@ class sqgnn(nn.Module):
             dropout_rate,
             batchnorm,
             activation=F.relu,
+            device=self.device
         )
         # self.fc3_out = MLP(self.num_classes, self.num_classes, self.num_classes, dropout_rate, batchnorm)
 
@@ -311,7 +321,7 @@ class sqgnn(nn.Module):
             rel_send = None
 
         n_leaves, batch, feats = inputs.size()
-        device = inputs.device
+        assert inputs.device == self.device
 
         # NOTE create rel matrices on the fly if not given as input
         if rel_rec is None:
@@ -320,14 +330,14 @@ class sqgnn(nn.Module):
             #     device=device
             # ).repeat_interleave(n_leaves-1, dim=1).T  # (l*(l-1), l)
             # rel_rec = rel_rec.unsqueeze(0).expand(inputs.size(1), -1, -1)
-            rel_rec = construct_rel_recvs([inputs.size(0)], device=device)
+            rel_rec = construct_rel_recvs([inputs.size(0)], device=self.device)
 
         if rel_send is None:
             # rel_send = t.eye(n_leaves, device=device).repeat(n_leaves, 1)
             # rel_send[t.arange(0, n_leaves*n_leaves, n_leaves + 1)] = 0
             # rel_send = rel_send[rel_send.sum(dim=1) > 0]  # (l*(l-1), l)
             # rel_send = rel_send.unsqueeze(0).expand(inputs.size(1), -1, -1)
-            rel_send = construct_rel_sends([inputs.size(0)], device=device)
+            rel_send = construct_rel_sends([inputs.size(0)], device=self.device)
 
         x = inputs.permute(1, 0, 2)  # (b, l, m)
 
