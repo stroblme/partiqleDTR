@@ -39,6 +39,10 @@ log = logging.getLogger(__name__)
 def log_git_repo(git_hash_identifier: str):
     repo = git.Repo(search_parent_directories=True)
     sha = repo.head.object.hexsha
+    if repo.is_dirty(untracked_files=True):
+        log.warning("Uncommited and/or untracked files found. Please cleanup before running experiments")
+    else:
+        log.info(f"Repository was found to be clean with sha {sha}")
     mlflow.set_tag(git_hash_identifier, sha)
 
     return {}
