@@ -26,12 +26,23 @@ qiskit_logger.setLevel(logging.WARNING)
 log = logging.getLogger(__name__)
 
 import os
-os.environ["CUDA_VISIBLE_DEVICES"]=""
+
+os.environ["CUDA_VISIBLE_DEVICES"] = ""
+
 
 class MLP(nn.Module):
     """Two-layer fully-connected ELU net with batch norm."""
 
-    def __init__(self, n_in, n_hid, n_out, do_prob, batchnorm=True, activation=F.elu, device=t.device("cpu")):
+    def __init__(
+        self,
+        n_in,
+        n_hid,
+        n_out,
+        do_prob,
+        batchnorm=True,
+        activation=F.elu,
+        device=t.device("cpu"),
+    ):
         super(MLP, self).__init__()
 
         self.batchnorm = batchnorm
@@ -109,8 +120,8 @@ class sqgnn(nn.Module):
         batchnorm=True,
         symmetrize=True,
         pre_trained_model=None,
-        n_fsps:int=-1,
-        device:str="cpu",
+        n_fsps: int = -1,
+        device: str = "cpu",
         **kwargs,
     ):
         super(sqgnn, self).__init__()
@@ -261,7 +272,7 @@ class sqgnn(nn.Module):
             dropout_rate,
             batchnorm,
             activation=F.elu,
-            device=self.device
+            device=self.device,
         )
         self.fc2_out = MLP(
             self.num_classes,
@@ -270,7 +281,7 @@ class sqgnn(nn.Module):
             dropout_rate,
             batchnorm,
             activation=F.elu,
-            device=self.device
+            device=self.device,
         )
         self.fc3_out = MLP(
             2 * self.num_classes,
@@ -279,7 +290,7 @@ class sqgnn(nn.Module):
             dropout_rate,
             batchnorm,
             activation=F.elu,
-            device=self.device
+            device=self.device,
         )
         # self.fc3_out = MLP(self.num_classes, self.num_classes, self.num_classes, dropout_rate, batchnorm)
 

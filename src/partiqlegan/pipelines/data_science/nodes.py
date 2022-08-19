@@ -40,7 +40,9 @@ def log_git_repo(git_hash_identifier: str):
     repo = git.Repo(search_parent_directories=True)
     sha = repo.head.object.hexsha
     if repo.is_dirty(untracked_files=True):
-        log.warning("Uncommited and/or untracked files found. Please cleanup before running experiments")
+        log.warning(
+            "Uncommited and/or untracked files found. Please cleanup before running experiments"
+        )
     else:
         log.info(f"Repository was found to be clean with sha {sha}")
     mlflow.set_tag(git_hash_identifier, sha)
@@ -106,7 +108,7 @@ def create_model(
         symmetrize=symmetrize,
         pre_trained_model=pre_trained_model,
         n_fsps=n_fsps,
-        device=device
+        device=device,
     )
 
     # if pre_trained_model: #TODO: check if this case decision is necessary

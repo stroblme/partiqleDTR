@@ -127,7 +127,7 @@ def create_training_qgnn_pipeline(**kwargs) -> Pipeline:
             node(
                 func=train_qgnn,
                 inputs={"instructor": "instructor"},
-                outputs={"trained_model": "trained_model"},
+                outputs={"trained_model": "trained_model", "gradients": "gradients"},
                 name="train_qgnn",
             ),
         ]
@@ -283,7 +283,10 @@ def create_split_training_qgnn_pipeline(**kwargs) -> Pipeline:
                 inputs={
                     "instructor": "quantum_instructor",
                 },
-                outputs={"trained_model": "trained_quantum_model"},
+                outputs={
+                    "trained_model": "trained_quantum_model",
+                    "gradients": "gradients",
+                },
                 name="train_qgnn",
                 tags=["split_run", "training"],
             ),
