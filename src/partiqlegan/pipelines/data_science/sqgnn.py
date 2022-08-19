@@ -278,7 +278,7 @@ class sqgnn(nn.Module):
             self.num_classes,
             dropout_rate,
             batchnorm,
-            activation=F.relu,
+            activation=F.elu,
             device=self.device
         )
         # self.fc3_out = MLP(self.num_classes, self.num_classes, self.num_classes, dropout_rate, batchnorm)
