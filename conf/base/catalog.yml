@@ -104,3 +104,7 @@ trained_quantum_model:
   data_set:
     type: partiqlegan.pipelines.data_science.utils.HybridTorchModelDataset
     filepath: data/06_models/trained_quantum_model.pkl
+
+gradients:
+  type: pickle.PickleDataSet
+  filepath: data/08_reporting/gradients.pickle
