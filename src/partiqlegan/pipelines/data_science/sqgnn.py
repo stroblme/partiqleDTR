@@ -218,9 +218,9 @@ class sqgnn(nn.Module):
                     )
 
         def circuit_builder(qc, n_qubits, n_hidden):
-            encoding(qc, n_qubits, f"enc")
-            qc.barrier()
             for i in range(n_hidden):
+                encoding(qc, n_qubits, f"enc_{i}")
+                qc.barrier()
                 variational(qc, n_qubits, f"var_{i}")
                 qc.barrier()
 
