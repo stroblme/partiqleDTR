@@ -68,7 +68,7 @@ def heatmap(
     )
 
     # Rotate the tick labels and set their alignment.
-    plt.setp(ax.get_xticklabels(), rotation=0, ha="right", rotation_mode="anchor")
+    plt.setp(ax.get_xticklabels(), rotation=90, ha="right", rotation_mode="anchor")
     plt.setp(ax.get_yticklabels(), rotation=0, ha="right", rotation_mode="anchor")
 
     # Turn spines off and create white grid.

@@ -187,6 +187,12 @@ class Instructor:
                                     f"Gradients in epoch {epoch}, iteration {i}: {epoch_grad}"
                                 )
 
+                            # for i in range(self.epochs):
+                            #     all_grads.append(scale * epoch_grad)
+                            # g_plt = self.plotGradients(all_grads, figsize=(16,12))
+                            # mlflow.log_figure(g_plt.gcf(), f"gradients.png")
+
+
                             labels = labels.cpu()
                             if labels.numpy().min() < -1:
                                 raise Exception(
@@ -258,7 +264,7 @@ class Instructor:
 
         # quickly print the gradients..
         if len(all_grads) > 0:
-            g_plt = self.plotGradients(all_grads)
+            g_plt = self.plotGradients(all_grads, figsize=(16,12))
             mlflow.log_figure(g_plt.gcf(), f"gradients.png")
 
         if result == None:
@@ -266,13 +272,13 @@ class Instructor:
 
         return {"model_qgnn": result, "gradients": all_grads}
 
-    def plotGradients(self, epoch_gradients):
+    def plotGradients(self, epoch_gradients, figsize=(16,12)):
 
         X = [i for i in range(len(epoch_gradients))]
         Y = [i for i in range(len(epoch_gradients[0]))]
-        Z = t.log(t.stack(epoch_gradients))
+        Z = t.stack(epoch_gradients)
 
-        fig, ax = plt.subplots()
+        fig, ax = plt.subplots(figsize=figsize)
         im, cbar = heatmap(
             Z,
             X,
