@@ -122,6 +122,7 @@ class sqgnn(nn.Module):
         pre_trained_model=None,
         n_fsps: int = -1,
         device: str = "cpu",
+        data_reupload = True,
         **kwargs,
     ):
         super(sqgnn, self).__init__()
@@ -153,24 +154,32 @@ class sqgnn(nn.Module):
             "cuda" if t.cuda.is_available() and device != "cpu" else "cpu"
         )
 
-        def encoding(qc, n_qubits, identifier):
+        def gen_encoding_params(n_qubits, identifier):
+            q_params = []
             for i in range(n_qubits):
-                energy = q.circuit.Parameter(f"{identifier}_bias_{i}")
+                q_params.append([])
+                for j in range(n_momenta):
+                    q_params[i].append(q.circuit.Parameter(f"{identifier}_{i}_{j}"))
+            return q_params
+
+        def encoding(qc, n_qubits, q_params, identifier):
+            for i in range(n_qubits):
+                energy = q_params[i][0]
 
                 px = (
-                    q.circuit.Parameter(f"{identifier}_rx_{i}") * energy * t.pi,
+                    q_params[i][1] * energy * t.pi,
                     i,
-                    f"{identifier}_rx_{i}",
+                    f"{identifier[:-3]}_rx_{i}",
                 )
                 qc.rx(*px)
                 py = (
-                    q.circuit.Parameter(f"{identifier}_ry_{i}") * energy * t.pi,
+                    q_params[i][2] * energy * t.pi,
                     i,
-                    f"{identifier}_ry_{i}",
+                    f"{identifier[:-3]}_ry_{i}",
                 )
                 qc.ry(*py)
                 pz = (
-                    q.circuit.Parameter(f"{identifier}_rz_{i}") * energy * t.pi,
+                    q_params[i][3] * energy * t.pi,
                     i,
                 )  # rz does not accept identifier
                 qc.rz(*pz)
@@ -218,8 +227,9 @@ class sqgnn(nn.Module):
                     )
 
         def circuit_builder(qc, n_qubits, n_hidden):
+            enc_params = gen_encoding_params(n_qubits, f"enc")
             for i in range(n_hidden):
-                encoding(qc, n_qubits, f"enc_{i}")
+                encoding(qc, n_qubits, enc_params, f"enc_{i}")
                 qc.barrier()
                 variational(qc, n_qubits, f"var_{i}")
                 qc.barrier()
