@@ -122,7 +122,7 @@ class sqgnn(nn.Module):
         pre_trained_model=None,
         n_fsps: int = -1,
         device: str = "cpu",
-        data_reupload = True,
+        # data_reupload = True,
         **kwargs,
     ):
         super(sqgnn, self).__init__()
