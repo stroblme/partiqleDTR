@@ -38,27 +38,6 @@ from .nodes import *
 def create_training_qgnn_pipeline(**kwargs) -> Pipeline:
     return pipeline(
         [
-            # node(
-            #         func=log_decay_parameter,
-            #         inputs={
-            #             "masses":"params:masses",
-            #             "fsp_masses":"params:fsp_masses",
-            #             "n_topologies":"params:n_topologies",
-            #             "max_depth":"params:max_depth",
-            #             "max_children":"params:max_children",
-            #             "min_children":"params:min_children",
-            #             "isp_weight":"params:isp_weight",
-            #             "iso_retries":"params:iso_retries",
-            #             "generate_unknown":"params:generate_unknown",
-            #             "modes_names":"params:modes_names",
-            #             "train_events_per_top":"params:train_events_per_top",
-            #             "val_events_per_top":"params:val_events_per_top",
-            #             "test_events_per_top":"params:test_events_per_top",
-            #             "seed":"params:seed"
-            #         },
-            #         outputs={},
-            #         name="log_git_repo"
-            # ),
             node(
                 func=log_git_repo,
                 inputs={"git_hash_identifier": "params:git_hash_identifier"},
@@ -133,6 +112,9 @@ def create_training_qgnn_pipeline(**kwargs) -> Pipeline:
         ]
     )
 
+# additional pipeline just to add it as an exception in kedro
+def create_debug_training_qgnn_pipeline(**kwargs) -> Pipeline:
+    return create_training_qgnn_pipeline(**kwargs)
 
 def create_split_training_qgnn_pipeline(**kwargs) -> Pipeline:
     return pipeline(
