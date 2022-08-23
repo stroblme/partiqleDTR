@@ -14,7 +14,7 @@ dropout_rate: 0.3
 learning_rate: 0.002
 learning_rate_decay: 200
 gamma: 0.5
-batch_size: 1
+batch_size: 5
 
 # GNN
 n_blocks: 3
