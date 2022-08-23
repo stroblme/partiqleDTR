@@ -362,8 +362,9 @@ class sqgnn(nn.Module):
 
         x = inputs.permute(1, 0, 2)  # (b, l, m)
 
-        x = x.flatten()
-        x = t.nn.functional.pad(x, (0, 16 - x.shape[0]), mode="constant", value=0)
+        # x = x.flatten()
+        x = x.reshape(batch, n_leaves*feats)
+        x = t.nn.functional.pad(x, (0, feats**2 - x.shape[1]), mode="constant", value=0)
 
         x = self.quantum_layer(x)
 
