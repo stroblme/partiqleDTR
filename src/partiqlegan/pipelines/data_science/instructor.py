@@ -96,6 +96,7 @@ class Instructor:
 
         self.model = model
         # self.model.to(self.device)
+        log.info(f"Testing model..")
         mlflow.log_text(
             str(
                 torchinfo.summary(
