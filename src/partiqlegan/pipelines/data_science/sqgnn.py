@@ -380,8 +380,10 @@ class sqgnn(nn.Module):
         def get_binary_shots(result, permutations_indices, out_shape):
             lcag = t.zeros(out_shape)
             lcag = lcag.to(result.device)
-            lcag[np.tril_indices_from(lcag, k=-1)] = result[permutations_indices]
-            lcag = lcag + t.transpose(lcag, 0, 1)
+            for i in range(out_shape[0]):
+                lcag[i][np.tril_indices_from(lcag[0], k=-1)] = result[i, permutations_indices]
+            # lcag[:, np.tril_indices_from(lcag[:], k=-1)] = result[:, permutations_indices]
+            lcag = lcag + t.transpose(lcag, 1, 2)
             # lcag = lcag - t.diag(t.ones(out_shape[0]).to(result.device))
             return lcag
 
@@ -389,7 +391,7 @@ class sqgnn(nn.Module):
         # x = self.fc_out(x)
 
         x = get_binary_shots(
-            x, build_binary_permutation_indices(n_leaves), (n_leaves, n_leaves)
+            x, build_binary_permutation_indices(n_leaves), (batch, n_leaves, n_leaves)
         )
 
         # b = t.tensor([[i] for i in range(self.num_classes)]).repeat(1,n_leaves**2).reshape(batch,self.num_classes,n_leaves*n_leaves)
@@ -400,11 +402,12 @@ class sqgnn(nn.Module):
         # ea = ea.to(x.device)
         # ed = ed.to(x.device)
 
-        x = (
-            x.repeat(1, self.num_classes)
-            .transpose(0, 1)
-            .reshape(batch, self.num_classes, n_leaves * n_leaves)
-        )
+        # x = (
+        #     x.repeat(1, self.num_classes)
+        #     .transpose(0, 1)
+        #     .reshape(batch, self.num_classes, n_leaves * n_leaves)
+        # )
+        x = x.reshape(batch, 1, n_leaves * n_leaves).repeat(1, self.num_classes, 1)
         x = x.permute(0, 2, 1)  # (b, c, l, l)
         skip = x
         x = self.fc1_out(x)
