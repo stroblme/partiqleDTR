@@ -10,7 +10,7 @@ formatters:
 handlers:
     console:
         class: logging.StreamHandler
-        level: DEBUG
+        level: INFO
         formatter: simple
         stream: ext://sys.stdout
 
@@ -47,12 +47,12 @@ loggers:
         propagate: no
 
     kedro.io:
-        level: DEBUG
+        level: INFO
         handlers: [console, info_file_handler, error_file_handler]
         propagate: no
 
     kedro.pipeline:
-        level: DEBUG
+        level: INFO
         handlers: [console, info_file_handler, error_file_handler]
         propagate: no
 
@@ -62,5 +62,5 @@ loggers:
     #     propagate: no
 
 root:
-    level: DEBUG
+    level: INFO
     handlers: [console, info_file_handler, error_file_handler]
