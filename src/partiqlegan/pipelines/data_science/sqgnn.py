@@ -130,6 +130,7 @@ class sqgnn(nn.Module):
         assert dim_feedforward % 2 == 0, "dim_feedforward must be an even number"
         # n_fsps = 4
         self.layers = n_fsps  # dim_feedforward//8
+        self.total_n_fsps = n_fsps 
         self.num_classes = n_classes
         self.factor = factor
         self.tokenize = tokenize
@@ -347,10 +348,10 @@ class sqgnn(nn.Module):
 
         # x = inputs.permute(1, 0, 2)  # (b, l, m)
 
-        x = x.reshape(batch, n_leaves * feats)
+        x = x.reshape(batch, n_leaves * feats) # flatten the last two dims
         x = t.nn.functional.pad(
-            x, (0, feats**2 - x.shape[1]), mode="constant", value=0
-        )
+            x, (0, self.total_n_fsps*feats), mode="constant", value=0
+        ) #self.total_n_fsps*feats
 
         x = self.quantum_layer(x)
 
