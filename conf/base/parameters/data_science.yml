@@ -1,17 +1,17 @@
 ---
 # General
 model_sel: "sqgnn"
-post_model_sel: "pqgnn"
+post_model_sel: "pqgnn" # only for split training
 n_momenta: 4
 
 # Classical
-epochs: 50
+epochs: 20
 normalize: True
 dim_feedforward: 256
 batchnorm: True
 
 dropout_rate: 0.3
-learning_rate: 0.002
+learning_rate: 0.01
 learning_rate_decay: 200
 gamma: 0.5
 batch_size: 5
