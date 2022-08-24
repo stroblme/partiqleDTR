@@ -112,9 +112,11 @@ def create_training_qgnn_pipeline(**kwargs) -> Pipeline:
         ]
     )
 
+
 # additional pipeline just to add it as an exception in kedro
 def create_debug_training_qgnn_pipeline(**kwargs) -> Pipeline:
     return create_training_qgnn_pipeline(**kwargs)
+
 
 def create_split_training_qgnn_pipeline(**kwargs) -> Pipeline:
     return pipeline(

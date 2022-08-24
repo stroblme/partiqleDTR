@@ -363,8 +363,10 @@ class sqgnn(nn.Module):
         x = inputs.permute(1, 0, 2)  # (b, l, m)
 
         # x = x.flatten()
-        x = x.reshape(batch, n_leaves*feats)
-        x = t.nn.functional.pad(x, (0, feats**2 - x.shape[1]), mode="constant", value=0)
+        x = x.reshape(batch, n_leaves * feats)
+        x = t.nn.functional.pad(
+            x, (0, feats**2 - x.shape[1]), mode="constant", value=0
+        )
 
         x = self.quantum_layer(x)
 
@@ -381,7 +383,9 @@ class sqgnn(nn.Module):
             lcag = t.zeros(out_shape)
             lcag = lcag.to(result.device)
             for i in range(out_shape[0]):
-                lcag[i][np.tril_indices_from(lcag[0], k=-1)] = result[i, permutations_indices]
+                lcag[i][np.tril_indices_from(lcag[0], k=-1)] = result[
+                    i, permutations_indices
+                ]
             # lcag[:, np.tril_indices_from(lcag[:], k=-1)] = result[:, permutations_indices]
             lcag = lcag + t.transpose(lcag, 1, 2)
             # lcag = lcag - t.diag(t.ones(out_shape[0]).to(result.device))

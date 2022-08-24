@@ -193,7 +193,6 @@ class Instructor:
                             # g_plt = self.plotGradients(all_grads, figsize=(16,12))
                             # mlflow.log_figure(g_plt.gcf(), f"gradients.png")
 
-
                             labels = labels.cpu()
                             if labels.numpy().min() < -1:
                                 raise Exception(
@@ -265,7 +264,7 @@ class Instructor:
 
         # quickly print the gradients..
         if len(all_grads) > 0:
-            g_plt = self.plotGradients(all_grads, figsize=(16,12))
+            g_plt = self.plotGradients(all_grads, figsize=(16, 12))
             mlflow.log_figure(g_plt.gcf(), f"gradients.png")
 
         if result == None:
@@ -273,7 +272,7 @@ class Instructor:
 
         return {"model_qgnn": result, "gradients": all_grads}
 
-    def plotGradients(self, epoch_gradients, figsize=(16,12)):
+    def plotGradients(self, epoch_gradients, figsize=(16, 12)):
 
         X = [i for i in range(len(epoch_gradients))]
         Y = [i for i in range(len(epoch_gradients[0]))]
