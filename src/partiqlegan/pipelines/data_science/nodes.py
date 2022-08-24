@@ -57,6 +57,7 @@ def calculate_n_classes(dataset_lca_and_leaves: Dict) -> int:
             n_classes = int(lca.max() if lca.max() > n_classes else n_classes)
     # n_fsps = int(max([len(subset[0]) for _, subset in dataset_lca_and_leaves.items()]))+1
 
+    log.info(f"Number of Classes calculated to {n_classes}}")
     return {
         "n_classes": n_classes + 1  # +1 for starting counting from zero (len(0..5)=5+1)
     }
@@ -68,7 +69,7 @@ def calculate_n_fsps(dataset_lca_and_leaves: Dict) -> int:
         for lca in subset.y:
             n_fsps = lca.shape[0] if lca.shape[0] > n_fsps else n_fsps
     # n_fsps = int(max([len(subset[0]) for _, subset in dataset_lca_and_leaves.items()]))+1
-
+    log.info(f"Number of FSPS calculated to {n_fsps}")
     return {"n_fsps": n_fsps}
 
 
