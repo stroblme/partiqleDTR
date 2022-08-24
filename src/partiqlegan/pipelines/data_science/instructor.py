@@ -270,7 +270,7 @@ class Instructor:
         if result == None:
             result = self.model
 
-        return {"model_qgnn": result, "gradients": all_grads}
+        return result, all_grads
 
     def plotGradients(self, epoch_gradients, figsize=(16, 12)):
 

@@ -187,6 +187,6 @@ def create_instructor(
 
 def train_qgnn(instructor: Instructor):
 
-    trained_model = instructor.train()
+    trained_model, gradients = instructor.train()
 
-    return {"trained_model": trained_model}
+    return {"trained_model": trained_model, "gradients": gradients}
