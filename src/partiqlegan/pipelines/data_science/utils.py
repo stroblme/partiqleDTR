@@ -37,7 +37,7 @@ class HybridTorchModelDataset(AbstractDataSet):
     def _save(self, data: HybridTorchModel):
         if not self._exists():
             Path(self._filepath.as_posix()).mkdir()
-        with open(Path(self._filepath.as_posix(), "setup_fn.pkl"), "wb") as output:
+        with open(Path(self._filepath.as_posix()), "wb") as output:
             output.write(dill.dumps(data._setup_fn))
         t.save(data.model.state_dict(), Path(self._filepath.as_posix(), "weights.pt"))
 
