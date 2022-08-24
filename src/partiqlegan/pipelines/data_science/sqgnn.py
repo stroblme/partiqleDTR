@@ -336,33 +336,17 @@ class sqgnn(nn.Module):
         Output: (b, c, l, l)
         """
         if isinstance(inputs, (list, tuple)):
-            inputs, rel_rec, rel_send = inputs
-        else:
+            x, rel_rec, rel_send = inputs # get the actual state from the list of states, rel_rec and rel_send
+        else: # in case we are running torchinfo, rel_rec and rel_send are not provided
             rel_rec = None
             rel_send = None
+            x = inputs
 
-        n_leaves, batch, feats = inputs.size()
-        assert inputs.device == self.device
+        n_leaves, batch, feats = x.size() # get the representative sizes
+        assert x.device == self.device # check if we are running on the same device
 
-        # NOTE create rel matrices on the fly if not given as input
-        if rel_rec is None:
-            # rel_rec = t.eye(
-            #     n_leaves,
-            #     device=device
-            # ).repeat_interleave(n_leaves-1, dim=1).T  # (l*(l-1), l)
-            # rel_rec = rel_rec.unsqueeze(0).expand(inputs.size(1), -1, -1)
-            rel_rec = construct_rel_recvs([inputs.size(0)], device=self.device)
+        # x = inputs.permute(1, 0, 2)  # (b, l, m)
 
-        if rel_send is None:
-            # rel_send = t.eye(n_leaves, device=device).repeat(n_leaves, 1)
-            # rel_send[t.arange(0, n_leaves*n_leaves, n_leaves + 1)] = 0
-            # rel_send = rel_send[rel_send.sum(dim=1) > 0]  # (l*(l-1), l)
-            # rel_send = rel_send.unsqueeze(0).expand(inputs.size(1), -1, -1)
-            rel_send = construct_rel_sends([inputs.size(0)], device=self.device)
-
-        x = inputs.permute(1, 0, 2)  # (b, l, m)
-
-        # x = x.flatten()
         x = x.reshape(batch, n_leaves * feats)
         x = t.nn.functional.pad(
             x, (0, feats**2 - x.shape[1]), mode="constant", value=0
@@ -371,6 +355,11 @@ class sqgnn(nn.Module):
         x = self.quantum_layer(x)
 
         def build_binary_permutation_indices(digits):
+            """
+            Generate the binary permutation indices.
+            :param digits:
+            :return:
+            """
             n_permutations = (digits**2 - digits) // 2
             permutations_indices = []
             for i in range(2**digits):
@@ -380,6 +369,13 @@ class sqgnn(nn.Module):
             return permutations_indices
 
         def get_binary_shots(result, permutations_indices, out_shape):
+            """
+            Generate the binary shots.
+            :param result:
+            :param permutations_indices:
+            :param out_shape:
+            :return:
+            """
             lcag = t.zeros(out_shape)
             lcag = lcag.to(result.device)
             for i in range(out_shape[0]):
@@ -388,29 +384,13 @@ class sqgnn(nn.Module):
                 ]
             # lcag[:, np.tril_indices_from(lcag[:], k=-1)] = result[:, permutations_indices]
             lcag = lcag + t.transpose(lcag, 1, 2)
-            # lcag = lcag - t.diag(t.ones(out_shape[0]).to(result.device))
             return lcag
 
-        # x = x.reshape(batch, x.shape[0], 1)
-        # x = self.fc_out(x)
 
         x = get_binary_shots(
             x, build_binary_permutation_indices(n_leaves), (batch, n_leaves, n_leaves)
         )
 
-        # b = t.tensor([[i] for i in range(self.num_classes)]).repeat(1,n_leaves**2).reshape(batch,self.num_classes,n_leaves*n_leaves)
-        # b = b.to(x.device)
-
-        # ea = t.eye(x.shape[0]).repeat(1,self.num_classes).transpose(0,1).reshape(batch,self.num_classes,n_leaves*n_leaves)
-        # ed = t.ones(x.shape).repeat(1,self.num_classes).transpose(0,1).reshape(batch,self.num_classes,n_leaves*n_leaves) - ea
-        # ea = ea.to(x.device)
-        # ed = ed.to(x.device)
-
-        # x = (
-        #     x.repeat(1, self.num_classes)
-        #     .transpose(0, 1)
-        #     .reshape(batch, self.num_classes, n_leaves * n_leaves)
-        # )
         x = x.reshape(batch, 1, n_leaves * n_leaves).repeat(1, self.num_classes, 1)
         x = x.permute(0, 2, 1)  # (b, c, l, l)
         skip = x
@@ -419,12 +399,6 @@ class sqgnn(nn.Module):
         x = t.cat((x, skip), dim=2)  # Skip connection  # (b, l*(l-1), 2d)
         x = self.fc3_out(x)
         x = x.reshape(batch, n_leaves, n_leaves, self.num_classes)
-        # x = x - b/self.num_classes/n_leaves
-        # x = t.max(x, t.ones(x.shape)*(-1))
-
-        # x = x*ed
-        # x = x-ea
-
         x = x.permute(0, 3, 1, 2)  # (b, c, l, l)
         if self.symmetrize:
             x = t.div(x + t.transpose(x, 2, 3), 2)  # (b, c, l, l)
