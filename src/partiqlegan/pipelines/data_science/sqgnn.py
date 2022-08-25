@@ -274,7 +274,7 @@ class sqgnn(nn.Module):
         log.info(f"Initialization done")
 
         # last layer input size depends if we do a concat before (use skip cons)
-        final_input_dim = 2 * self.num_classes if self.skip_block else self.num_classes
+        final_input_dim = 2 * dim_feedforward if self.skip_block else dim_feedforward
 
         self.block = nn.ModuleList(
                         [
@@ -284,6 +284,8 @@ class sqgnn(nn.Module):
                                 dim_feedforward,
                                 dropout_rate,
                                 batchnorm,
+                                activation=F.elu,
+                                device=self.device,
                             ),
                             nn.Sequential(
                                 *[
@@ -293,13 +295,15 @@ class sqgnn(nn.Module):
                                         dim_feedforward,
                                         dropout_rate,
                                         batchnorm,
+                                        activation=F.elu,
+                                        device=self.device,
                                     )
                                     for _ in range(n_layers_mlp)
                                 ]
                             ),
                             MLP(
                                 final_input_dim,
-                                2 * self.num_classes,
+                                final_input_dim//2,
                                 self.num_classes,
                                 dropout_rate,
                                 batchnorm,
@@ -379,11 +383,11 @@ class sqgnn(nn.Module):
 
         skip = x if self.skip_block else None
         x = self.block[0](x) # initial mlp
-        for mlp in self.block[1:-2]:
-            x = mlp(x)
+        for seq_mlp in self.block[1]:
+            x = seq_mlp(x)
 
         x = t.cat((x, skip), dim=2) if self.skip_block else x # Skip connection
-        x = self.block[-1](x) # (b, c, l, l) -> final mlp
+        x = self.block[2](x) # (b, c, l, l) -> final mlp
 
         x = x.reshape(batch, n_leaves, n_leaves, self.num_classes)
         x = x.permute(0, 3, 1, 2)  # (b, c, l, l)
