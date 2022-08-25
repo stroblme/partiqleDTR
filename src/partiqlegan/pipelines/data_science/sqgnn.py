@@ -350,8 +350,8 @@ class sqgnn(nn.Module):
 
         x = x.reshape(batch, n_leaves * feats) # flatten the last two dims
         x = t.nn.functional.pad(
-            x, (0, self.total_n_fsps*feats), mode="constant", value=0
-        ) #self.total_n_fsps*feats
+            x, (0, self.total_n_fsps*feats-x.size(1)), mode="constant", value=0
+        ) # pad up to the largest lcag size. subtract the current size to prevent unnecessary padding
 
         x = self.quantum_layer(x)
 
