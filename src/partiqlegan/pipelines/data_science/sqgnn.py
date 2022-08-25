@@ -107,12 +107,10 @@ class sqgnn(nn.Module):
         n_momenta,  # d
         n_classes,  # l
         n_blocks=3,
-        dim_feedforward=128,  # ff
+        dim_feedforward=6,  # ff
         n_layers_mlp=2,
-        n_additional_mlp_layers=2,
-        n_final_mlp_layers=2,
+        n_layers_vqc=2,
         skip_block=False,
-        skip_global=False,
         dropout_rate=0.3,
         factor=True,
         tokenize=-1,
@@ -122,22 +120,20 @@ class sqgnn(nn.Module):
         pre_trained_model=None,
         n_fsps: int = -1,
         device: str = "cpu",
-        # data_reupload = True,
+        data_reupload = True,
         **kwargs,
     ):
         super(sqgnn, self).__init__()
 
         assert dim_feedforward % 2 == 0, "dim_feedforward must be an even number"
         # n_fsps = 4
-        self.layers = n_fsps  # dim_feedforward//8
-        self.total_n_fsps = n_fsps 
+        self.layers = n_layers_vqc  # dim_feedforward//8
+        self.total_n_fsps = n_fsps # used for padding in forward path
         self.num_classes = n_classes
         self.factor = factor
         self.tokenize = tokenize
         self.symmetrize = symmetrize
-        self.block_additional_mlp_layers = n_additional_mlp_layers
         self.skip_block = skip_block
-        self.skip_global = skip_global
         # self.max_leaves = max_leaves
 
         # self.initial_mlp = pre_trained_module.initial_mlp
@@ -230,7 +226,8 @@ class sqgnn(nn.Module):
         def circuit_builder(qc, n_qubits, n_hidden):
             enc_params = gen_encoding_params(n_qubits, f"enc")
             for i in range(n_hidden):
-                encoding(qc, n_qubits, enc_params, f"enc_{i}")
+                if data_reupload or i == 0:
+                    encoding(qc, n_qubits, enc_params, f"enc_{i}")
                 qc.barrier()
                 variational(qc, n_qubits, f"var_{i}")
                 qc.barrier()
@@ -276,60 +273,45 @@ class sqgnn(nn.Module):
         )
         log.info(f"Initialization done")
 
-        self.fc1_out = MLP(
-            self.num_classes,
-            self.num_classes,
-            self.num_classes,
-            dropout_rate,
-            batchnorm,
-            activation=F.elu,
-            device=self.device,
-        )
-        self.fc2_out = MLP(
-            self.num_classes,
-            2 * self.num_classes,
-            self.num_classes,
-            dropout_rate,
-            batchnorm,
-            activation=F.elu,
-            device=self.device,
-        )
-        self.fc3_out = MLP(
-            2 * self.num_classes,
-            2 * self.num_classes,
-            self.num_classes,
-            dropout_rate,
-            batchnorm,
-            activation=F.elu,
-            device=self.device,
-        )
-        # self.fc3_out = MLP(self.num_classes, self.num_classes, self.num_classes, dropout_rate, batchnorm)
+        # last layer input size depends if we do a concat before (use skip cons)
+        final_input_dim = 2 * self.num_classes if self.skip_block else self.num_classes
 
-        # self.fc_out = nn.Linear(dim_feedforward, self.num_classes)
+        self.block = nn.ModuleList(
+                        [
+                            MLP(
+                                self.num_classes,
+                                dim_feedforward,
+                                dim_feedforward,
+                                dropout_rate,
+                                batchnorm,
+                            ),
+                            nn.Sequential(
+                                *[
+                                    MLP(
+                                        dim_feedforward,
+                                        dim_feedforward,
+                                        dim_feedforward,
+                                        dropout_rate,
+                                        batchnorm,
+                                    )
+                                    for _ in range(n_layers_mlp)
+                                ]
+                            ),
+                            MLP(
+                                final_input_dim,
+                                2 * self.num_classes,
+                                self.num_classes,
+                                dropout_rate,
+                                batchnorm,
+                                activation=F.elu,
+                                device=self.device,
+                            )
+                            # This is what would be needed for a concat instead of addition of the skip connection
+                            # MLP(dim_feedforward * 2, dim_feedforward, dim_feedforward, dropout, batchnorm) if (block_additional_mlp_layers > 0) else None,
+                        ]
+                    )
+        
 
-    def edge2node(self, x, rel_rec):
-        """
-        Input: (b, l*l, d), (b, l*l, l)
-        Output: (b, l, d)
-        """
-        # TODO assumes that batched matrix product just works
-        # TODO these do not have to be members
-        incoming = t.matmul(rel_rec.permute(0, 2, 1), x)  # (b, l, d)
-        denom = rel_rec.sum(1)[:, 1]
-        return incoming / denom.reshape(-1, 1, 1)  # (b, l, d)
-        # return incoming / incoming.size(1)  # (b, l, d)
-
-    def node2edge(self, x, rel_rec, rel_send):
-        """
-        Input: (b, l, d), (b, l*(l-1), l), (b, l*(l-1), l)
-        Output: (b, l*l(l-1), 2d)
-        """
-        # TODO assumes that batched matrix product just works
-        receivers = t.matmul(rel_rec, x)  # (b, l*l, d)
-        senders = t.matmul(rel_send, x)  # (b, l*l, d)
-        edges = t.cat([senders, receivers], dim=2)  # (b, l*l, 2d)
-
-        return edges
 
     def forward(self, inputs):
         """
@@ -392,16 +374,20 @@ class sqgnn(nn.Module):
             x, build_binary_permutation_indices(n_leaves), (batch, n_leaves, n_leaves)
         )
 
-        x = x.reshape(batch, 1, n_leaves * n_leaves).repeat(1, self.num_classes, 1)
-        x = x.permute(0, 2, 1)  # (b, c, l, l)
-        skip = x
-        x = self.fc1_out(x)
-        x = self.fc2_out(x)
-        x = t.cat((x, skip), dim=2)  # Skip connection  # (b, l*(l-1), 2d)
-        x = self.fc3_out(x)
+        x = x.reshape(batch, 1, n_leaves * n_leaves).repeat(1, self.num_classes, 1) # copy the vqc output across n_classes dimensions and let the nn handle the decoding
+        x = x.permute(0, 2, 1)  # (b, c, l, l) -> split the leaves
+
+        skip = x if self.skip_block else None
+        x = self.block[0](x) # initial mlp
+        for mlp in self.block[1:-2]:
+            x = mlp(x)
+
+        x = t.cat((x, skip), dim=2) if self.skip_block else x # Skip connection
+        x = self.block[-1](x) # (b, c, l, l) -> final mlp
+
         x = x.reshape(batch, n_leaves, n_leaves, self.num_classes)
         x = x.permute(0, 3, 1, 2)  # (b, c, l, l)
-        if self.symmetrize:
-            x = t.div(x + t.transpose(x, 2, 3), 2)  # (b, c, l, l)
+        
+        x = t.div(x + t.transpose(x, 2, 3), 2) if self.symmetrize else x  # (b, c, l, l)
 
         return x
