@@ -115,8 +115,8 @@ class sqgnn(nn.Module):
         symmetrize=True,
         n_fsps: int = -1,
         device: str = "cpu",
-        data_reupload = True,
-        add_rot_gates = True,
+        data_reupload=True,
+        add_rot_gates=True,
         **kwargs,
     ):
         super(sqgnn, self).__init__()
@@ -124,7 +124,7 @@ class sqgnn(nn.Module):
         assert dim_feedforward % 2 == 0, "dim_feedforward must be an even number"
         # n_fsps = 4
         self.layers = n_layers_vqc  # dim_feedforward//8
-        self.total_n_fsps = n_fsps # used for padding in forward path
+        self.total_n_fsps = n_fsps  # used for padding in forward path
         self.num_classes = n_classes
         self.symmetrize = symmetrize
         self.skip_block = skip_block
@@ -287,45 +287,43 @@ class sqgnn(nn.Module):
         final_input_dim = 2 * dim_feedforward if self.skip_block else dim_feedforward
 
         self.block = nn.ModuleList(
-                        [
-                            MLP(
-                                self.num_classes,
-                                dim_feedforward,
-                                dim_feedforward,
-                                dropout_rate,
-                                batchnorm,
-                                activation=F.elu,
-                                device=self.device,
-                            ),
-                            nn.Sequential(
-                                *[
-                                    MLP(
-                                        dim_feedforward,
-                                        dim_feedforward,
-                                        dim_feedforward,
-                                        dropout_rate,
-                                        batchnorm,
-                                        activation=F.elu,
-                                        device=self.device,
-                                    )
-                                    for _ in range(n_layers_mlp)
-                                ]
-                            ),
-                            MLP(
-                                final_input_dim,
-                                final_input_dim//2,
-                                self.num_classes,
-                                dropout_rate,
-                                batchnorm,
-                                activation=F.elu,
-                                device=self.device,
-                            )
-                            # This is what would be needed for a concat instead of addition of the skip connection
-                            # MLP(dim_feedforward * 2, dim_feedforward, dim_feedforward, dropout, batchnorm) if (block_additional_mlp_layers > 0) else None,
-                        ]
-                    )
-        
-
+            [
+                MLP(
+                    self.num_classes,
+                    dim_feedforward,
+                    dim_feedforward,
+                    dropout_rate,
+                    batchnorm,
+                    activation=F.elu,
+                    device=self.device,
+                ),
+                nn.Sequential(
+                    *[
+                        MLP(
+                            dim_feedforward,
+                            dim_feedforward,
+                            dim_feedforward,
+                            dropout_rate,
+                            batchnorm,
+                            activation=F.elu,
+                            device=self.device,
+                        )
+                        for _ in range(n_layers_mlp)
+                    ]
+                ),
+                MLP(
+                    final_input_dim,
+                    final_input_dim // 2,
+                    self.num_classes,
+                    dropout_rate,
+                    batchnorm,
+                    activation=F.elu,
+                    device=self.device,
+                )
+                # This is what would be needed for a concat instead of addition of the skip connection
+                # MLP(dim_feedforward * 2, dim_feedforward, dim_feedforward, dropout, batchnorm) if (block_additional_mlp_layers > 0) else None,
+            ]
+        )
 
     def forward(self, inputs):
         """
@@ -333,21 +331,25 @@ class sqgnn(nn.Module):
         Output: (b, c, l, l)
         """
         if isinstance(inputs, (list, tuple)):
-            x, rel_rec, rel_send = inputs # get the actual state from the list of states, rel_rec and rel_send
-        else: # in case we are running torchinfo, rel_rec and rel_send are not provided
+            (
+                x,
+                rel_rec,
+                rel_send,
+            ) = inputs  # get the actual state from the list of states, rel_rec and rel_send
+        else:  # in case we are running torchinfo, rel_rec and rel_send are not provided
             rel_rec = None
             rel_send = None
             x = inputs
 
-        n_leaves, batch, feats = x.size() # get the representative sizes
-        assert x.device == self.device # check if we are running on the same device
+        n_leaves, batch, feats = x.size()  # get the representative sizes
+        assert x.device == self.device  # check if we are running on the same device
 
         # x = inputs.permute(1, 0, 2)  # (b, l, m)
 
-        x = x.reshape(batch, n_leaves * feats) # flatten the last two dims
+        x = x.reshape(batch, n_leaves * feats)  # flatten the last two dims
         x = t.nn.functional.pad(
-            x, (0, self.total_n_fsps*feats-x.size(1)), mode="constant", value=0
-        ) # pad up to the largest lcag size. subtract the current size to prevent unnecessary padding
+            x, (0, self.total_n_fsps * feats - x.size(1)), mode="constant", value=0
+        )  # pad up to the largest lcag size. subtract the current size to prevent unnecessary padding
 
         x = self.quantum_layer(x)
 
@@ -383,25 +385,26 @@ class sqgnn(nn.Module):
             lcag = lcag + t.transpose(lcag, 1, 2)
             return lcag
 
-
         x = get_binary_shots(
             x, build_binary_permutation_indices(n_leaves), (batch, n_leaves, n_leaves)
         )
 
-        x = x.reshape(batch, 1, n_leaves * n_leaves).repeat(1, self.num_classes, 1) # copy the vqc output across n_classes dimensions and let the nn handle the decoding
+        x = x.reshape(batch, 1, n_leaves * n_leaves).repeat(
+            1, self.num_classes, 1
+        )  # copy the vqc output across n_classes dimensions and let the nn handle the decoding
         x = x.permute(0, 2, 1)  # (b, c, l, l) -> split the leaves
 
         skip = x if self.skip_block else None
-        x = self.block[0](x) # initial mlp
+        x = self.block[0](x)  # initial mlp
         for seq_mlp in self.block[1]:
             x = seq_mlp(x)
 
-        x = t.cat((x, skip), dim=2) if self.skip_block else x # Skip connection
-        x = self.block[2](x) # (b, c, l, l) -> final mlp
+        x = t.cat((x, skip), dim=2) if self.skip_block else x  # Skip connection
+        x = self.block[2](x)  # (b, c, l, l) -> final mlp
 
         x = x.reshape(batch, n_leaves, n_leaves, self.num_classes)
         x = x.permute(0, 3, 1, 2)  # (b, c, l, l)
-        
+
         x = t.div(x + t.transpose(x, 2, 3), 2) if self.symmetrize else x  # (b, c, l, l)
 
         return x
