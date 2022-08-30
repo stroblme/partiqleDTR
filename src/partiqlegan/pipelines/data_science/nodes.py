@@ -119,41 +119,45 @@ def create_hyperparam_optimizer(
                             )
 
     hyperparam_optimizer.set_variable_parmeters(
-        [
-            n_blocks_range,
-            dim_feedforward_range,
-            n_layers_mlp_range,
-            n_additional_mlp_layers_range,
-            n_final_mlp_layers_range,
-            dropout_rate_range,
-            data_reupload_range,
-        ],
-        [learning_rate_range, learning_rate_decay_range, batch_size_range],
+        {
+            "n_blocks_range":n_blocks_range,
+            "dim_feedforward_range":dim_feedforward_range,
+            "n_layers_mlp_range":n_layers_mlp_range,
+            "n_additional_mlp_layers_range":n_additional_mlp_layers_range,
+            "n_final_mlp_layers_range":n_final_mlp_layers_range,
+            "dropout_rate_range":dropout_rate_range,
+            "data_reupload_range":data_reupload_range,
+        },
+        {
+            "learning_rate_range":learning_rate_range,
+            "learning_rate_decay_range":learning_rate_decay_range,
+            "batch_size_range":batch_size_range
+        }
     )
 
     hyperparam_optimizer.set_fixed_parameters(
-        [
-            n_classes,
-            n_momenta,
-            model_sel,
-            factor,
-            tokenize,
-            embedding_dims,
-            batchnorm,
-            symmetrize,
-            pre_trained_model,
-            n_fsps,
-            device,
-        ],
-        [
-            dataset_lca_and_leaves,
-            model,
-            gamma,
-            epochs,
-            normalize,
-            plot_mode,
-            detectAnomaly,
-        ]
+        {
+            "n_classes":n_classes,
+            "n_momenta":n_momenta,
+            "model_sel":model_sel,
+            "factor":factor,
+            "tokenize":tokenize,
+            "embedding_dims":embedding_dims,
+            "batchnorm":batchnorm,
+            "symmetrize":symmetrize,
+            "pre_trained_model":pre_trained_model,
+            "n_fsps":n_fsps,
+            "device":device,
+        },
+        {
+            "dataset_lca_and_leaves":dataset_lca_and_leaves,
+            "model":model,
+            "gamma":gamma,
+            "epochs":epochs,
+            "normalize":normalize,
+            "plot_mode":plot_mode,
+            "detectAnomaly":detectAnomaly,
+        }
     )
 
     hyperparam_optimizer.create_model = create_model
@@ -190,6 +194,7 @@ def create_model(
     pre_trained_model: DataParallel,
     n_fsps: int,
     device: str,
+    **kwargs
 ) -> DataParallel:
 
     model = models[model_sel](
@@ -209,6 +214,7 @@ def create_model(
         pre_trained_model=pre_trained_model,
         n_fsps=n_fsps,
         device=device,
+        **kwargs
     )
 
     if device == "cpu":
@@ -235,6 +241,7 @@ def create_instructor(
     detectAnomaly: bool,
     device: str,
     n_fsps: int,
+    **kwargs: Dict
 ) -> Instructor:
     instructor = Instructor(
         model,
@@ -249,6 +256,7 @@ def create_instructor(
         detectAnomaly,
         device,
         n_fsps,
+        **kwargs
     )
 
     return {"instructor": instructor}
