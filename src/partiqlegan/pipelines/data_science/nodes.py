@@ -72,6 +72,95 @@ def calculate_n_fsps(dataset_lca_and_leaves: Dict) -> int:
     log.info(f"Number of FSPS calculated to {n_fsps}")
     return {"n_fsps": n_fsps}
 
+def create_hyperparam_optimizer(
+    n_classes,
+    n_momenta,
+    model_sel,
+    n_blocks_range:list,
+    dim_feedforward_range:list,
+    n_layers_mlp_range:list,
+    n_additional_mlp_layers_range:list,
+    n_final_mlp_layers_range:list,
+    dropout_rate_range:list,
+    factor:bool,
+    tokenize:bool,
+    embedding_dims:int,
+    batchnorm:bool,
+    symmetrize:bool,
+    data_reupload_range:bool,
+    pre_trained_model:DataParallel,
+    n_fsps:int,
+    device:str,
+
+    dataset_lca_and_leaves: Dict,
+    model: DataParallel,
+    learning_rate_range: list,
+    learning_rate_decay_range: list,
+    gamma: float,
+    batch_size_range: list,
+    epochs: int,
+    normalize: bool,
+    plot_mode: str,
+    detectAnomaly: bool,
+) -> Hyperparam_Optimizer:
+
+    hyperparam_optimizer = Hyperparam_Optimizer()
+
+    hyperparam_optimizer.set_variable_parmeters(
+        [
+            n_blocks_range,
+            dim_feedforward_range,
+            n_layers_mlp_range,
+            n_additional_mlp_layers_range,
+            n_final_mlp_layers_range,
+            dropout_rate_range,
+            data_reupload_range
+        ],
+        [
+            learning_rate_decay_range,
+            batch_size_range
+        ]
+    )
+
+    hyperparam_optimizer.set_fixed_parameters(
+        [
+            n_classes,
+            n_momenta,
+            model_sel,
+            factor,
+            tokenize,
+            embedding_dims,
+            batchnorm,
+            symmetrize,
+            pre_trained_model,
+            n_fsps,
+            device,
+        ],
+        [
+            dataset_lca_and_leaves,
+            model,
+            gamma,
+            epochs,
+            normalize,
+            plot_mode,
+            detectAnomaly,
+        ]
+    )
+
+    hyperparam_optimizer.create_model = create_model
+    hyperparam_optimizer.create_instructor = create_instructor
+    hyperparam_optimizer.objective = train
+
+    return hyperparam_optimizer
+
+def train_optuna(hyperparam_optimizer: Hyperparam_Optimizer):
+    
+    hyperparam_optimizer.minimize()
+
+    trained_model, gradients = hyperparam_optimizer.get_artifacts()
+
+    return {"trained_model": trained_model, "gradients": gradients}
+
 
 def create_model(
     n_classes,
