@@ -73,26 +73,26 @@ def calculate_n_fsps(dataset_lca_and_leaves: Dict) -> int:
     log.info(f"Number of FSPS calculated to {n_fsps}")
     return {"n_fsps": n_fsps}
 
+
 def create_hyperparam_optimizer(
     n_classes,
     n_momenta,
     model_sel,
-    n_blocks_range:list,
-    dim_feedforward_range:list,
-    n_layers_mlp_range:list,
-    n_additional_mlp_layers_range:list,
-    n_final_mlp_layers_range:list,
-    dropout_rate_range:list,
-    factor:bool,
-    tokenize:bool,
-    embedding_dims:int,
-    batchnorm:bool,
-    symmetrize:bool,
-    data_reupload_range:bool,
-    pre_trained_model:DataParallel,
-    n_fsps:int,
-    device:str,
-
+    n_blocks_range: list,
+    dim_feedforward_range: list,
+    n_layers_mlp_range: list,
+    n_additional_mlp_layers_range: list,
+    n_final_mlp_layers_range: list,
+    dropout_rate_range: list,
+    factor: bool,
+    tokenize: bool,
+    embedding_dims: int,
+    batchnorm: bool,
+    symmetrize: bool,
+    data_reupload_range: bool,
+    pre_trained_model: DataParallel,
+    n_fsps: int,
+    device: str,
     dataset_lca_and_leaves: Dict,
     model: DataParallel,
     learning_rate_range: list,
@@ -115,12 +115,9 @@ def create_hyperparam_optimizer(
             n_additional_mlp_layers_range,
             n_final_mlp_layers_range,
             dropout_rate_range,
-            data_reupload_range
+            data_reupload_range,
         ],
-        [
-            learning_rate_decay_range,
-            batch_size_range
-        ]
+        [learning_rate_decay_range, batch_size_range],
     )
 
     hyperparam_optimizer.set_fixed_parameters(
@@ -145,7 +142,7 @@ def create_hyperparam_optimizer(
             normalize,
             plot_mode,
             detectAnomaly,
-        ]
+        ],
     )
 
     hyperparam_optimizer.create_model = create_model
@@ -154,8 +151,9 @@ def create_hyperparam_optimizer(
 
     return hyperparam_optimizer
 
+
 def train_optuna(hyperparam_optimizer: Hyperparam_Optimizer):
-    
+
     hyperparam_optimizer.minimize()
 
     trained_model, gradients = hyperparam_optimizer.get_artifacts()
@@ -167,20 +165,20 @@ def create_model(
     n_classes,
     n_momenta,
     model_sel,
-    n_blocks:int,
-    dim_feedforward:int,
-    n_layers_mlp:int,
-    n_additional_mlp_layers:int,
-    n_final_mlp_layers:int,
-    dropout_rate:float,
-    factor:bool,
-    tokenize:bool,
-    embedding_dims:bool,
-    batchnorm:bool,
-    symmetrize:bool,
-    pre_trained_model:DataParallel,
-    n_fsps:int,
-    device:str,
+    n_blocks: int,
+    dim_feedforward: int,
+    n_layers_mlp: int,
+    n_additional_mlp_layers: int,
+    n_final_mlp_layers: int,
+    dropout_rate: float,
+    factor: bool,
+    tokenize: bool,
+    embedding_dims: bool,
+    batchnorm: bool,
+    symmetrize: bool,
+    pre_trained_model: DataParallel,
+    n_fsps: int,
+    device: str,
 ) -> DataParallel:
 
     model = models[model_sel](
@@ -244,8 +242,6 @@ def create_model(
     return {"nri_model": nri_model}
 
 
-
-
 def create_instructor(
     dataset_lca_and_leaves: Dict,
     model: DataParallel,
@@ -283,4 +279,3 @@ def train(instructor: Instructor):
     trained_model, gradients = instructor.train()
 
     return {"trained_model": trained_model, "gradients": gradients}
-

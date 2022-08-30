@@ -307,7 +307,7 @@ class edge_network(nn.Module):
             # ).repeat_interleave(n_leaves-1, dim=1).T  # (l*(l-1), l)
             # rel_rec = rel_rec.unsqueeze(0).expand(inputs.size(1), -1, -1)
             rel_rec = construct_rel_recvs([x.size(1)], device=self.device)
-            
+
         n_leaves, batch, feats = x.size()  # get the representative sizes
         assert x.device == self.device  # check if we are running on the same device
 
@@ -570,14 +570,14 @@ class node_network(nn.Module):
         log.info(f"Initialization done")
 
         self.input_layer = MLP(
-                    2*dim_feedforward*n_fsps**2,
-                    dim_feedforward,
-                    n_fsps*n_momenta,
-                    dropout_rate,
-                    batchnorm,
-                    activation=F.elu,
-                    device=self.device,
-                )
+            2 * dim_feedforward * n_fsps**2,
+            dim_feedforward,
+            n_fsps * n_momenta,
+            dropout_rate,
+            batchnorm,
+            activation=F.elu,
+            device=self.device,
+        )
 
     def node2edge(self, x, rel_rec, rel_send):
         """
