@@ -7,6 +7,7 @@ from torch.nn.parallel import DataParallel
 
 import mlflow
 
+from .hyperparam_optimizer import Hyperparam_Optimizer
 from .instructor import Instructor
 from .gnn import gnn
 from .qftgnn import qftgnn
@@ -166,20 +167,20 @@ def create_model(
     n_classes,
     n_momenta,
     model_sel,
-    n_blocks=3,
-    dim_feedforward=128,
-    n_layers_mlp=2,
-    n_additional_mlp_layers=2,
-    n_final_mlp_layers=2,
-    dropout_rate=0.3,
-    factor=True,
-    tokenize=None,
-    embedding_dims=None,
-    batchnorm=True,
-    symmetrize=True,
-    pre_trained_model: DataParallel = None,
-    n_fsps: int = -1,
-    device="cpu",
+    n_blocks:int,
+    dim_feedforward:int,
+    n_layers_mlp:int,
+    n_additional_mlp_layers:int,
+    n_final_mlp_layers:int,
+    dropout_rate:float,
+    factor:bool,
+    tokenize:bool,
+    embedding_dims:bool,
+    batchnorm:bool,
+    symmetrize:bool,
+    pre_trained_model:DataParallel,
+    n_fsps:int,
+    device:str,
 ) -> DataParallel:
 
     model = models[model_sel](
@@ -243,6 +244,8 @@ def create_model(
     return {"nri_model": nri_model}
 
 
+
+
 def create_instructor(
     dataset_lca_and_leaves: Dict,
     model: DataParallel,
@@ -275,8 +278,9 @@ def create_instructor(
     return {"instructor": instructor}
 
 
-def train_qgnn(instructor: Instructor):
+def train(instructor: Instructor):
 
     trained_model, gradients = instructor.train()
 
     return {"trained_model": trained_model, "gradients": gradients}
+
