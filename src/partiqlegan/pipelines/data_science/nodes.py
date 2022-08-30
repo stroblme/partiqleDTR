@@ -1,6 +1,8 @@
 import git
 import os
 
+from typing import List
+
 import torch as t
 from torch.nn.parallel import DataParallel
 
@@ -78,12 +80,12 @@ def create_hyperparam_optimizer(
     n_classes,
     n_momenta,
     model_sel,
-    n_blocks_range: list,
-    dim_feedforward_range: list,
-    n_layers_mlp_range: list,
-    n_additional_mlp_layers_range: list,
-    n_final_mlp_layers_range: list,
-    dropout_rate_range: list,
+    n_blocks_range: List,
+    dim_feedforward_range: List,
+    n_layers_mlp_range: List,
+    n_additional_mlp_layers_range: List,
+    n_final_mlp_layers_range: List,
+    dropout_rate_range: List,
     factor: bool,
     tokenize: bool,
     embedding_dims: int,
@@ -95,17 +97,26 @@ def create_hyperparam_optimizer(
     device: str,
     dataset_lca_and_leaves: Dict,
     model: DataParallel,
-    learning_rate_range: list,
-    learning_rate_decay_range: list,
+    learning_rate_range: List,
+    learning_rate_decay_range: List,
     gamma: float,
-    batch_size_range: list,
+    batch_size_range: List,
     epochs: int,
     normalize: bool,
     plot_mode: str,
     detectAnomaly: bool,
+    redis_host: str,
+    redis_port: int,
+    redis_path: str,
+    redis_password: str
 ) -> Hyperparam_Optimizer:
 
-    hyperparam_optimizer = Hyperparam_Optimizer()
+    hyperparam_optimizer = Hyperparam_Optimizer(
+                                redis_host,
+                                redis_port,
+                                redis_path,
+                                redis_password                        
+                            )
 
     hyperparam_optimizer.set_variable_parmeters(
         [
@@ -117,7 +128,7 @@ def create_hyperparam_optimizer(
             dropout_rate_range,
             data_reupload_range,
         ],
-        [learning_rate_decay_range, batch_size_range],
+        [learning_rate_range, learning_rate_decay_range, batch_size_range],
     )
 
     hyperparam_optimizer.set_fixed_parameters(
@@ -142,7 +153,7 @@ def create_hyperparam_optimizer(
             normalize,
             plot_mode,
             detectAnomaly,
-        ],
+        ]
     )
 
     hyperparam_optimizer.create_model = create_model
