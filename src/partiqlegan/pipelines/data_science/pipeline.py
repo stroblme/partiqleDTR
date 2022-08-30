@@ -94,27 +94,6 @@ def create_debug_training_qgnn_pipeline(**kwargs) -> Pipeline:
 def create_split_training_qgnn_pipeline(**kwargs) -> Pipeline:
     return pipeline(
         [
-            # node(
-            #         func=log_decay_parameter,
-            #         inputs={
-            #             "masses":"params:masses",
-            #             "fsp_masses":"params:fsp_masses",
-            #             "n_topologies":"params:n_topologies",
-            #             "max_depth":"params:max_depth",
-            #             "max_children":"params:max_children",
-            #             "min_children":"params:min_children",
-            #             "isp_weight":"params:isp_weight",
-            #             "iso_retries":"params:iso_retries",
-            #             "generate_unknown":"params:generate_unknown",
-            #             "modes_names":"params:modes_names",
-            #             "train_events_per_top":"params:train_events_per_top",
-            #             "val_events_per_top":"params:val_events_per_top",
-            #             "test_events_per_top":"params:test_events_per_top",
-            #             "seed":"params:seed"
-            #         },
-            #         outputs={},
-            #         name="log_git_repo"
-            # ),
             node(
                 func=log_git_repo,
                 inputs={"git_hash_identifier": "params:git_hash_identifier"},
@@ -140,56 +119,6 @@ def create_split_training_qgnn_pipeline(**kwargs) -> Pipeline:
                 name="calculate_n_fsps",
                 tags="split_run",
             ),
-            # node(
-            #         func=create_model,
-            #         inputs={
-            #             "n_classes":"n_classes",
-            #             "n_momenta":"params:n_momenta",
-            #             "model_sel":"params:model_sel",
-            #             "n_blocks":"params:n_blocks",
-            #             "dim_feedforward":"params:dim_feedforward",
-            #             "n_layers_mlp":"params:n_layers_mlp",
-            #             "n_additional_mlp_layers":"params:n_additional_mlp_layers",
-            #             "n_final_mlp_layers":"params:n_final_mlp_layers",
-            #             "dropout_rate":"params:dropout_rate",
-            #             "factor":"params:factor",
-            #             "tokenize":"params:tokenize",
-            #             "embedding_dims":"params:embedding_dims",
-            #             "batchnorm":"params:batchnorm",
-            #             "symmetrize":"params:symmetrize",
-            #         },
-            #         outputs={
-            #                 "nri_model":"classical_model"
-            #         },
-            #         name="create_model"
-            # ),
-            # node(
-            #         func=create_instructor,
-            #         inputs={
-            #             "dataset_lca_and_leaves":"dataset_lca_and_leaves",
-            #             "model":"classical_model",
-            #             "learning_rate":"params:learning_rate",
-            #             "learning_rate_decay":"params:learning_rate_decay",
-            #             "gamma":"params:gamma",
-            #             "batch_size":"params:batch_size",
-            #             "epochs":"params:epochs",
-            #             "normalize":"params:normalize"
-            #         },
-            #         outputs={
-            #             "instructor":"classical_instructor"
-            #         },
-            #         name="create_instructor"
-            # ),
-            # node(
-            #         func=train_qgnn,
-            #         inputs={
-            #             "instructor":"classical_instructor"
-            #             },
-            #         outputs={
-            #             "trained_model":"trained_classical_model"
-            #         },
-            #         name="train_split_model"
-            # ),
             node(
                 func=create_model,
                 inputs={
