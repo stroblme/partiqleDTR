@@ -200,37 +200,6 @@ def create_model(
         device=device,
     )
 
-    # if pre_trained_model: #TODO: check if this case decision is necessary
-    #     model = models[model_sel](n_momenta=n_momenta,
-    #                     n_classes=n_classes,
-    #                     n_blocks=n_blocks,
-    #                     dim_feedforward=dim_feedforward,
-    #                     n_layers_mlp=n_layers_mlp,
-    #                     n_additional_mlp_layers=n_additional_mlp_layers,
-    #                     n_final_mlp_layers=n_final_mlp_layers,
-    #                     dropout_rate=dropout_rate,
-    #                     factor=factor,
-    #                     tokenize=tokenize,
-    #                     embedding_dims=embedding_dims,
-    #                     batchnorm=batchnorm,
-    #                     symmetrize=symmetrize,
-    #                     pre_trained_model=pre_trained_model,
-    #                     n_fsps=n_fsps)
-    # else:
-    #     model = models[model_sel](n_momenta=n_momenta,
-    #                         n_classes=n_classes,
-    #                         n_blocks=n_blocks,
-    #                         dim_feedforward=dim_feedforward,
-    #                         n_layers_mlp=n_layers_mlp,
-    #                         n_additional_mlp_layers=n_additional_mlp_layers,
-    #                         n_final_mlp_layers=n_final_mlp_layers,
-    #                         dropout_rate=dropout_rate,
-    #                         factor=factor,
-    #                         tokenize=tokenize,
-    #                         embedding_dims=embedding_dims,
-    #                         batchnorm=batchnorm,
-    #                         symmetrize=symmetrize)
-
     if device == "cpu":
         nri_model = model.to(t.device(device))
         # os.environ["CUDA_VISIBLE_DEVICES"]=""
