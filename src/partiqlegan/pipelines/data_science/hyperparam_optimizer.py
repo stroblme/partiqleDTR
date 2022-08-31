@@ -87,24 +87,24 @@ class Hyperparam_Optimizer:
         return updated_variable_parameters
 
     def minimize(self):
-        #TODO: modify variable parameters
-
-    
         startTime = time.time()
 
         while (time.time() - startTime) < self.duration:
-            trial = self.study.ask()
+            self.run_trial()
 
-            updated_variable_model_parameters = self.update_variable_parameters(trial, self.variable_model_parameters)
-            model_parameters = self.fixed_model_parameters + updated_variable_model_parameters
-            model = self.create_model(*model_parameters)
+    def run_trial(self):
+        trial = self.study.ask()
 
-            # gather all parameters and create instructor
-            updated_variable_instructor_parameters = self.update_variable_parameters(trial, self.variable_instructor_parameters)
-            instructor_parameters = self.fixed_instructor_parameters + updated_variable_instructor_parameters
-            instructor_parameters['model'] = model # update this single parameter using the returned model
-            instructor_parameters['report_callback'] = trial.report
-            instructor_parameters['early_stop_callback'] = self.early_stop_callback
-            instructor = self.create_instructor(*instructor_parameters)
-            
-            artifact = self.objective(instructor)
+        updated_variable_model_parameters = self.update_variable_parameters(trial, self.variable_model_parameters)
+        model_parameters = self.fixed_model_parameters + updated_variable_model_parameters
+        model = self.create_model(*model_parameters)
+
+        # gather all parameters and create instructor
+        updated_variable_instructor_parameters = self.update_variable_parameters(trial, self.variable_instructor_parameters)
+        instructor_parameters = self.fixed_instructor_parameters + updated_variable_instructor_parameters
+        instructor_parameters['model'] = model # update this single parameter using the returned model
+        instructor_parameters['report_callback'] = trial.report
+        instructor_parameters['early_stop_callback'] = self.early_stop_callback
+        instructor = self.create_instructor(*instructor_parameters)
+        
+        artifact = self.objective(instructor)
