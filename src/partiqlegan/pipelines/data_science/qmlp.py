@@ -82,7 +82,7 @@ class MLP(nn.Module):
         return self.batch_norm_layer(x) if self.batchnorm else x  # (b, l, d)
 
 
-class sqgnn(nn.Module):
+class qmlp(nn.Module):
     """NRI model built off the official implementation.
 
     Contains adaptations to make it work with our use case, plus options for extra layers to give it some more oomph
@@ -119,7 +119,7 @@ class sqgnn(nn.Module):
         add_rot_gates=True,
         **kwargs,
     ):
-        super(sqgnn, self).__init__()
+        super(qmlp, self).__init__()
 
         assert dim_feedforward % 2 == 0, "dim_feedforward must be an even number"
         # n_fsps = 4
@@ -181,18 +181,17 @@ class sqgnn(nn.Module):
                 if add_rot_gates:
                     qc.rx(
                         q.circuit.Parameter(f"{identifier}_rx_{i}"),
-                        n_qubits - i,
+                        i,
                         f"{identifier}_rx_{i}",
                     )
                     qc.ry(
                         q.circuit.Parameter(f"{identifier}_ry_{i}"),
-                        n_qubits - i,
+                        i,
                         f"{identifier}_ry_{i}",
                     )
                     qc.rz(
                         q.circuit.Parameter(f"{identifier}_rz_{i}"),
-                        n_qubits - i,
-                        f"{identifier}_rz_{i}",
+                        i,
                     )
                 if i == 0:
                     qc.crx(
