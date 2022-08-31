@@ -1,6 +1,6 @@
 ---
 # General
-model_sel: "sqgnn"
+model_sel: "qmlp"
 post_model_sel: "pqgnn" # only for split training
 n_momenta: 4
 
@@ -38,6 +38,13 @@ symmetrize: True
 # Quantum
 data_reupload: True
 data_reupload_range: [True, False]
+add_rot_gates: True
+add_rot_gates_range: [True, False]
+#TODO specify when available
+redis_host: "localhost"
+redis_port: 6379
+redis_path: "partiqlegan"
+redis_password: ""
 
 # PyTorch
 detect_anomaly: False # enables torch' anomaly detector
