@@ -19,10 +19,9 @@ class Hyperparam_Optimizer:
         """
         Storage intialization
         """
-        storage = o.storages.redis.RedisStorage(
+        storage = o.storages.RedisStorage(
             url=f"redis://{password}@{host}:{port}/{path}",
         )
-
         return storage
 
     def set_variable_parmeters(self, model_parameters, instructor_parameters):
