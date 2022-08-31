@@ -200,6 +200,7 @@ def create_model(
     device: str,
     data_reupload: bool,
     add_rot_gates: bool,
+    n_layers_vqc: bool,
     pre_trained_model: DataParallel = None,
     **kwargs
 ) -> DataParallel:
@@ -222,6 +223,7 @@ def create_model(
         device=device,
         data_reupload=data_reupload,
         add_rot_gates=add_rot_gates,
+        n_layers_vqc=n_layers_vqc,
         pre_trained_model=pre_trained_model,
         **kwargs
     )
