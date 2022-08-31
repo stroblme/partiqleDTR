@@ -6,7 +6,7 @@ from typing import List
 import torch as t
 from torch.nn.parallel import DataParallel
 
-
+import redis
 import mlflow
 
 from .hyperparam_optimizer import Hyperparam_Optimizer
@@ -19,6 +19,7 @@ from .dgnn import dgnn
 from .pqgnn import pqgnn
 from .sgnn import sgnn
 from .sqgnn import sqgnn
+from .qmlp import qmlp
 
 # from .dqgnn import dqgnn
 models = {
@@ -28,6 +29,7 @@ models = {
     "dqgnn": dqgnn,
     "qftgnn": qftgnn,
     "sqgnn": sqgnn,
+    "qmlp": qmlp,
     "dgnn": dgnn,
     "pqgnn": pqgnn,
 }
@@ -75,6 +77,8 @@ def calculate_n_fsps(dataset_lca_and_leaves: Dict) -> int:
     log.info(f"Number of FSPS calculated to {n_fsps}")
     return {"n_fsps": n_fsps}
 
+def create_redis_service(host:str, port:int):
+    r = redis.Redis(host=host, port=port)
 
 def create_hyperparam_optimizer(
     n_classes,
@@ -92,11 +96,9 @@ def create_hyperparam_optimizer(
     batchnorm: bool,
     symmetrize: bool,
     data_reupload_range: bool,
-    pre_trained_model: DataParallel,
     n_fsps: int,
     device: str,
     dataset_lca_and_leaves: Dict,
-    model: DataParallel,
     learning_rate_range: List,
     learning_rate_decay_range: List,
     gamma: float,
@@ -112,13 +114,15 @@ def create_hyperparam_optimizer(
 ) -> Hyperparam_Optimizer:
 
     hyperparam_optimizer = Hyperparam_Optimizer(
-                                redis_host,
-                                redis_port,
-                                redis_path,
-                                redis_password                        
+                                name="hyperparam_optimizer",
+                                id=0,
+                                host=redis_host,
+                                port=redis_port,
+                                path=redis_path,
+                                password=redis_password                        
                             )
 
-    hyperparam_optimizer.set_variable_parmeters(
+    hyperparam_optimizer.set_variable_parameters(
         {
             "n_blocks_range":n_blocks_range,
             "dim_feedforward_range":dim_feedforward_range,
@@ -145,13 +149,12 @@ def create_hyperparam_optimizer(
             "embedding_dims":embedding_dims,
             "batchnorm":batchnorm,
             "symmetrize":symmetrize,
-            "pre_trained_model":pre_trained_model,
             "n_fsps":n_fsps,
             "device":device,
         },
         {
             "dataset_lca_and_leaves":dataset_lca_and_leaves,
-            "model":model,
+            "model":None, # this must be overwritten later in the optimization step and just indicates the difference in implementation here
             "gamma":gamma,
             "epochs":epochs,
             "normalize":normalize,
@@ -164,7 +167,9 @@ def create_hyperparam_optimizer(
     hyperparam_optimizer.create_instructor = create_instructor
     hyperparam_optimizer.objective = train
 
-    return hyperparam_optimizer
+    return {
+        "hyperparam_optimizer":hyperparam_optimizer
+    }
 
 
 def train_optuna(hyperparam_optimizer: Hyperparam_Optimizer):
@@ -191,9 +196,11 @@ def create_model(
     embedding_dims: bool,
     batchnorm: bool,
     symmetrize: bool,
-    pre_trained_model: DataParallel,
     n_fsps: int,
     device: str,
+    data_reupload: bool,
+    add_rot_gates: bool,
+    pre_trained_model: DataParallel = None,
     **kwargs
 ) -> DataParallel:
 
@@ -211,9 +218,11 @@ def create_model(
         embedding_dims=embedding_dims,
         batchnorm=batchnorm,
         symmetrize=symmetrize,
-        pre_trained_model=pre_trained_model,
         n_fsps=n_fsps,
         device=device,
+        data_reupload=data_reupload,
+        add_rot_gates=add_rot_gates,
+        pre_trained_model=pre_trained_model,
         **kwargs
     )
 
