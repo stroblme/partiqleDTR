@@ -108,7 +108,7 @@ class qmlp(nn.Module):
         n_classes,  # l
         dim_feedforward=6,  # ff
         n_layers_mlp=2,
-        n_layers_vqc=2,
+        n_layers_vqc=3,
         skip_block=False,
         dropout_rate=0.3,
         batchnorm=True,
