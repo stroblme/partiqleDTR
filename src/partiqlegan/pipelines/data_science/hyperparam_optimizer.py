@@ -24,22 +24,22 @@ class Hyperparam_Optimizer:
         )
         return storage
 
-    def set_variable_parmeters(self, model_parameters, instructor_parameters):
-        assert type(model_parameters) == Dict
-        assert type(instructor_parameters) == Dict
+    def set_variable_parameters(self, model_parameters, instructor_parameters):
+        assert isinstance(model_parameters, Dict)
+        assert isinstance(instructor_parameters, Dict)
 
         self.variable_model_parameters = model_parameters
         self.variable_instructor_parameters = instructor_parameters
 
     def set_fixed_parameters(self, model_parameters, instructor_parameters):
-        assert type(model_parameters) == Dict
-        assert type(instructor_parameters) == Dict
+        assert isinstance(model_parameters, Dict)
+        assert isinstance(instructor_parameters, Dict)
 
         self.fixed_model_parameters = model_parameters
         self.fixed_instructor_parameters = instructor_parameters
 
     @staticmethod
-    def create_model()):
+    def create_model():
         raise NotImplementedError("Create Model method must be set!")
 
     @staticmethod
@@ -58,15 +58,15 @@ class Hyperparam_Optimizer:
     def update_variable_parameters(self, trial, parameters):
         updated_variable_parameters = dict()
         for parameter, value in parameters.items():
-            assert type(value) == List
+            assert isinstance(value, List)
 
             # if we have three values (-> no bool) and they are not categorical (str)
-            if len(value) == 3 and type(value[0])!=str and type(value[1])!=str:
+            if len(value) == 3 and not isinstance(value[0], str) and not isinstance(value[1], str):
                 low = value[0]
                 high = value[1]
 
                 # if the third parameter specifies the scale
-                if type(value[2]) == str:
+                if isinstance(value[2]) == str:
                     log = value[2]=="log"
                     step = None
                 else:
@@ -74,9 +74,9 @@ class Hyperparam_Optimizer:
                     step = value[2]
                     
                 #
-                if type(low) == float and type(high) == float:
+                if isinstance(low, float) and isinstance(high, float):
                     updated_variable_parameters[parameter] = trial.suggest_float(parameter, *value[1,2], step=step, log=log)
-                elif type(low) == int and type(high) == int:
+                elif isinstance(low, int) and isinstance(high, int):
                     updated_variable_parameters[parameter] = trial.suggest_categorical(parameter, *value[1,2], step=step, log=log)
                 else:
                     raise ValueError(f"Unexpected type of range for trial suggestion for parameter {parameter}. Expected one of 'float' or 'int', got [{type(low)}, {type(high)}].")
