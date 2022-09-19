@@ -155,7 +155,7 @@ class Instructor:
                         labels = labels.to(self.device)
                         scale = 1 / labels.size(
                             1
-                        )  # get the scaling dependend on the number of classes
+                        )  # get the scaling dependent on the number of classes
 
                         if mode == "train":
                             self.model.train()  # set the module in training mode
