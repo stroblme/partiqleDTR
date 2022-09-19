@@ -112,3 +112,7 @@ trained_quantum_model:
 gradients:
   type: pickle.PickleDataSet
   filepath: data/08_reporting/gradients.pickle
+
+checkpoint:
+  type: pickle.PickleDataSet
+  filepath: data/08_reporting/checkpoint.pickle

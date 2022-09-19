@@ -275,6 +275,6 @@ def create_instructor(
 
 def train(instructor: Instructor):
 
-    trained_model, gradients = instructor.train()
+    result = instructor.train() # returns a dict of e.g. the model, checkpoints and the gradients
 
-    return {"trained_model": trained_model, "gradients": gradients}
+    return result

@@ -254,6 +254,7 @@ def create_split_training_qgnn_pipeline(**kwargs) -> Pipeline:
                 },
                 outputs={
                     "trained_model": "trained_quantum_model",
+                    "checkpoint": "checkpoint",
                     "gradients": "gradients",
                 },
                 name="train_qgnn",

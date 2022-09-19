@@ -234,6 +234,17 @@ class Instructor:
                                     f"Exception occured when trying to plot graphs in epoch {epoch}: {e}\n\tThe lcag matrices were:\n\t{labels.numpy()}\n\tand\n\t{logits.cpu().detach().numpy()}"
                                 )
 
+                            model_state_dict = self.model.state_dict()
+                            optimizer_state_dict = self.optimizer.state_dict()
+                            checkpoint = {
+                                "epoch": epoch,
+                                "loss": loss,
+                                "model_state_dict": model_state_dict,
+                                "optimizer_state_dict": optimizer_state_dict
+                            }
+
+
+
                         if mode == "train":
                             log.debug(
                                 f"Sample evaluation in epoch {epoch}, iteration {i} took {time.time() - sample_start} seconds. Loss was {scale*loss.item()}"
@@ -270,7 +281,11 @@ class Instructor:
         if result == None:
             result = self.model
 
-        return result, all_grads
+        return {
+            "trained_model":result, 
+            "checkpoint":checkpoint,
+            "gradients":all_grads
+        }
 
     def plotGradients(self, epoch_gradients, figsize=(16, 12)):
 
