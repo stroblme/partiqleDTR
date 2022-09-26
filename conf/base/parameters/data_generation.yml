@@ -3,7 +3,7 @@ masses: [100, 90, 80, 70, 50, 20, 25, 10]
 fsp_masses: [1, 2, 3, 5, 12]
 modes_names: ['train', 'val', 'test']
 n_topologies: 5
-max_depth: 3 # this will control the dimensionality of the classes
+max_depth: 2 # this will control the dimensionality of the classes
 max_children: 3 # careful, this only controls how many children a single particle can have
 min_children: 2
 isp_weight: 1.0
