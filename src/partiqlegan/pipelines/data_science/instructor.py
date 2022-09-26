@@ -178,7 +178,7 @@ class Instructor:
                             self.optimizer.zero_grad()
                             loss.backward()
                             self.optimizer.step()
-                            
+
                             # raise Exception("test")
                             epoch_grad += t.Tensor(
                                 [p.grad for p in self.model.parameters()][0]
@@ -310,6 +310,9 @@ class Instructor:
                 "model_state_dict": model_state_dict,
                 "optimizer_state_dict": optimizer_state_dict
             }
+
+        mlflow.log_dict(model_state_dict, f"model.json")
+        mlflow.log_dict(optimizer_state_dict, f"optimizer.json")
 
         return {
             "trained_model":result, 
