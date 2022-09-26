@@ -1,4 +1,5 @@
 import time
+import traceback
 
 import matplotlib.pyplot as plt
 
@@ -81,6 +82,8 @@ class Instructor:
         detectAnomaly: bool = False,
         device: str = "cpu",
         n_fsps=-1,
+        model_state_dict=None,
+        optimizer_state_dict=None
     ):
         """
         Args:
@@ -117,12 +120,18 @@ class Instructor:
         self.epochs = epochs
         self.normalize = normalize
         self.batch_size = batch_size
-        self.opt = t.optim.Adam(self.model.parameters(), lr=learning_rate)
+        self.optimizer = t.optim.Adam(self.model.parameters(), lr=learning_rate)
         # learning rate scheduler, same as in NRI
-        self.scheduler = StepLR(self.opt, step_size=learning_rate_decay, gamma=gamma)
+
+        if model_state_dict is not None:
+            self.model.load_state_dict(model_state_dict)
+        if optimizer_state_dict is not None:
+            self.optimizer.load_state_dict(optimizer_state_dict)
+
+        self.scheduler = StepLR(self.optimizer, step_size=learning_rate_decay, gamma=gamma)
         self.detectAnomaly = detectAnomaly  # TODO: introduce as parameter if helpful
 
-    def train(self):
+    def train(self, start_epoch=1):
         if self.detectAnomaly:
             log.info(f"Anomaly detection enabled")
             t.autograd.set_detect_anomaly(True)
@@ -131,9 +140,10 @@ class Instructor:
         result = None
         best_acc = 0
         all_grads = []
+        checkpoint = None
 
         try:  # catch things like gradient nan exceptions
-            for epoch in range(1, 1 + self.epochs):
+            for epoch in range(start_epoch, 1 + self.epochs):
                 for mode in ["train", "val"]:
                     data_batch = DataLoader(
                         DataWrapper(self.data[mode], normalize=self.normalize),
@@ -165,10 +175,11 @@ class Instructor:
                             acc = self.edge_accuracy(logits, labels)
 
                             # do the actual optimization
-                            self.opt.zero_grad()
+                            self.optimizer.zero_grad()
                             loss.backward()
-                            self.opt.step()
-
+                            self.optimizer.step()
+                            
+                            # raise Exception("test")
                             epoch_grad += t.Tensor(
                                 [p.grad for p in self.model.parameters()][0]
                             )  # only log the first layer (vqc)
@@ -237,8 +248,7 @@ class Instructor:
                             model_state_dict = self.model.state_dict()
                             optimizer_state_dict = self.optimizer.state_dict()
                             checkpoint = {
-                                "epoch": epoch,
-                                "loss": loss,
+                                "start_epoch": epoch,
                                 "model_state_dict": model_state_dict,
                                 "optimizer_state_dict": optimizer_state_dict
                             }
@@ -271,15 +281,35 @@ class Instructor:
         except GradientsNanException as e:
             log.error(f"Gradients became NAN during training\n{e}")
         except Exception as e:
-            log.error(f"Exception occured during training\n{e}")
+            log.error(f"Exception occured during training\n{e}\n")
+            traceback.print_exc()
+
 
         # quickly print the gradients..
         if len(all_grads) > 0:
             g_plt = self.plotGradients(all_grads, figsize=(16, 12))
             mlflow.log_figure(g_plt.gcf(), f"gradients.png")
 
+
+        # In case we didn't even calculated a single sample
         if result == None:
             result = self.model
+
+        if checkpoint is None:
+            try:
+                model_state_dict = self.model.state_dict()
+            except:
+                model_state_dict = {}
+            try:
+                optimizer_state_dict = self.optimizer.state_dict()
+            except:
+                optimizer_state_dict = {}
+
+            checkpoint = {
+                "start_epoch": epoch,
+                "model_state_dict": model_state_dict,
+                "optimizer_state_dict": optimizer_state_dict
+            }
 
         return {
             "trained_model":result, 

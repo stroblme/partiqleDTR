@@ -77,6 +77,18 @@ def calculate_n_fsps(dataset_lca_and_leaves: Dict) -> int:
     log.info(f"Number of FSPS calculated to {n_fsps}")
     return {"n_fsps": n_fsps}
 
+def unpack_checkpoint(checkpoint: Dict) -> Dict:
+    model_state_dict = checkpoint["model_state_dict"]
+    optimizer_state_dict = checkpoint["optimizer_state_dict"]
+    start_epoch = checkpoint["start_epoch"]
+
+    return {
+        "model_state_dict": model_state_dict,
+        "optimizer_state_dict": optimizer_state_dict,
+        "start_epoch":start_epoch
+    }
+
+
 def create_redis_service(host:str, port:int):
     r = redis.Redis(host=host, port=port)
 
@@ -273,8 +285,8 @@ def create_instructor(
     return {"instructor": instructor}
 
 
-def train(instructor: Instructor):
+def train(instructor: Instructor, start_epoch=1):
 
-    result = instructor.train() # returns a dict of e.g. the model, checkpoints and the gradients
+    result = instructor.train(start_epoch) # returns a dict of e.g. the model, checkpoints and the gradients
 
     return result
