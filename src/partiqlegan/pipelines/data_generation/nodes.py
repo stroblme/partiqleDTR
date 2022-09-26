@@ -283,10 +283,10 @@ def gen_events_from_structure(
     # generate_unknown = parameters["GENERATE_UNKNOWN"] if "GENERATE_UNKNOWN" in parameters else None
     # seed = parameters["SEEDS"] if "SEEDS" in parameters else None
 
-    events_per_mode = {
-        "train": train_events_per_top,
-        "val": val_events_per_top,
-        "test": test_events_per_top,
+    events_per_top = {
+        modes_names[0]: train_events_per_top,
+        modes_names[1]: val_events_per_top,
+        modes_names[2]: test_events_per_top,
     }
 
     all_weights = {mode: list() for mode in modes_names}
@@ -297,22 +297,32 @@ def gen_events_from_structure(
     seeds = [rd.integers(n_seeds * 1000) for i in range(n_seeds)]
 
     actual_seeds = []
+    # iterate topologies
     for i, root_node in enumerate(decay_tree_structure):
         # NOTE generate leaves and labels for training, validation, and testing
         modes = []
         # For topologies not in the training set, save them to a different subdir
         # save_dir = Path(root, 'unknown')
-        if i < n_topologies or not generate_unknown:
-            modes = modes_names
-            # save_dir = Path(root, 'known')
-        elif i < (2 * n_topologies):
-            modes = modes_names[1:]
-        else:
-            modes = modes_names[2:]
+
+        # uncommented the following lines at 220926 since there is no obvious reason why we need e.g. 10, 20, 30 samples in train, val, test respectively.
+        # ----------------------------------------------------------------
+        # if i < n_topologies or not generate_unknown:
+        #     modes = modes_names
+        #     # save_dir = Path(root, 'known')
+        # elif i < (2 * n_topologies):
+        #     modes = modes_names[1:]
+        # else:
+        #     modes = modes_names[2:]
         # save_dir.mkdir(parents=True, exist_ok=True)
+        # ----------------------------------------------------------------
+        # modes = [m for m, e in events_per_top.items() if e >= i]
+        modes = modes_names
+
+        if i >= n_topologies:
+            break
 
         for j, mode in enumerate(modes):
-            num_events = events_per_mode[mode]
+            num_events = events_per_top[mode]
             l_rd = np.random.default_rng(seeds[i * len(modes) + j])
             l_seed = l_rd.integers(np.iinfo(np.int32).max)
 

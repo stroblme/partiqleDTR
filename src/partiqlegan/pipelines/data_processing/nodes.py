@@ -194,9 +194,9 @@ def lca_and_leaves_sort_into_modes(
     # generate_unknown = decay_parameters["GENERATE_UNKNOWN"] if "GENERATE_UNKNOWN" in decay_parameters else None
 
     events_per_mode = {
-        "train": train_events_per_top,
-        "val": val_events_per_top,
-        "test": test_events_per_top,
+        modes_names[0]: train_events_per_top,
+        modes_names[1]: val_events_per_top,
+        modes_names[2]: test_events_per_top,
     }
 
     _, all_events = decay_tree_events
@@ -209,15 +209,29 @@ def lca_and_leaves_sort_into_modes(
         modes = []
         # For topologies not in the training set, save them to a different subdir
         # save_dir = Path(root, 'unknown')
-        if i < n_topologies or not generate_unknown:
-            modes = modes_names
-            # save_dir = Path(root, 'known')
-        elif i < (2 * n_topologies):
-            modes = modes_names[1:]
-        else:
-            modes = modes_names[2:]
+
+        # uncommented the following lines at 220926 since there is no obvious reason why we need e.g. 10, 20, 30 samples in train, val, test respectively.
+        # ----------------------------------------------------------------
+        # if i < n_topologies or not generate_unknown:
+        #     modes = modes_names
+        #     # save_dir = Path(root, 'known')
+        # elif i < (2 * n_topologies):
+        #     modes = modes_names[1:]
+        # else:
+        #     modes = modes_names[2:]
+        # ----------------------------------------------------------------
+        # and added the following instead
+        # modes = [m for m, e in events_per_mode.items() if e >= i]
+        modes = modes_names
+
+        if i >= n_topologies:
+            break
+
+
+
         # save_dir.mkdir(parents=True, exist_ok=True)
 
+        # iterate modes (e.g. train, val, test)
         for mode in modes:
             num_events = events_per_mode[mode]
 
