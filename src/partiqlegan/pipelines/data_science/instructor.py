@@ -82,6 +82,8 @@ class Instructor:
         detectAnomaly: bool = False,
         device: str = "cpu",
         n_fsps=-1,
+        gradients_clamp=1000,
+        gradients_spreader=1e-10,
         model_state_dict=None,
         optimizer_state_dict=None
     ):
@@ -109,8 +111,8 @@ class Instructor:
             "model_printout.txt",
         )
         for p in self.model.parameters():
-            p.register_hook(lambda grad: t.clamp(grad, -1000, 1000))
-            p.register_hook(lambda grad: t.where(grad < 1e-10, t.rand(1) * 1e-9, grad))
+            p.register_hook(lambda grad: t.clamp(grad, -gradients_clamp, gradients_clamp))
+            p.register_hook(lambda grad: t.where(grad < gradients_spreader, t.rand(1) * gradients_spreader*1e1, grad))
 
         self.pytorch_total_params = sum(p.numel() for p in model.parameters())
         mlflow.log_param("Total trainable parameters", self.pytorch_total_params)
@@ -231,30 +233,6 @@ class Instructor:
                         epoch_loss += scale * loss.item()
                         epoch_acc += scale * acc.item()
 
-                        if acc > best_acc and mode == self.plot_mode:
-                            # update the current best model when approaching a higher accuray
-                            best_acc = acc
-                            result = self.model
-                            try:
-                                c_plt = self.plotBatchGraphs(logits.cpu(), labels)
-                                mlflow.log_figure(
-                                    c_plt.gcf(), f"{mode}_e{epoch}_sample_graph.png"
-                                )
-                            except Exception as e:
-                                log.error(
-                                    f"Exception occured when trying to plot graphs in epoch {epoch}: {e}\n\tThe lcag matrices were:\n\t{labels.numpy()}\n\tand\n\t{logits.cpu().detach().numpy()}"
-                                )
-
-                            model_state_dict = self.model.state_dict()
-                            optimizer_state_dict = self.optimizer.state_dict()
-                            checkpoint = {
-                                "start_epoch": epoch,
-                                "model_state_dict": model_state_dict,
-                                "optimizer_state_dict": optimizer_state_dict
-                            }
-
-
-
                         if mode == "train":
                             log.debug(
                                 f"Sample evaluation in epoch {epoch}, iteration {i} took {time.time() - sample_start} seconds. Loss was {scale*loss.item()}"
@@ -266,6 +244,29 @@ class Instructor:
                     epoch_acc /= len(
                         data_batch
                     )  # to the already scaled accuracy, apply the batch size scaling
+
+                    if epoch_acc > best_acc and mode == self.plot_mode:
+                        # update the current best model when approaching a higher accuray
+                        best_acc = epoch_acc
+                        result = self.model
+                        try:
+                            # just use the last sample for plotting.. this definitely needs improvement
+                            c_plt = self.plotBatchGraphs(logits.cpu(), labels)
+                            mlflow.log_figure(
+                                c_plt.gcf(), f"{mode}_e{epoch}_sample_graph.png"
+                            )
+                        except Exception as e:
+                            log.error(
+                                f"Exception occured when trying to plot graphs in epoch {epoch}: {e}\n\tThe lcag matrices were:\n\t{labels.numpy()}\n\tand\n\t{logits.cpu().detach().numpy()}"
+                            )
+
+                        model_state_dict = self.model.state_dict()
+                        optimizer_state_dict = self.optimizer.state_dict()
+                        checkpoint = {
+                            "start_epoch": epoch,
+                            "model_state_dict": model_state_dict,
+                            "optimizer_state_dict": optimizer_state_dict
+                        }
 
                     if mode == "train":
                         all_grads.append(scale * epoch_grad)
@@ -311,8 +312,8 @@ class Instructor:
                 "optimizer_state_dict": optimizer_state_dict
             }
 
-        mlflow.log_dict(model_state_dict, f"model.json")
-        mlflow.log_dict(optimizer_state_dict, f"optimizer.json")
+        mlflow.log_dict(model_state_dict, f"model.yml")
+        mlflow.log_dict(optimizer_state_dict, f"optimizer.yml")
 
         return {
             "trained_model":result, 
