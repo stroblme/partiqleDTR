@@ -323,15 +323,15 @@ class Instructor:
 
     def plotGradients(self, epoch_gradients, figsize=(16, 12)):
 
-        X = [i for i in range(len(epoch_gradients))]
-        Y = [i for i in range(len(epoch_gradients[0]))]
+        X = [i for i in range(len(epoch_gradients[0]))]
+        Y = [i for i in range(len(epoch_gradients))]
         Z = t.stack(epoch_gradients)
 
         fig, ax = plt.subplots(figsize=figsize)
         im, cbar = heatmap(
             Z,
-            X,
             Y,
+            X,
             ax=ax,
             cmap="magma_r",
             cbarlabel=f"Gradients Normalized",
