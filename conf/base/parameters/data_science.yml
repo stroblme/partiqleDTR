@@ -20,6 +20,8 @@ learning_rate_decay_range: [1, 1000, "log"]
 gamma: 0.5
 batch_size: 5
 batch_size_range: [1, 64, "log"]
+gradients_clamp: 1000
+gradients_spreader: 1e-10
 
 # GNN
 n_blocks: 3
@@ -53,5 +55,6 @@ detect_anomaly: False # enables torch' anomaly detector
 device: 'cpu' # anything but 'cpu' to use cuda devices instead
 
 # MLFLOW
-plot_mode: "train"
+plot_mode: "val"
+plotting_rows: 4
 git_hash_identifier: "git_hash"
