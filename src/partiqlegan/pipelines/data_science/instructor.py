@@ -354,7 +354,8 @@ class Instructor:
 
             graph.lca2graph(lcag)
             plt.sca(ax[it][0])
-            graph.visualize(opt="max", ax=ax[it][0])
+            if len(graph.visual) > 0: # can happen if invalid graph -> no edge added
+                graph.visualize(opt="max", ax=ax[it][0])
 
             graph_ref = GraphVisualization()
 
