@@ -1,5 +1,6 @@
 import time
 import traceback
+import random
 
 import matplotlib.pyplot as plt
 
@@ -162,6 +163,10 @@ class Instructor:
                     epoch_acc = 0.0
                     epoch_grad = t.zeros(len([p for p in self.model.parameters()][0]))
 
+                    # for i in range(10):
+                    #     all_grads.append(epoch_grad+i)
+                    # g_plt=self.plotGradients(all_grads)
+                    # mlflow.log_figure(g_plt.gcf(), f"gradients.png")
                     log.info(
                         f"Running epoch {epoch} in mode {mode} over {len(data_batch)} samples"
                     )
