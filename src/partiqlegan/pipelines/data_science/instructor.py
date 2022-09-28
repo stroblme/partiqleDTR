@@ -79,6 +79,7 @@ class Instructor:
         epochs: int,
         normalize: bool,
         plot_mode: str = "val",
+        plotting_rows: int = 4,
         detectAnomaly: bool = False,
         device: str = "cpu",
         n_fsps=-1,
@@ -118,6 +119,7 @@ class Instructor:
         mlflow.log_param("Total trainable parameters", self.pytorch_total_params)
 
         self.plot_mode = plot_mode
+        self.plotting_rows = plotting_rows
         self.data = data
         self.epochs = epochs
         self.normalize = normalize
@@ -146,6 +148,8 @@ class Instructor:
 
         try:  # catch things like gradient nan exceptions
             for epoch in range(start_epoch, 1 + self.epochs):
+                logits_for_plotting = []
+                labels_for_plotting = []
                 for mode in ["train", "val"]:
                     data_batch = DataLoader(
                         DataWrapper(self.data[mode], normalize=self.normalize),
