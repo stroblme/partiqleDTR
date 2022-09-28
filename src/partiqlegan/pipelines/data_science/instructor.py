@@ -238,6 +238,15 @@ class Instructor:
                                 f"Sample evaluation in epoch {epoch}, iteration {i} took {time.time() - sample_start} seconds. Loss was {scale*loss.item()}"
                             )
 
+                        if mode == self.plot_mode:
+                            logits_for_plotting.extend([*logits]) # flatten along the batch size
+                            labels_for_plotting.extend([*labels]) # flatten along the batch size
+                        # if len(logits_for_plotting) > self.plotting_rows:
+                        #     selected_logits = [random.choice(logits_for_plotting).cpu() for i in range(self.plotting_rows)]
+                        #     selected_labels = [random.choice(labels_for_plotting) for i in range(self.plotting_rows)]
+
+                        #     c_plt = self.plotBatchGraphs(selected_logits, selected_labels, rows=self.plotting_rows, cols=2)
+
                     epoch_loss /= len(
                         data_batch
                     )  # to the already scaled loss, apply the batch size scaling
@@ -250,8 +259,10 @@ class Instructor:
                         best_acc = epoch_acc
                         result = self.model
                         try:
-                            # just use the last sample for plotting.. this definitely needs improvement
-                            c_plt = self.plotBatchGraphs(logits.cpu(), labels)
+                            selected_logits = [random.choice(logits_for_plotting).cpu() for i in range(self.plotting_rows)]
+                            selected_labels = [random.choice(labels_for_plotting) for i in range(self.plotting_rows)]
+
+                            c_plt = self.plotBatchGraphs(selected_logits, selected_labels, rows=self.plotting_rows, cols=2)
                             mlflow.log_figure(
                                 c_plt.gcf(), f"{mode}_e{epoch}_sample_graph.png"
                             )
