@@ -5,20 +5,20 @@ post_model_sel: "pqgnn" # only for split training
 n_momenta: 4
 
 # Classical
-epochs: 50
+epochs: 20
 normalize: True
 dim_feedforward: 64
 dim_feedforward_range: [4, 256, "log"]
 batchnorm: True
 
-dropout_rate: 0.3
+dropout_rate: 0.2
 dropout_rate_range: [0.1, 1.0, "linear"]
 learning_rate: 0.01
 learning_rate_range: [1e-5, 1e-1, "log"]
 learning_rate_decay: 200
 learning_rate_decay_range: [1, 1000, "log"]
 gamma: 0.5
-batch_size: 5
+batch_size: 4
 batch_size_range: [1, 64, "log"]
 gradients_clamp: 1000
 gradients_spreader: 1e-10
