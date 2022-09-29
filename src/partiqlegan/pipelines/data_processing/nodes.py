@@ -227,8 +227,6 @@ def lca_and_leaves_sort_into_modes(
         if i >= n_topologies:
             break
 
-
-
         # save_dir.mkdir(parents=True, exist_ok=True)
 
         # iterate modes (e.g. train, val, test)

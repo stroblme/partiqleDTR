@@ -87,7 +87,7 @@ class Instructor:
         gradients_clamp=1000,
         gradients_spreader=1e-10,
         model_state_dict=None,
-        optimizer_state_dict=None
+        optimizer_state_dict=None,
     ):
         """
         Args:
@@ -113,8 +113,16 @@ class Instructor:
             "model_printout.txt",
         )
         for p in self.model.parameters():
-            p.register_hook(lambda grad: t.clamp(grad, -gradients_clamp, gradients_clamp))
-            p.register_hook(lambda grad: t.where(grad < gradients_spreader, t.rand(1) * gradients_spreader*1e1, grad))
+            p.register_hook(
+                lambda grad: t.clamp(grad, -gradients_clamp, gradients_clamp)
+            )
+            p.register_hook(
+                lambda grad: t.where(
+                    grad < gradients_spreader,
+                    t.rand(1) * gradients_spreader * 1e1,
+                    grad,
+                )
+            )
 
         self.pytorch_total_params = sum(p.numel() for p in model.parameters())
         mlflow.log_param("Total trainable parameters", self.pytorch_total_params)
@@ -133,7 +141,9 @@ class Instructor:
         if optimizer_state_dict is not None:
             self.optimizer.load_state_dict(optimizer_state_dict)
 
-        self.scheduler = StepLR(self.optimizer, step_size=learning_rate_decay, gamma=gamma)
+        self.scheduler = StepLR(
+            self.optimizer, step_size=learning_rate_decay, gamma=gamma
+        )
         self.detectAnomaly = detectAnomaly  # TODO: introduce as parameter if helpful
 
     def train(self, start_epoch=1):
@@ -248,8 +258,12 @@ class Instructor:
                             )
 
                         if mode == self.plot_mode:
-                            logits_for_plotting.extend([*logits]) # flatten along the batch size
-                            labels_for_plotting.extend([*labels]) # flatten along the batch size
+                            logits_for_plotting.extend(
+                                [*logits]
+                            )  # flatten along the batch size
+                            labels_for_plotting.extend(
+                                [*labels]
+                            )  # flatten along the batch size
                         # if len(logits_for_plotting) > self.plotting_rows:
                         #     selected_logits = [random.choice(logits_for_plotting).cpu() for i in range(self.plotting_rows)]
                         #     selected_labels = [random.choice(labels_for_plotting) for i in range(self.plotting_rows)]
@@ -268,10 +282,21 @@ class Instructor:
                         best_acc = epoch_acc
                         result = self.model
                         try:
-                            selected_logits = [random.choice(logits_for_plotting).cpu() for i in range(self.plotting_rows)]
-                            selected_labels = [random.choice(labels_for_plotting) for i in range(self.plotting_rows)]
+                            selected_logits = [
+                                random.choice(logits_for_plotting).cpu()
+                                for i in range(self.plotting_rows)
+                            ]
+                            selected_labels = [
+                                random.choice(labels_for_plotting)
+                                for i in range(self.plotting_rows)
+                            ]
 
-                            c_plt = self.plotBatchGraphs(selected_logits, selected_labels, rows=self.plotting_rows, cols=2)
+                            c_plt = self.plotBatchGraphs(
+                                selected_logits,
+                                selected_labels,
+                                rows=self.plotting_rows,
+                                cols=2,
+                            )
                             mlflow.log_figure(
                                 c_plt.gcf(), f"{mode}_e{epoch}_sample_graph.png"
                             )
@@ -285,7 +310,7 @@ class Instructor:
                         checkpoint = {
                             "start_epoch": epoch,
                             "model_state_dict": model_state_dict,
-                            "optimizer_state_dict": optimizer_state_dict
+                            "optimizer_state_dict": optimizer_state_dict,
                         }
 
                     if mode == "train":
@@ -305,12 +330,10 @@ class Instructor:
             log.error(f"Exception occured during training\n{e}\n")
             traceback.print_exc()
 
-
         # quickly print the gradients..
         if len(all_grads) > 0:
             g_plt = self.plotGradients(all_grads, figsize=(16, 12))
             mlflow.log_figure(g_plt.gcf(), f"gradients.png")
-
 
         # In case we didn't even calculated a single sample
         if result == None:
@@ -329,16 +352,16 @@ class Instructor:
             checkpoint = {
                 "start_epoch": epoch,
                 "model_state_dict": model_state_dict,
-                "optimizer_state_dict": optimizer_state_dict
+                "optimizer_state_dict": optimizer_state_dict,
             }
 
         mlflow.log_dict(model_state_dict, f"model.yml")
         mlflow.log_dict(optimizer_state_dict, f"optimizer.yml")
 
         return {
-            "trained_model":result, 
-            "checkpoint":checkpoint,
-            "gradients":all_grads
+            "trained_model": result,
+            "checkpoint": checkpoint,
+            "gradients": all_grads,
         }
 
     def plotGradients(self, epoch_gradients, figsize=(16, 12)):
@@ -374,7 +397,7 @@ class Instructor:
 
             graph.lca2graph(lcag)
             plt.sca(ax[it][0])
-            if len(graph.visual) > 0: # can happen if invalid graph -> no edge added
+            if len(graph.visual) > 0:  # can happen if invalid graph -> no edge added
                 graph.visualize(opt="max", ax=ax[it][0])
 
             graph_ref = GraphVisualization()
