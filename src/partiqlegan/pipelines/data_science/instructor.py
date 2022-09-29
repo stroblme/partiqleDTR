@@ -178,7 +178,7 @@ class Instructor:
                     # g_plt=self.plotGradients(all_grads)
                     # mlflow.log_figure(g_plt.gcf(), f"gradients.png")
                     log.info(
-                        f"Running epoch {epoch} in mode {mode} over {len(data_batch)} samples"
+                        f"Running epoch {epoch} in mode {mode} over {len(data_batch)*self.batch_size} samples"
                     )
                     for i, (states, labels) in enumerate(data_batch):
                         sample_start = time.time()
