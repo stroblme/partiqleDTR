@@ -77,6 +77,7 @@ def calculate_n_fsps(dataset_lca_and_leaves: Dict) -> int:
     log.info(f"Number of FSPS calculated to {n_fsps}")
     return {"n_fsps": n_fsps}
 
+
 def unpack_checkpoint(checkpoint: Dict) -> Dict:
     model_state_dict = checkpoint["model_state_dict"]
     optimizer_state_dict = checkpoint["optimizer_state_dict"]
@@ -85,12 +86,13 @@ def unpack_checkpoint(checkpoint: Dict) -> Dict:
     return {
         "model_state_dict": model_state_dict,
         "optimizer_state_dict": optimizer_state_dict,
-        "start_epoch":start_epoch
+        "start_epoch": start_epoch,
     }
 
 
-def create_redis_service(host:str, port:int):
+def create_redis_service(host: str, port: int):
     r = redis.Redis(host=host, port=port)
+
 
 def create_hyperparam_optimizer(
     n_classes,
@@ -125,69 +127,67 @@ def create_hyperparam_optimizer(
     redis_host: str,
     redis_port: int,
     redis_path: str,
-    redis_password: str
+    redis_password: str,
 ) -> Hyperparam_Optimizer:
 
     hyperparam_optimizer = Hyperparam_Optimizer(
-                                name="hyperparam_optimizer",
-                                id=0,
-                                host=redis_host,
-                                port=redis_port,
-                                path=redis_path,
-                                password=redis_password                        
-                            )
+        name="hyperparam_optimizer",
+        id=0,
+        host=redis_host,
+        port=redis_port,
+        path=redis_path,
+        password=redis_password,
+    )
 
     hyperparam_optimizer.set_variable_parameters(
         {
-            "n_blocks_range":n_blocks_range,
-            "dim_feedforward_range":dim_feedforward_range,
-            "n_layers_mlp_range":n_layers_mlp_range,
-            "n_additional_mlp_layers_range":n_additional_mlp_layers_range,
-            "n_final_mlp_layers_range":n_final_mlp_layers_range,
-            "dropout_rate_range":dropout_rate_range,
-            "data_reupload_range":data_reupload_range,
+            "n_blocks_range": n_blocks_range,
+            "dim_feedforward_range": dim_feedforward_range,
+            "n_layers_mlp_range": n_layers_mlp_range,
+            "n_additional_mlp_layers_range": n_additional_mlp_layers_range,
+            "n_final_mlp_layers_range": n_final_mlp_layers_range,
+            "dropout_rate_range": dropout_rate_range,
+            "data_reupload_range": data_reupload_range,
         },
         {
-            "learning_rate_range":learning_rate_range,
-            "learning_rate_decay_range":learning_rate_decay_range,
-            "batch_size_range":batch_size_range
-        }
+            "learning_rate_range": learning_rate_range,
+            "learning_rate_decay_range": learning_rate_decay_range,
+            "batch_size_range": batch_size_range,
+        },
     )
 
     hyperparam_optimizer.set_fixed_parameters(
         {
-            "n_classes":n_classes,
-            "n_momenta":n_momenta,
-            "model_sel":model_sel,
-            "factor":factor,
-            "tokenize":tokenize,
-            "embedding_dims":embedding_dims,
-            "batchnorm":batchnorm,
-            "symmetrize":symmetrize,
-            "n_fsps":n_fsps,
-            "device":device,
+            "n_classes": n_classes,
+            "n_momenta": n_momenta,
+            "model_sel": model_sel,
+            "factor": factor,
+            "tokenize": tokenize,
+            "embedding_dims": embedding_dims,
+            "batchnorm": batchnorm,
+            "symmetrize": symmetrize,
+            "n_fsps": n_fsps,
+            "device": device,
         },
         {
-            "dataset_lca_and_leaves":dataset_lca_and_leaves,
-            "model":None, # this must be overwritten later in the optimization step and just indicates the difference in implementation here
-            "gamma":gamma,
-            "epochs":epochs,
-            "normalize":normalize,
-            "plot_mode":plot_mode,
-            "plotting_rows":plotting_rows,
-            "gradients_clamp":gradients_clamp,
-            "gradients_spreader":gradients_spreader,
-            "detectAnomaly":detectAnomaly,
-        }
+            "dataset_lca_and_leaves": dataset_lca_and_leaves,
+            "model": None,  # this must be overwritten later in the optimization step and just indicates the difference in implementation here
+            "gamma": gamma,
+            "epochs": epochs,
+            "normalize": normalize,
+            "plot_mode": plot_mode,
+            "plotting_rows": plotting_rows,
+            "gradients_clamp": gradients_clamp,
+            "gradients_spreader": gradients_spreader,
+            "detectAnomaly": detectAnomaly,
+        },
     )
 
     hyperparam_optimizer.create_model = create_model
     hyperparam_optimizer.create_instructor = create_instructor
     hyperparam_optimizer.objective = train
 
-    return {
-        "hyperparam_optimizer":hyperparam_optimizer
-    }
+    return {"hyperparam_optimizer": hyperparam_optimizer}
 
 
 def train_optuna(hyperparam_optimizer: Hyperparam_Optimizer):
@@ -220,7 +220,7 @@ def create_model(
     add_rot_gates: bool,
     n_layers_vqc: bool,
     pre_trained_model: DataParallel = None,
-    **kwargs
+    **kwargs,
 ) -> DataParallel:
 
     model = models[model_sel](
@@ -243,7 +243,7 @@ def create_model(
         add_rot_gates=add_rot_gates,
         n_layers_vqc=n_layers_vqc,
         pre_trained_model=pre_trained_model,
-        **kwargs
+        **kwargs,
     )
 
     if device == "cpu":
@@ -273,7 +273,7 @@ def create_instructor(
     detectAnomaly: bool,
     device: str,
     n_fsps: int,
-    **kwargs: Dict
+    **kwargs: Dict,
 ) -> Instructor:
     instructor = Instructor(
         model=model,
@@ -291,7 +291,7 @@ def create_instructor(
         detectAnomaly=detectAnomaly,
         device=device,
         n_fsps=n_fsps,
-        **kwargs
+        **kwargs,
     )
 
     return {"instructor": instructor}
@@ -299,6 +299,8 @@ def create_instructor(
 
 def train(instructor: Instructor, start_epoch=1):
 
-    result = instructor.train(start_epoch) # returns a dict of e.g. the model, checkpoints and the gradients
+    result = instructor.train(
+        start_epoch
+    )  # returns a dict of e.g. the model, checkpoints and the gradients
 
     return result

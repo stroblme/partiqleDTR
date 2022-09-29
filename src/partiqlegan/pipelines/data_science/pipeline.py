@@ -7,32 +7,34 @@ from kedro.pipeline import Pipeline, node, pipeline
 
 from .nodes import *
 
+
 def create_metadata_nodes(**kwargs) -> Pipeline:
     return [
-            node(
-                func=log_git_repo,
-                inputs={"git_hash_identifier": "params:git_hash_identifier"},
-                outputs={},
-                name="log_git_repo",
-            ),
-            node(
-                func=calculate_n_classes,
-                inputs={
-                    "dataset_lca_and_leaves": "dataset_lca_and_leaves",
-                },
-                outputs={"n_classes": "n_classes"},
-                name="calculate_n_classes",
-            ),
-            node(
-                func=calculate_n_fsps,
-                inputs={
-                    "dataset_lca_and_leaves": "dataset_lca_and_leaves",
-                },
-                outputs={"n_fsps": "n_fsps"},
-                name="calculate_n_fsps",
-                tags="split_run",
-            ),
-        ]
+        node(
+            func=log_git_repo,
+            inputs={"git_hash_identifier": "params:git_hash_identifier"},
+            outputs={},
+            name="log_git_repo",
+        ),
+        node(
+            func=calculate_n_classes,
+            inputs={
+                "dataset_lca_and_leaves": "dataset_lca_and_leaves",
+            },
+            outputs={"n_classes": "n_classes"},
+            name="calculate_n_classes",
+        ),
+        node(
+            func=calculate_n_fsps,
+            inputs={
+                "dataset_lca_and_leaves": "dataset_lca_and_leaves",
+            },
+            outputs={"n_fsps": "n_fsps"},
+            name="calculate_n_fsps",
+            tags="split_run",
+        ),
+    ]
+
 
 def create_training_qgnn_pipeline(**kwargs) -> Pipeline:
     return pipeline(
@@ -99,6 +101,7 @@ def create_training_qgnn_pipeline(**kwargs) -> Pipeline:
         ]
     )
 
+
 def create_training_optuna_pipeline(**kwargs) -> Pipeline:
     return pipeline(
         [
@@ -123,7 +126,6 @@ def create_training_optuna_pipeline(**kwargs) -> Pipeline:
                     "data_reupload_range": "params:data_reupload_range",
                     "n_fsps": "n_fsps",
                     "device": "params:device",
-
                     "dataset_lca_and_leaves": "dataset_lca_and_leaves",
                     "learning_rate_range": "params:learning_rate_range",
                     "learning_rate_decay_range": "params:learning_rate_decay_range",
@@ -139,7 +141,7 @@ def create_training_optuna_pipeline(**kwargs) -> Pipeline:
                     "redis_host": "params:redis_host",
                     "redis_port": "params:redis_port",
                     "redis_path": "params:redis_path",
-                    "redis_password": "params:redis_password"
+                    "redis_password": "params:redis_password",
                 },
                 outputs={"hyperparam_optimizer": "hyperparam_optimizer"},
                 name="create_instructor",
@@ -157,6 +159,7 @@ def create_training_optuna_pipeline(**kwargs) -> Pipeline:
         ]
     )
 
+
 def create_resume_training_qgnn_pipeline(**kwargs) -> Pipeline:
     return pipeline(
         [
@@ -166,7 +169,11 @@ def create_resume_training_qgnn_pipeline(**kwargs) -> Pipeline:
                 inputs={
                     "checkpoint": "checkpoint",
                 },
-                outputs={"model_state_dict": "model_state_dict", "optimizer_state_dict": "optimizer_state_dict", "start_epoch":"start_epoch"},
+                outputs={
+                    "model_state_dict": "model_state_dict",
+                    "optimizer_state_dict": "optimizer_state_dict",
+                    "start_epoch": "start_epoch",
+                },
                 name="unpack_checkpoint",
                 tags="split_run",
             ),
@@ -215,7 +222,7 @@ def create_resume_training_qgnn_pipeline(**kwargs) -> Pipeline:
                     "device": "params:device",
                     "n_fsps": "n_fsps",
                     "model_state_dict": "model_state_dict",
-                    "optimizer_state_dict": "optimizer_state_dict"
+                    "optimizer_state_dict": "optimizer_state_dict",
                 },
                 outputs={"instructor": "instructor"},
                 name="create_instructor",
@@ -237,9 +244,11 @@ def create_resume_training_qgnn_pipeline(**kwargs) -> Pipeline:
 # additional pipeline just to add it as an exception in kedro
 def create_debug_training_qgnn_pipeline(**kwargs) -> Pipeline:
     return create_training_qgnn_pipeline(**kwargs)
-    
+
+
 def create_debug_training_optuna_pipeline(**kwargs) -> Pipeline:
     return create_training_optuna_pipeline(**kwargs)
+
 
 # def create_split_training_qgnn_pipeline(**kwargs) -> Pipeline:
 #     return pipeline(
