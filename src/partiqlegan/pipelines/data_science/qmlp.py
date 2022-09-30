@@ -180,56 +180,56 @@ class qmlp(nn.Module):
             for i in range(n_qubits):
                 if add_rot_gates:
                     qc.rx(
-                        q.circuit.Parameter(f"{identifier}_rx_{i}"),
+                        q.circuit.Parameter(f"{identifier}_rx_0_{i}"),
                         i,
                         f"{identifier}_rx_{i}",
                     )
                     qc.ry(
-                        q.circuit.Parameter(f"{identifier}_ry_{i}"),
+                        q.circuit.Parameter(f"{identifier}_ry_0_{i}"),
                         i,
                         f"{identifier}_ry_{i}",
                     )
                     qc.rz(
-                        q.circuit.Parameter(f"{identifier}_rz_{i}"),
+                        q.circuit.Parameter(f"{identifier}_rz_0_{i}"),
                         i,
                     )
                 if i == 0:
                     qc.crx(
-                        q.circuit.Parameter(f"{identifier}_crx_{i+1}_{i}"),
+                        q.circuit.Parameter(f"{identifier}_crx_{n_qubits - 1}_{i}"),
                         i,
                         n_qubits - 1,
-                        f"{identifier}_crx_{i+1}_{i}",
+                        f"{identifier}_crx_{n_qubits - 1}_{i}",
                     )
                     qc.cry(
-                        q.circuit.Parameter(f"{identifier}_cry_{i+1}_{i}"),
+                        q.circuit.Parameter(f"{identifier}_cry_{n_qubits - 1}_{i}"),
                         i,
                         n_qubits - 1,
-                        f"{identifier}_cry_{i+1}_{i}",
+                        f"{identifier}_cry_{n_qubits - 1}_{i}",
                     )
                     qc.crz(
-                        q.circuit.Parameter(f"{identifier}_crz_{i+1}_{i}"),
+                        q.circuit.Parameter(f"{identifier}_crz_{n_qubits - 1}_{i}"),
                         i,
                         n_qubits - 1,
-                        f"{identifier}_crz_{i+1}_{i}",
+                        f"{identifier}_crz_{n_qubits - 1}_{i}",
                     )
                 else:
                     qc.crx(
-                        q.circuit.Parameter(f"{identifier}_crx_{i+1}_{i}"),
+                        q.circuit.Parameter(f"{identifier}_crx_{n_qubits - i - 1}_{n_qubits - i}"),
                         n_qubits - i,
                         n_qubits - i - 1,
-                        f"{identifier}_crx_{i+1}_{i}",
+                        f"{identifier}_crx_{n_qubits - i - 1}_{n_qubits - i}",
                     )
                     qc.cry(
-                        q.circuit.Parameter(f"{identifier}_cry_{i+1}_{i}"),
+                        q.circuit.Parameter(f"{identifier}_cry_{n_qubits - i - 1}_{n_qubits - i}"),
                         n_qubits - i,
                         n_qubits - i - 1,
-                        f"{identifier}_cry_{i+1}_{i}",
+                        f"{identifier}_cry_{n_qubits - i - 1}_{n_qubits - i}",
                     )
                     qc.crz(
-                        q.circuit.Parameter(f"{identifier}_crz_{i+1}_{i}"),
+                        q.circuit.Parameter(f"{identifier}_crz_{n_qubits - i - 1}_{n_qubits - i}"),
                         n_qubits - i,
                         n_qubits - i - 1,
-                        f"{identifier}_crz_{i+1}_{i}",
+                        f"{identifier}_crz_{n_qubits - i - 1}_{n_qubits - i}",
                     )
 
         def circuit_builder(qc, n_qubits, n_hidden):
@@ -242,7 +242,7 @@ class qmlp(nn.Module):
                 qc.barrier()
 
         log.info(
-            f"Building Quantum Circuit with {self.layers} layers and {n_classes} qubits"
+            f"Building Quantum Circuit with {self.layers} layers and {n_fsps} qubits"
         )
         self.qc = q.QuantumCircuit(n_fsps)
         circuit_builder(self.qc, n_fsps, self.layers)
@@ -343,14 +343,26 @@ class qmlp(nn.Module):
         n_leaves, batch, feats = x.size()  # get the representative sizes
         assert x.device == self.device  # check if we are running on the same device
 
-        # x = inputs.permute(1, 0, 2)  # (b, l, m)
+        x = x.permute(1, 0, 2)  # (b, l, m)
 
         x = x.reshape(batch, n_leaves * feats)  # flatten the last two dims
         x = t.nn.functional.pad(
-            x, (0, self.total_n_fsps * feats - x.size(1)), mode="constant", value=0
-        )  # pad up to the largest lcag size. subtract the current size to prevent unnecessary padding
+            x, (0, (self.total_n_fsps * feats) - (n_leaves * feats)), mode="constant", value=0
+        )  # pad up to the largest lcag size. subtract the current size to prevent unnecessary padding.
+        # note that x.size() is here n_leaves * feats
+
+        # set the weights to zero which are either involved in a controlled operation or directly operating on qubits not relevant to the current graph (i.e. where the input was zero padded before)
+        # this is supposed to ensure, that the actual measurement of the circuit is not impacted by any random weights contributing to meaningless 
+        # print(self.quantum_layer._weights)
+        with t.no_grad():
+            for i, p in enumerate(self.var_params):
+                if int(p._name[-1]) > n_leaves or int(p._name[-3]) > n_leaves:
+                    self.quantum_layer._weights[i] = 0.0
+        # print(self.quantum_layer._weights)
 
         x = self.quantum_layer(x)
+
+        
 
         def build_binary_permutation_indices(digits):
             """
