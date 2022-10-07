@@ -7,18 +7,18 @@ n_momenta: 4
 # Classical
 epochs: 45
 normalize: True
-dim_feedforward: 128
+dim_feedforward: 256
 dim_feedforward_range: [4, 512, "log"]
 batchnorm: True
 
 dropout_rate: 0.2
 dropout_rate_range: [0.1, 1.0, "linear"]
-learning_rate: 0.01
+learning_rate: 0.001
 learning_rate_range: [1e-5, 1e-1, "log"]
 learning_rate_decay: 200
 learning_rate_decay_range: [1, 1000, "log"]
 gamma: 0.5
-batch_size: 5
+batch_size: 10
 batch_size_range: [1, 64, "log"]
 gradients_clamp: 1000
 gradients_spreader: 1e-10
@@ -26,7 +26,7 @@ skip_block: True # activates skip connections on local scales
 skip_global: True # activates skip connections on global scales
 
 # GNN
-n_blocks: 3
+n_blocks: 4
 n_blocks_range: [1, 5, "linear"]
 n_layers_mlp: 2 # initial mlp layers before the blocks
 n_layers_mlp_range: [1, 5, "linear"]
@@ -59,5 +59,5 @@ device: 'cpu' # anything but 'cpu' to use cuda devices instead
 # MLFLOW
 plot_mode: "val"
 plotting_rows: 4
-log_gradients: False
+log_gradients: False # set false when using models where the quantum layer is not the first one
 git_hash_identifier: "git_hash"
