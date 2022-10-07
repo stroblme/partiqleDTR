@@ -22,6 +22,8 @@ batch_size: 5
 batch_size_range: [1, 64, "log"]
 gradients_clamp: 1000
 gradients_spreader: 1e-10
+skip_block: True # activates skip connections on local scales
+skip_global: True # activates skip connections on global scales
 
 # GNN
 n_blocks: 3
