@@ -2,14 +2,14 @@
 masses: [100, 90, 80, 70, 50, 20, 25, 10]
 fsp_masses: [1, 2, 3, 5, 12]
 modes_names: ['train', 'val', 'test']
-n_topologies: 5
-max_depth: 2 # this will control the dimensionality of the classes
+n_topologies: 10
+max_depth: 4 # this will control the dimensionality of the classes
 max_children: 3 # careful, this only controls how many children a single particle can have
 min_children: 2
 isp_weight: 1.0
-train_events_per_top: 100
-val_events_per_top: 20
-test_events_per_top: 10
+train_events_per_top: 200
+val_events_per_top: 40
+test_events_per_top: 20
 seed: 1111
 iso_retries: 0
 pad_to: -1
