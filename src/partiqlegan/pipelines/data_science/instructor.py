@@ -199,6 +199,8 @@ class Instructor:
                             loss = cross_entropy(logits, labels, ignore_index=-1)
                             acc = self.edge_accuracy(logits, labels)
 
+                            # self.plotBatchGraphs(logits, labels)
+                            
                             # do the actual optimization
                             self.optimizer.zero_grad()
                             loss.backward()
