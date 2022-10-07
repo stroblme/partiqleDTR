@@ -344,6 +344,7 @@ class Instructor:
         if result == None:
             result = self.model
 
+        log.info("Saving model and optimizer data")
         if checkpoint is None:
             try:
                 model_state_dict = self.model.state_dict()
