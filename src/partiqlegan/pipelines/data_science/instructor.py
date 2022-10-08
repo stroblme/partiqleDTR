@@ -81,6 +81,7 @@ class Instructor:
         normalize: bool,
         plot_mode: str = "val",
         plotting_rows: int = 4,
+        log_gradients:bool = False,
         detectAnomaly: bool = False,
         device: str = "cpu",
         n_fsps=-1,
@@ -128,7 +129,8 @@ class Instructor:
         mlflow.log_param("Total trainable parameters", self.pytorch_total_params)
 
         self.plot_mode = plot_mode
-        self.plotting_rows = plotting_rows
+        self.plotting_rows = plotting_rows  
+        self.log_gradients = log_gradients
         self.data = data
         self.epochs = epochs
         self.normalize = normalize
@@ -171,7 +173,9 @@ class Instructor:
 
                     epoch_loss = 0.0
                     epoch_acc = 0.0
-                    epoch_grad = t.zeros(len([p for p in self.model.parameters()][0]))
+
+                    if self.log_gradients:
+                        epoch_grad = t.zeros(len([p for p in self.model.parameters()][0]))
 
                     # for i in range(10):
                     #     all_grads.append(epoch_grad+i)
@@ -195,30 +199,33 @@ class Instructor:
                             loss = cross_entropy(logits, labels, ignore_index=-1)
                             acc = self.edge_accuracy(logits, labels)
 
+                            # self.plotBatchGraphs(logits, labels)
+                            
                             # do the actual optimization
                             self.optimizer.zero_grad()
                             loss.backward()
                             self.optimizer.step()
 
-                            # raise Exception("test")
-                            epoch_grad += t.Tensor(
-                                [p.grad for p in self.model.parameters()][0]
-                            )  # only log the first layer (vqc)
-                            if t.all(t.isnan(epoch_grad)):
-                                log.error(
-                                    f"All gradients became nan in epoch {epoch} after iteration {i}.\nInput was\n{states}.\nPredicted was\n{logits}.\nGradients are\n{epoch_grad}"
-                                )
-                                raise GradientsNanException
-                            elif t.any(
-                                t.isnan(epoch_grad)
-                            ):  # TODO: we are checking for "all" instead of "any" since there were cases where the gradients became nan but training successfully continued (investigate in samples!)
-                                log.error(
-                                    f"At least one gradient became nan in epoch {epoch} after iteration {i}.\nInput was\n{states}.\nPredicted was\n{logits}.\nGradients are\n{epoch_grad}"
-                                )
-                            else:
-                                log.debug(
-                                    f"Gradients in epoch {epoch}, iteration {i}: {epoch_grad}"
-                                )
+                            if self.log_gradients:
+                                # raise Exception("test")
+                                epoch_grad += t.Tensor(
+                                    [p.grad for p in self.model.parameters()][0]
+                                )  # only log the first layer (vqc)
+                                if t.all(t.isnan(epoch_grad)):
+                                    log.error(
+                                        f"All gradients became nan in epoch {epoch} after iteration {i}.\nInput was\n{states}.\nPredicted was\n{logits}.\nGradients are\n{epoch_grad}"
+                                    )
+                                    raise GradientsNanException
+                                elif t.any(
+                                    t.isnan(epoch_grad)
+                                ):  # TODO: we are checking for "all" instead of "any" since there were cases where the gradients became nan but training successfully continued (investigate in samples!)
+                                    log.error(
+                                        f"At least one gradient became nan in epoch {epoch} after iteration {i}.\nInput was\n{states}.\nPredicted was\n{logits}.\nGradients are\n{epoch_grad}"
+                                    )
+                                else:
+                                    log.debug(
+                                        f"Gradients in epoch {epoch}, iteration {i}: {epoch_grad}"
+                                    )
 
                             # for i in range(self.epochs):
                             #     all_grads.append(scale * epoch_grad)
@@ -313,7 +320,7 @@ class Instructor:
                             "optimizer_state_dict": optimizer_state_dict,
                         }
 
-                    if mode == "train":
+                    if self.log_gradients and mode == "train":
                         all_grads.append(scale * epoch_grad)
 
                     mlflow.log_metric(
@@ -331,14 +338,15 @@ class Instructor:
             traceback.print_exc()
 
         # quickly print the gradients..
-        if len(all_grads) > 0:
+        if self.log_gradients and len(all_grads) > 0:
             g_plt = self.plotGradients(all_grads, figsize=(16, 12))
             mlflow.log_figure(g_plt.gcf(), f"gradients.png")
-
+            
         # In case we didn't even calculated a single sample
         if result == None:
             result = self.model
 
+        log.info("Saving model and optimizer data")
         if checkpoint is None:
             try:
                 model_state_dict = self.model.state_dict()
