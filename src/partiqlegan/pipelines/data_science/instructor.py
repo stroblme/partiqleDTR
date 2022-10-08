@@ -416,6 +416,10 @@ class Instructor:
     def edge_accuracy(self, logits: t.Tensor, labels: t.Tensor) -> float:
         # logits: [Batch, Classes, LCA_0, LCA_1]
         probs = logits.softmax(1)  # get softmax for probabilities
-        preds = probs.max(1)[1]  # find maximum across the classes
-        correct = (labels == preds).sum().float()
-        return correct / (labels.size(1) * labels.size(2))
+        preds = probs.max(1)[1]  # find maximum across the classes (batches are on 0)
+
+        correct = 0.0
+        for batch_label, batch_preds in zip(labels, preds):
+            correct += (batch_label == batch_preds).float().sum()/(labels.size(1) * labels.size(2)) # divide by the size of the matrix
+
+        return correct / labels.size(0) # divide by the batch size
