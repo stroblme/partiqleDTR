@@ -37,25 +37,33 @@ class DataWrapper(Dataset):
     def __init__(self, data, normalize=False):
         dmax = 0
         dmin = 1
+
+        normalize_individually = False
+        zero_mean = False
+
         self.data = data
         if normalize:
-            # for i, event in enumerate(data.x):
-            #     dmax = event.max() if event.max() > dmax else dmax
-            #     dmin = event.min() if event.min() < dmin else dmin
-            # for i, event in enumerate(data.x):
-            #     self.data.x[i] = (event-dmin)/(dmax-dmin)
-            # dmax = 0
-            # dmin = 1
-            # for i, event in enumerate(data.x):
-            #     dmax = event.max() if event.max() > dmax else dmax
-            #     dmin = event.min() if event.min() < dmin else dmin
-            # assert dmax==1 and dmin==0
-
+            if not normalize_individually:
+                for i, event in enumerate(data.x):
+                    dmax = event.max() if event.max() > dmax else dmax
+                    dmin = event.min() if event.min() < dmin else dmin
+                # for i, event in enumerate(data.x):
+                #     self.data.x[i] = (event-dmin)/(dmax-dmin)
+                # dmax = 0
+                # dmin = 1
+                # for i, event in enumerate(data.x):
+                #     dmax = event.max() if event.max() > dmax else dmax
+                #     dmin = event.min() if event.min() < dmin else dmin
+                # assert dmax==1 and dmin==0
             for i, event in enumerate(data.x):
-                dmax = event.max()
-                dmin = event.min()
+                if normalize_individually:
+                    dmax = event.max()
+                    dmin = event.min()
 
-                self.data.x[i] = (event - dmin) / (dmax - dmin)
+                if zero_mean:
+                    self.data.x[i] = (event - (dmax - dmin)/2) / (dmax - dmin)
+                else:
+                    self.data.x[i] = (event - dmin) / (dmax - dmin)
 
     def __len__(self):
         return len(self.data)
