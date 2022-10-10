@@ -292,10 +292,10 @@ class Instructor:
 
                     epoch_loss /= len(
                         data_batch
-                    )  # to the already scaled loss, apply the batch size scaling
+                    )  # to the already scaled loss, apply the number of all iterations (no. of mini batches)
                     epoch_acc /= len(
                         data_batch
-                    )  # to the already scaled accuracy, apply the batch size scaling
+                    )  # to the already scaled accuracy, apply the number of all iterations (no. of mini batches)
 
                     if epoch_acc > best_acc and mode == self.plot_mode:
                         # update the current best model when approaching a higher accuray
