@@ -5,13 +5,13 @@ post_model_sel: "pqgnn" # only for split training
 n_momenta: 4
 
 # Classical
-epochs: 50
+epochs: 80
 normalize: True
 dim_feedforward: 256
 dim_feedforward_range: [4, 512, "log"]
 batchnorm: True
 
-dropout_rate: 0.2
+dropout_rate: 0.4
 dropout_rate_range: [0.1, 1.0, "linear"]
 learning_rate: 0.001
 learning_rate_range: [1e-5, 1e-1, "log"]
