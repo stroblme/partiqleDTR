@@ -2,330 +2,64 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from enum import Enum
+import time
 
+from .graph_visualization import hierarchy_pos
 
 import torch as t
 from torch import nn
 import torch.nn.functional as F
 from torch.autograd import Function
 
+import networkx as nx
+import torch_geometric as tg
+from torch_geometric.utils.convert import to_networkx
+from torch_geometric.utils import add_self_loops, degree
+import mlflow
+
 from .utils import *
 
 import qiskit as q
 from qiskit import transpile, assemble
 from qiskit.visualization import *
+from qiskit_machine_learning.neural_networks import CircuitQNN, TwoLayerQNN
+from qiskit_machine_learning.connectors import TorchConnector
 
 import logging
 
 qiskit_logger = logging.getLogger("qiskit")
 qiskit_logger.setLevel(logging.WARNING)
+log = logging.getLogger(__name__)
 
+import os
 
-class CircuitType(Enum):
-    EdgeNetwork = 1
-    NodeNetwork = 2
-
-
-class QuantumCircuit:
-    """
-    This class provides a simple interface for interaction
-    with the quantum circuit
-    """
-
-    def __init__(self, n_qubits: int, circuit_type: CircuitType, backend, shots):
-        # --- Circuit definition ---
-        self.n_qubits = n_qubits
-        self.shots = shots
-        self.backend = backend
-        self.circuit_type = circuit_type
-
-        # parameters = [np.random.uniform(-np.pi, np.pi) for i in range(n_qubits*(n_layers[0]*len(rot_gates_enc)+n_layers[1]*len(rot_gates_pqc)+n_layers[1]*len(ent_gates_pqc)))]
-
-        self.enc_qc = q.QuantumCircuit(n_qubits)
-        for i in range(n_qubits):
-            self.enc_qc.ry(q.circuit.Parameter(f"enc_ry_0_{i}"), i, f"enc_ry_0_{i}")
-
-        def build_mps_circuit(qc):
-            for i in range(n_qubits):
-                qc.ry(q.circuit.Parameter(f"var_ry_0_{i}"), i, f"var_ry_0_{i}")
-
-            for i in range(n_qubits - 1):
-                qc.swap(i, i + 1)
-                qc.ry(
-                    q.circuit.Parameter(f"var_ry_{i+1}_{i+1}"),
-                    i + 1,
-                    f"var_ry_{i+1}_{i+1}",
-                )
-
-        def build_circuit_19(qc: q.QuantumCircuit):
-            for i in range(n_qubits):
-                qc.rx(q.circuit.Parameter(f"var_rx_0_{i}"), i, f"var_rx_0_{i}")
-                qc.rz(q.circuit.Parameter(f"var_rz_1_{i}"), i)
-
-            for i in range(n_qubits - 1):
-                if i == 0:
-                    qc.crx(
-                        q.circuit.Parameter(f"var_crx_{i+1}_{i}"),
-                        i,
-                        n_qubits - 1,
-                        f"var_crx_{i+1}_{i}",
-                    )
-                else:
-                    qc.crx(
-                        q.circuit.Parameter(f"var_crx_{i+1}_{i}"),
-                        n_qubits - i,
-                        n_qubits - i - 1,
-                        f"var_crx_{i+1}_{i}",
-                    )
-
-        self.var_qc = q.QuantumCircuit(
-            n_qubits
-        )  # no need to add classical since they are automaticallya added later
-        if circuit_type == CircuitType.NodeNetwork:
-            build_circuit_19(self.var_qc)
-            self.qc = self.enc_qc.compose(self.var_qc)
-        else:
-            build_mps_circuit(self.var_qc)
-            self.qc = self.enc_qc.compose(self.var_qc)
-            # self.qc.add_bits(q.ClassicalRegister(1)) # add one classical bit here so we can do the measurement later
-            # self.qc.measure(n_qubits-1, 0)
-        if shots is not None:
-            self.qc.measure_all()  # TODO: we need to measure all since somehow we get an error when evaluating a circuit where not *all* qubits are measured
-
-        # self.qc.draw()
-
-    def circuit_parameters(self, data, variational):
-        parameters = {}
-        for i, p in enumerate(self.enc_qc.parameters):
-            parameters[p] = data[i]
-        for i, p in enumerate(self.var_qc.parameters):
-            parameters[p] = variational[i]
-        return parameters
-
-    def bitstring_decode(self, results):
-        shots = sum(results.values())
-
-        average = (
-            np.zeros(self.n_qubits)
-            if self.circuit_type == CircuitType.NodeNetwork
-            else np.zeros(1)
-        )
-        for bitstring, counts in results.items():
-            if self.circuit_type == CircuitType.NodeNetwork:
-                for i, s in enumerate(bitstring):
-                    average[i] += counts if s == "1" else 0
-            else:
-                average[0] += counts if bitstring[-1] == "1" else 0
-
-        return average / (shots * len(average))
-
-    def run(self, data, variational: np.array):
-        circuits = []
-        ignore_after = -1
-        batch_index = []
-        for batch in data:
-            for i, batch_data in enumerate(batch):
-                if max(batch_data) == 0.0:
-                    ignore_after = i
-                    break  # shortcut to prevent unnecessary circuit exec.
-                else:
-                    scaled_data = np.interp(
-                        batch_data, (batch_data.min(), batch_data.max()), (0, np.pi)
-                    )
-                    circuits.append(
-                        self.qc.assign_parameters(
-                            self.circuit_parameters(
-                                scaled_data.tolist(), variational[i].tolist()
-                            )
-                        )
-                    )
-            batch_index.append(len(circuits))
-
-        # backend = q.BasicAer.get_backend('qasm_simulator')
-        jobs_result = q.execute(circuits, self.backend, shots=self.shots).result()
-        # jobs_result =  self.backend.execute(circuits, self.backend, shots=self.shots).result()
-
-        results = []
-        last_idx = 0
-        for idx in batch_index:
-            expectations = [
-                self.bitstring_decode(jobs_result.get_counts(c))
-                for c in circuits[last_idx:idx]
-            ]
-
-            # expectations = [self.bitstring_decode(jobs_result.get_statevector(c)) for c in circuits]
-            # expectations = [self.bitstring_decode(jobs_result.get_unitary(c)) for c in circuits]
-            expectations = (
-                np.append(
-                    expectations,
-                    [np.zeros(self.n_qubits)] * (data.shape[1] - ignore_after),
-                    axis=0,
-                )
-                if ignore_after >= 0
-                else expectations
-            )
-            # counts = np.array(list(results.get_counts().values()))
-            # states = np.array(list(results.get_counts().keys())).astype(float)
-            last_idx = idx
-            results.append(np.array(expectations))
-        return np.array(results)
-
-
-# simulator = qiskit.Aer.get_backend('aer_simulator')
-
-# circuit = QuantumCircuit(1, simulator, 100)
-# print('Expected value for rotation pi {}'.format(circuit.run([np.pi])[0]))
-# circuit._circuit.draw()
-# def poolProcess(circuit_data_variational):
-#     circuit, data, variational = circuit_data_variational
-#     return circuit.run(data, variational)
-
-
-class HybridFunction(Function):
-    """Hybrid quantum - classical function definition"""
-
-    @staticmethod
-    def forward(ctx, input, quantum_circuit, variational, shift):
-        """Forward pass computation"""
-        ctx.shift = shift
-        ctx.quantum_circuit = quantum_circuit
-        # variational = variational
-
-        # with Pool(len(input)) as p:
-        #     results = p.map(poolProcess, list(zip([ctx.quantum_circuit]*len(input), input, [variational]*len(input))))
-        # can't use pool processing here since qiskit itself has poolprocessing
-        # for batch in input:
-        results = t.Tensor(ctx.quantum_circuit.run(input, variational))
-        # results.append(expectation_z)
-
-        ctx.save_for_backward(input, variational)
-
-        return results
-
-    @staticmethod
-    def backward(ctx, grad_output):
-        """Backward pass computation"""
-        input, variational = ctx.saved_tensors
-
-        # variational
-        var_gradients = []
-        # for batch in input:
-        dv_dl = []
-        for i in range(variational.shape[1]):
-            modifier = np.zeros(variational.shape)
-            modifier[:, i] += ctx.shift
-
-            var_shift_right = variational + modifier
-            var_shift_left = variational - modifier
-            var_expectation_right = ctx.quantum_circuit.run(
-                input, var_shift_right
-            )  # lx4
-            var_expectation_left = ctx.quantum_circuit.run(input, var_shift_left)  # lx4
-            var_gradient = (
-                var_expectation_right - var_expectation_left
-            )  # parmeter shift rule
-            var_gradients.append(var_gradient)
-        # var_gradients.append(dv_dl)
-
-        # in_shift_right = batch + np.ones(batch.shape) * ctx.shift
-        # in_shift_left = batch - np.ones(batch.shape) * ctx.shift
-
-        # in_expectation_right = ctx.quantum_circuit.run(in_shift_right, variational)
-        # in_expectation_left  = ctx.quantum_circuit.run(in_shift_left, variational)
-        # in_gradient = in_expectation_right - in_expectation_left # parmeter shift rule
-        # in_gradients.append(in_gradient)
-
-        var_gradients = t.Tensor(var_gradients)  # [params, b, l, c]
-        grad_output_reshaped = grad_output.reshape(
-            (1, grad_output.shape[0], grad_output.shape[1], grad_output.shape[2])
-        )  # reshape to [b,1,l,c]
-        grad_output_reshaped = t.repeat_interleave(
-            grad_output_reshaped, var_gradients.shape[0], axis=0
-        )  # reshape to [b,nv,l,c]
-        var_gradients = var_gradients.float() * grad_output_reshaped.float()
-
-        # var_gradients_classes_mean = var_gradients.mean(axis=1)
-        var_gradients_mean = var_gradients.mean(axis=(1, 2)).transpose(
-            0, 1
-        )  # average over batches and output
-        var_gradients_up = t.zeros(variational.shape)
-        var_gradients_up[: var_gradients_mean.shape[0]] += var_gradients_mean
-        # in_gradients = t.Tensor(in_gradients)
-
-        # var_gradients_up = var_gradients_up.float() * grad_output.float()
-        # in_gradients_up = in_gradients.float() * grad_output.float()
-
-        return grad_output, None, var_gradients_up, None
-
-
-class QuantumLayer(nn.Module):
-    """Hybrid quantum - classical layer definition"""
-
-    def __init__(
-        self, n_hid, n_classes, circuit_type, backend=None, shots=100, shift=np.pi / 2
-    ):
-        super(QuantumLayer, self).__init__()
-        if backend == None:
-            # backend = q.Aer.get_backend('aer_simulator')
-            backend = q.Aer.get_backend("statevector_simulator")
-            # backend = q.Aer.get_backend('aer_simulator_statevector')
-            # backend = q.Aer.get_backend('aer_simulator_unitary')
-            shots = None
-
-        self.quantum_circuit = QuantumCircuit(n_hid, circuit_type, backend, shots)
-        self.shift = shift
-        self.variational = t.Tensor(
-            np.random.random((n_classes, self.quantum_circuit.var_qc.num_parameters))
-        )
-        # t.autograd.gradcheck(HybridFunction, )
-
-    def forward(self, input):
-        device = input.device
-        x = HybridFunction.apply(
-            input.cpu(), self.quantum_circuit, self.variational, self.shift
-        )
-        return x.to(device)
-
-
-class HybridLayer(nn.Module):
-    """Hybrid quantum - classical layer definition"""
-
-    def __init__(
-        self, n_in, n_hid, n_out, circuit_type, backend=None, shots=100, shift=np.pi / 2
-    ):
-        super(HybridLayer, self).__init__()
-        self.fc_in = nn.Linear(n_in, n_hid)
-        if circuit_type == CircuitType.NodeNetwork:
-            self.fc_out = nn.Linear(n_hid, n_out)
-        else:
-            self.fc_out = nn.Linear(1, n_out)
-
-        self.quantum_layer = QuantumLayer(
-            n_hid, 200, circuit_type, backend, shots, shift
-        )
-
-    def forward(self, input):
-        x = self.fc_in(input)
-        x = self.quantum_layer(x)
-        x = self.fc_out(x)
-        return x
+os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
 
 class MLP(nn.Module):
     """Two-layer fully-connected ELU net with batch norm."""
 
-    def __init__(self, n_in, n_hid, n_out, do_prob, batchnorm=True):
+    def __init__(
+        self,
+        n_in,
+        n_hid,
+        n_out,
+        do_prob,
+        batchnorm=True,
+        activation=F.elu,
+        device=t.device("cpu"),
+    ):
         super(MLP, self).__init__()
 
         self.batchnorm = batchnorm
 
-        self.fc1 = nn.Linear(n_in, n_hid)
-        self.fc2 = nn.Linear(n_hid, n_out)
+        self.fc1 = nn.Linear(n_in, n_hid, device=device)
+        self.fc2 = nn.Linear(n_hid, n_out, device=device)
         if self.batchnorm:
             self.bn = nn.BatchNorm1d(n_out, momentum=0.1, track_running_stats=True)
             # self.bn = nn.BatchNorm1d(n_out, momentum=0.1, track_running_stats=False)  # Use this to overfit
         self.dropout_prob = do_prob
-
+        self.activation = activation
         self.init_weights()
 
     def init_weights(self):
@@ -348,11 +82,54 @@ class MLP(nn.Module):
         Output: (b, l, d)
         """
         # Input shape: [num_sims, num_things, num_features]
-        x = F.elu(self.fc1(inputs))  # (b, l, d)
+        x = self.activation(self.fc1(inputs))  # (b, l, d)
         x = F.dropout(x, self.dropout_prob, training=self.training)  # (b, l, d)
-        x = F.elu(self.fc2(x))  # (b, l, d)
+        x = self.activation(self.fc2(x))  # (b, l, d)
         return self.batch_norm_layer(x) if self.batchnorm else x  # (b, l, d)
 
+
+class qMessagePassing(tg.nn.MessagePassing):
+    def __init__(self, in_channels, out_channels):
+        super().__init__(aggr='add', flow='target_to_source')  # "Add" aggregation (Step 5).
+        self.lin = t.nn.Linear(in_channels, out_channels, bias=False)
+        self.bias = t.nn.Parameter(t.Tensor(out_channels))
+
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        self.lin.reset_parameters()
+        self.bias.data.zero_()
+
+    def forward(self, x, edge_index):
+        # x has shape [N, in_channels]
+        # edge_index has shape [2, E]
+
+        # Step 1: Add self-loops to the adjacency matrix.
+        # edge_index, _ = add_self_loops(edge_index, num_nodes=x.size(0))
+
+        # Step 2: Linearly transform node feature matrix.
+        x = self.lin(x)
+
+        # Step 3: Compute normalization.
+        row, col = edge_index
+        deg = degree(col, x.size(0), dtype=x.dtype)
+        deg_inv_sqrt = deg.pow(-0.5)
+        deg_inv_sqrt[deg_inv_sqrt == float('inf')] = 0
+        norm = deg_inv_sqrt[row] * deg_inv_sqrt[col]
+
+        # Step 4-5: Start propagating messages.
+        out = self.propagate(edge_index, x=x, norm=norm) # internally calls message, aggregate, update
+
+        # Step 6: Apply a final bias vector.
+        out += self.bias
+
+        return out
+
+    def message(self, x_j, norm):
+        # x_j has shape [E, out_channels]
+
+        # Step 4: Normalize node features.
+        return norm.view(-1, 1) * x_j
 
 class qgnn(nn.Module):
     """NRI model built off the official implementation.
@@ -378,348 +155,356 @@ class qgnn(nn.Module):
         self,
         n_momenta,  # d
         n_classes,  # l
-        n_blocks=3,
-        dim_feedforward=128,  # ff
+        dim_feedforward=6,  # ff
         n_layers_mlp=2,
-        n_additional_mlp_layers=2,
-        n_final_mlp_layers=2,
+        n_layers_vqc=3,
+        skip_block=False,
         dropout_rate=0.3,
-        factor=True,
-        tokenize=-1,
-        embedding_dims=-1,
         batchnorm=True,
         symmetrize=True,
+        n_fsps: int = -1,
+        device: str = "cpu",
+        data_reupload=True,
+        add_rot_gates=True,
         **kwargs,
     ):
         super(qgnn, self).__init__()
 
         assert dim_feedforward % 2 == 0, "dim_feedforward must be an even number"
-
+        # n_fsps = 4
+        self.layers = n_layers_vqc  # dim_feedforward//8
+        self.total_n_fsps = n_fsps  # used for padding in forward path
         self.num_classes = n_classes
-        self.factor = factor
-        self.tokenize = tokenize
         self.symmetrize = symmetrize
-        self.block_additional_mlp_layers = n_additional_mlp_layers
+        self.skip_block = skip_block
         # self.max_leaves = max_leaves
 
-        # Set up embedding for tokens and adjust input dims
-        if self.tokenize != -1:
-            assert (embedding_dims is not None) and isinstance(
-                embedding_dims, int
-            ), "embedding_dims must be set to an integer is tokenize is given"
+        # self.initial_mlp = pre_trained_module.initial_mlp
+        # self.blocks = pre_trained_module.blocks
+        # self.final_mlp = pre_trained_module.final_mlp
 
-            # Initialise the embedding layers, ignoring pad values
-            self.embed = nn.ModuleDict({})
-            for idx, n_tokens in self.tokenize.items():
-                # NOTE: This assumes a pad value of 0 for the input array x
-                self.embed[str(idx)] = nn.Embedding(
-                    n_tokens, embedding_dims, padding_idx=0
+        self.qi = q.utils.QuantumInstance(
+            q.Aer.get_backend("aer_simulator_statevector")
+        )
+
+        self.enc_params = []
+        self.var_params = []
+
+        self.device = t.device(
+            "cuda" if t.cuda.is_available() and device != "cpu" else "cpu"
+        )
+
+        def gen_encoding_params(n_qubits, identifier):
+            q_params = []
+            for i in range(n_qubits):
+                q_params.append([])
+                for j in range(n_momenta):
+                    q_params[i].append(q.circuit.Parameter(f"{identifier}_{i}_{j}"))
+            return q_params
+
+        def encoding(qc, n_qubits, q_params, identifier):
+            for i in range(n_qubits):
+                energy = q_params[i][0]
+
+                px = (
+                    q_params[i][1] * energy * t.pi,
+                    i,
+                    f"{identifier[:-3]}_rx_{i}",
                 )
-
-            # And update the infeatures to include the embedded feature dims and delete the original, now tokenized feats
-            n_momenta = n_momenta + (len(self.tokenize) * (embedding_dims - 1))
-            print(f"Set up embedding for {len(self.tokenize)} inputs")
-
-        # Create first half of inital NRI half-block to go from leaves to edges
-        initial_mlp = [
-            MLP(n_momenta, dim_feedforward, dim_feedforward, dropout_rate, batchnorm)
-        ]
-        # Add any additional layers as per request
-        initial_mlp.extend(
-            [
-                MLP(
-                    dim_feedforward,
-                    dim_feedforward,
-                    dim_feedforward,
-                    dropout_rate,
-                    batchnorm,
+                qc.rx(*px)
+                py = (
+                    q_params[i][2] * energy * t.pi,
+                    i,
+                    f"{identifier[:-3]}_ry_{i}",
                 )
-                for _ in range(n_layers_mlp - 1)
-            ]
-        )
-        self.initial_mlp = nn.Sequential(*initial_mlp)
-        self.node_network = HybridLayer(
-            dim_feedforward, 4, dim_feedforward, CircuitType.NodeNetwork
-        )
-        self.edge_network = HybridLayer(dim_feedforward, 4, 1, CircuitType.EdgeNetwork)
+                qc.ry(*py)
+                pz = (
+                    q_params[i][3] * energy * t.pi,
+                    i,
+                )  # rz does not accept identifier
+                qc.rz(*pz)
+                # qc.ry(*param)
 
-        # MLP to reduce feature dimensions from first Node2Edge before blocks begin
-        self.pre_blocks_mlp = MLP(
-            dim_feedforward * 2,
-            dim_feedforward,
-            dim_feedforward,
-            dropout_rate,
-            batchnorm,
-        )
-
-        if self.factor:
-            # MLPs within NRI blocks
-            # The blocks have minimum 1 MLP layer, and if specified they add more with a skip connection
-            # List of blocks
-            self.blocks = nn.ModuleList(
-                [
-                    # List of MLP sequences within each block
-                    nn.ModuleList(
-                        [
-                            # MLP layers before Edge2Node (start of block)
-                            nn.ModuleList(
-                                [
-                                    MLP(
-                                        dim_feedforward,
-                                        dim_feedforward,
-                                        dim_feedforward,
-                                        dropout_rate,
-                                        batchnorm,
-                                    ),
-                                    # *[HybridLayer(dim_feedforward, 4, 1, CircuitType.EdgeNetwork) for _ in range(self.num_classes)]
-                                    # HybridLayer(dim_feedforward, 6, dim_feedforward, CircuitType.NodeNetwork)
-                                    # This is what would be needed for a concat instead of addition of the skip connection
-                                    # MLP(dim_feedforward * 2, dim_feedforward, dim_feedforward, dropout, batchnorm) if (block_additional_mlp_layers > 0) else None,
-                                ]
-                            ),
-                            # MLP layers between Edge2Node and Node2Edge (middle of block)
-                            nn.ModuleList(
-                                [
-                                    # MLP(dim_feedforward, dim_feedforward, dim_feedforward, dropout_rate, batchnorm),
-                                    HybridLayer(
-                                        dim_feedforward,
-                                        6,
-                                        dim_feedforward,
-                                        CircuitType.NodeNetwork,
-                                    )
-                                    # This is what would be needed for a concat instead of addition of the skip connection
-                                    # MLP(dim_feedforward * 2, dim_feedforward, dim_feedforward, dropout, batchnorm) if (block_additional_mlp_layers > 0) else None,
-                                ]
-                            ),
-                            # MLP layer after Node2Edge (end of block)
-                            # This is just to reduce feature dim after skip connection was concatenated
-                            MLP(
-                                dim_feedforward * 3,
-                                dim_feedforward,
-                                dim_feedforward,
-                                dropout_rate,
-                                batchnorm,
-                            ),
-                        ]
+        def variational(qc, n_qubits, identifier):
+            for i in range(n_qubits):
+                if add_rot_gates:
+                    qc.rx(
+                        q.circuit.Parameter(f"{identifier}_rx_0_{i}"),
+                        i,
+                        f"{identifier}_rx_{i}",
                     )
-                    for _ in range(n_blocks)
-                ]
-            )
-            print("Using factor graph MLP encoder.")
-        else:
-            self.mlp3 = MLP(
-                dim_feedforward,
-                dim_feedforward,
-                dim_feedforward,
-                dropout_rate,
-                batchnorm,
-            )
-            self.mlp4 = MLP(
-                dim_feedforward * 2,
-                dim_feedforward,
-                dim_feedforward,
-                dropout_rate,
-                batchnorm,
-            )
-            print("Using MLP encoder.")
+                    qc.ry(
+                        q.circuit.Parameter(f"{identifier}_ry_0_{i}"),
+                        i,
+                        f"{identifier}_ry_{i}",
+                    )
+                    qc.rz(
+                        q.circuit.Parameter(f"{identifier}_rz_0_{i}"),
+                        i,
+                    )
+                if i == 0:
+                    qc.crx(
+                        q.circuit.Parameter(f"{identifier}_crx_{n_qubits - 1}_{i}"),
+                        i,
+                        n_qubits - 1,
+                        f"{identifier}_crx_{n_qubits - 1}_{i}",
+                    )
+                    qc.cry(
+                        q.circuit.Parameter(f"{identifier}_cry_{n_qubits - 1}_{i}"),
+                        i,
+                        n_qubits - 1,
+                        f"{identifier}_cry_{n_qubits - 1}_{i}",
+                    )
+                    qc.crz(
+                        q.circuit.Parameter(f"{identifier}_crz_{n_qubits - 1}_{i}"),
+                        i,
+                        n_qubits - 1,
+                        f"{identifier}_crz_{n_qubits - 1}_{i}",
+                    )
+                else:
+                    qc.crx(
+                        q.circuit.Parameter(f"{identifier}_crx_{n_qubits - i - 1}_{n_qubits - i}"),
+                        n_qubits - i,
+                        n_qubits - i - 1,
+                        f"{identifier}_crx_{n_qubits - i - 1}_{n_qubits - i}",
+                    )
+                    qc.cry(
+                        q.circuit.Parameter(f"{identifier}_cry_{n_qubits - i - 1}_{n_qubits - i}"),
+                        n_qubits - i,
+                        n_qubits - i - 1,
+                        f"{identifier}_cry_{n_qubits - i - 1}_{n_qubits - i}",
+                    )
+                    qc.crz(
+                        q.circuit.Parameter(f"{identifier}_crz_{n_qubits - i - 1}_{n_qubits - i}"),
+                        n_qubits - i,
+                        n_qubits - i - 1,
+                        f"{identifier}_crz_{n_qubits - i - 1}_{n_qubits - i}",
+                    )
 
-        # Final linear layers as requested
-        # self.final_mlp = nn.Sequential(*[MLP(dim_feedforward, dim_feedforward, dim_feedforward, dropout, batchnorm) for _ in range(final_mlp_layers)])
-        final_mlp = [
-            MLP(
-                dim_feedforward * 2,
-                dim_feedforward,
-                dim_feedforward,
-                dropout_rate,
-                batchnorm,
-            )
-        ]
-        # Add any additional layers as per request
-        final_mlp.extend(
+        def circuit_builder(qc, n_qubits, n_hidden):
+            enc_params = gen_encoding_params(n_qubits, f"enc")
+            for i in range(n_hidden):
+                if data_reupload or i == 0:
+                    encoding(qc, n_qubits, enc_params, f"enc_{i}")
+                qc.barrier()
+                variational(qc, n_qubits, f"var_{i}")
+                qc.barrier()
+
+        log.info(
+            f"Building Quantum Circuit with {self.layers} layers and {n_fsps} qubits"
+        )
+        self.qc = q.QuantumCircuit(n_fsps)
+        circuit_builder(self.qc, n_fsps, self.layers)
+
+        mlflow.log_figure(self.qc.draw(output="mpl"), f"circuit.png")
+
+        for param in self.qc.parameters:
+            if "enc" in param.name:
+                self.enc_params.append(param)
+            else:
+                self.var_params.append(param)
+        log.info(
+            f"Encoding Parameters: {len(self.enc_params)}, Variational Parameters: {len(self.var_params)}"
+        )
+
+        def interpreter(x):
+            print(f"Interpreter Input {x}")
+            return x
+
+        # start = time.time()
+        # self.qnn = CircuitQNN(
+        #     self.qc,
+        #     self.enc_params,
+        #     self.var_params,
+        #     quantum_instance=self.qi,
+        #     # interpret=interpreter,
+        #     # output_shape=(n_fsps**2, n_classes),
+        #     # sampling=True,
+        #     input_gradients=True,
+        # )
+        # self.initial_weights = 0.1 * (
+        #     2 * q.utils.algorithm_globals.random.random(self.qnn.num_weights) - 1
+        # )
+        # log.info(f"Transpilation took {time.time() - start}")
+        # self.quantum_layer = TorchConnector(
+        #     self.qnn, initial_weights=self.initial_weights
+        # )
+        # log.info(f"Initialization done")
+
+        # last layer input size depends if we do a concat before (use skip cons)
+        final_input_dim = 2 * dim_feedforward if self.skip_block else dim_feedforward
+
+        self.block = nn.ModuleList(
             [
                 MLP(
-                    dim_feedforward,
+                    self.num_classes,
                     dim_feedforward,
                     dim_feedforward,
                     dropout_rate,
                     batchnorm,
+                    activation=F.elu,
+                    device=self.device,
+                ),
+                nn.Sequential(
+                    *[
+                        MLP(
+                            dim_feedforward,
+                            dim_feedforward,
+                            dim_feedforward,
+                            dropout_rate,
+                            batchnorm,
+                            activation=F.elu,
+                            device=self.device,
+                        )
+                        for _ in range(n_layers_mlp)
+                    ]
+                ),
+                MLP(
+                    final_input_dim,
+                    final_input_dim // 2,
+                    self.num_classes,
+                    dropout_rate,
+                    batchnorm,
+                    activation=F.elu,
+                    device=self.device,
                 )
-                for _ in range(n_final_mlp_layers - 1)
+                # This is what would be needed for a concat instead of addition of the skip connection
+                # MLP(dim_feedforward * 2, dim_feedforward, dim_feedforward, dropout, batchnorm) if (block_additional_mlp_layers > 0) else None,
             ]
         )
-        self.final_mlp = nn.Sequential(*final_mlp)
 
-        self.fc_out = nn.Linear(dim_feedforward, self.num_classes)
-
-        self.init_weights()
-
-    def init_weights(self):
-        for m in self.modules():
-            if isinstance(m, nn.Linear):
-                nn.init.xavier_normal_(m.weight.data)
-                m.bias.data.fill_(0.1)
-
-    def edge2node(self, x, rel_rec):
-        """
-        Input: (b, l*l, d), (b, l*l, l)
-        Output: (b, l, d)
-        """
-        # TODO assumes that batched matrix product just works
-        # TODO these do not have to be members
-        incoming = t.matmul(rel_rec.permute(0, 2, 1), x)  # (b, l, d)
-        denom = rel_rec.sum(1)[:, 1]
-        return incoming / denom.reshape(-1, 1, 1)  # (b, l, d)
-        # return incoming / incoming.size(1)  # (b, l, d)
-
-    def node2edge(self, x, rel_rec, rel_send):
-        """
-        Input: (b, l, d), (b, l*(l-1), l), (b, l*(l-1), l)
-        Output: (b, l*l(l-1), 2d)
-        """
-        # TODO assumes that batched matrix product just works
-        receivers = t.matmul(rel_rec, x)  # (b, l*l, d)
-        senders = t.matmul(rel_send, x)  # (b, l*l, d)
-        edges = t.cat([senders, receivers], dim=2)  # (b, l*l, 2d)
-
-        return edges
+        self.qgat = qMessagePassing(4, 4)
 
     def forward(self, inputs):
         """
         Input: (l, b, d)
         Output: (b, c, l, l)
         """
-        # inputs=inputs.view(inputs.size(1), inputs.size(0), -1)
-
         if isinstance(inputs, (list, tuple)):
-            inputs, rel_rec, rel_send = inputs
-        else:
+            (
+                x,
+                rel_rec,
+                rel_send,
+            ) = inputs  # get the actual state from the list of states, rel_rec and rel_send
+        else:  # in case we are running torchinfo, rel_rec and rel_send are not provided
             rel_rec = None
             rel_send = None
+            x = inputs
 
-        n_leaves, batch, feats = inputs.size()
-        device = inputs.device
+        n_leaves, batch, feats = x.size()  # get the representative sizes
+        assert x.device == self.device  # check if we are running on the same device
 
-        # NOTE create rel matrices on the fly if not given as input
-        if rel_rec is None:
-            # rel_rec = t.eye(
-            #     n_leaves,
-            #     device=device
-            # ).repeat_interleave(n_leaves-1, dim=1).T  # (l*(l-1), l)
-            # rel_rec = rel_rec.unsqueeze(0).expand(inputs.size(1), -1, -1)
-            rel_rec = construct_rel_recvs([inputs.size(0)], device=device)
+        x = x.permute(1, 0, 2)  # (b, l, f)
 
-        if rel_send is None:
-            # rel_send = t.eye(n_leaves, device=device).repeat(n_leaves, 1)
-            # rel_send[t.arange(0, n_leaves*n_leaves, n_leaves + 1)] = 0
-            # rel_send = rel_send[rel_send.sum(dim=1) > 0]  # (l*(l-1), l)
-            # rel_send = rel_send.unsqueeze(0).expand(inputs.size(1), -1, -1)
-            rel_send = construct_rel_sends([inputs.size(0)], device=device)
+        def build_fully_connected(input):
+            batch, n_leaves, n_feats = input.size()
 
-        # Input shape: [batch, num_atoms, num_timesteps, num_dims]
-        # Input shape: [num_sims, num_atoms, num_timesteps, num_dims]
-        # x = inputs.view(inputs.size(0), inputs.size(1), -1)
-        # New shape: [num_sims, num_atoms, num_timesteps*num_dims]
-        # Need to match expected shape
-        # TODO should batch_first be a dataset parameter?
-        # (l, b, m) -> (b, l, m)
-        x = inputs.permute(1, 0, 2)  # (b, l, m)
+            max_nodes = np.sum(range(n_leaves+1))
+            graph_list = []
+            for data_batch in input:
 
-        # Create embeddings and merge back into x
-        # TODO: Move mask creation to init, optimise this loop
-        if self.tokenize != -1:
-            emb_x = []
-            # We'll use this to drop tokenized features from x
-            mask = t.ones(feats, dtype=t.bool, device=device)
-            for idx, emb in self.embed.items():
-                # Note we need to convert tokens to type long here for embedding layer
-                emb_x.append(emb(x[..., int(idx)].long()))  # List of (b, l, emb_dim)
-                mask[int(idx)] = False
+                edges = []
+                for level in range(n_leaves-1):
+                    for n_level in range(level+1):
+                        level_node_idx = n_level + (2**level-1)
+                        max_level_node_idx = level + (2**level-1)
+                        for n_other in range(max_level_node_idx+1, max_nodes):
+                            edges.append([level_node_idx, n_other])
 
-            # Now merge the embedding outputs with x (mask has deleted the old tokenized feats)
-            x = t.cat([x[..., mask], *emb_x], dim=-1)  # (b, l, d + embeddings)
-            del emb_x
+                edges = t.Tensor(edges).long().permute(1,0)
+                embeddings = t.zeros(max_nodes, n_feats)
+                embeddings[-n_leaves:] = data_batch
+                # edges = t.combinations(t.Tensor(range(n_leaves)).long()).permute(1,0)
+                graph_batch = tg.data.Data(x=embeddings, edge_index=edges)
 
-        # Initial set of linear layers
-        # (b, l, m) -> (b, l, d)
-        # x = self.hybrid(x)
-        x = self.initial_mlp(
-            x
-        )  # Series of 2-layer ELU net per node  (b, l, d) optionally includes embeddings
+                graph_list.append(graph_batch)
 
-        # (b, l, d), (b, l*l, l), (b, l*l, l) -> (b, l, 2*d)
-        x = self.node2edge(x, rel_rec, rel_send)  # (b, l*l, 2d)
+            return tg.data.Batch().from_data_list(graph_list)
 
-        # All things related to NRI blocks are in here
-        if self.factor:
-            x = self.pre_blocks_mlp(x)  # (b, l*l, d)
-            # Skip connection to jump over all NRI blocks
-            x_global_skip = x
+        x = build_fully_connected(x)
 
-            for block in self.blocks:
-                x_skip = x  # (b, l*l, d)
+        vis = to_networkx(x)
+        plt.close()
+        plt.figure(1,figsize=(8,8)) 
+        pos=nx.circular_layout(vis)
+        # pos = hierarchy_pos(vis, max(max(x.edge_index)))
+        nx.draw(vis, pos, cmap=plt.get_cmap('Set3'),node_size=70,linewidths=6)
+        plt.savefig("graph.png")
 
-                # First MLP sequence
-                x = block[0][0](x)  # (b, l*l, d)
-                if self.block_additional_mlp_layers > 0:
-                    x_first_skip = x  # (b, l*l, d)
-                    x = block[0][1](x)  # (b, l*l, d)
-                    x = x + x_first_skip  # (b, l*l, d)
-                    del x_first_skip
 
-                # Create nodes from edges
-                x = self.edge2node(x, rel_rec)  # (b, l, d)
+        x.x = self.qgat(x.x, x.edge_index) # messages flow to uninitialized nodes in graph
 
-                # Second MLP sequence
-                x = block[1][0](x)  # (b, l, d)
-                if self.block_additional_mlp_layers > 0:
-                    x_second_skip = x  # (b, l*l, d)
-                    x = block[1][1](x)  # (b, l*l, d)
-                    x = x + x_second_skip  # (b, l*l, d)
-                    del x_second_skip
+        x = x.reshape(batch, n_leaves * feats)  # flatten the last two dims
+        x = t.nn.functional.pad(
+            x, (0, (self.total_n_fsps * feats) - (n_leaves * feats)), mode="constant", value=0
+        )  # pad up to the largest lcag size. subtract the current size to prevent unnecessary padding.
+        # note that x.size() is here n_leaves * feats
 
-                # Create edges from nodes
-                x = self.node2edge(x, rel_rec, rel_send)  # (b, l*l, 2d)
+        # set the weights to zero which are either involved in a controlled operation or directly operating on qubits not relevant to the current graph (i.e. where the input was zero padded before)
+        # this is supposed to ensure, that the actual measurement of the circuit is not impacted by any random weights contributing to meaningless 
+        # print(self.quantum_layer._weights)
+        with t.no_grad():
+            for i, p in enumerate(self.var_params):
+                if int(p._name[-1]) > n_leaves or int(p._name[-3]) > n_leaves:
+                    self.quantum_layer._weights[i] = 0.0
+        # print(self.quantum_layer._weights)
 
-                # Final MLP in block to reduce dimensions again
-                x = t.cat((x, x_skip), dim=2)  # Skip connection  # (b, l*l, 3d)
-                x = block[2](x)  # (b, l*l, d)
-                del x_skip
+        x = self.quantum_layer(x)
 
-            # Global skip connection
-            x = t.cat((x, x_global_skip), dim=2)  # Skip connection  # (b, l*(l-1), 2d)
+        
 
-            # Cleanup
-            del rel_rec, rel_send
+        def build_binary_permutation_indices(digits):
+            """
+            Generate the binary permutation indices.
+            :param digits:
+            :return:
+            """
+            n_permutations = (digits**2 - digits) // 2
+            permutations_indices = []
+            for i in range(2**digits):
+                if bin(i).count("1") == 2:
+                    permutations_indices.append(i)
+            assert len(permutations_indices) == n_permutations
+            return permutations_indices
 
-        # else:
-        #     x = self.mlp3(x)  # (b, l*(l-1), d)
-        #     x = t.cat((x, x_skip), dim=2)  # Skip connection  # (b, l*(l-1), 2d)
-        #     x = self.mlp4(x)  # (b, l*(l-1), d)
+        def get_binary_shots(result, permutations_indices, out_shape):
+            """
+            Generate the binary shots.
+            :param result:
+            :param permutations_indices:
+            :param out_shape:
+            :return:
+            """
+            lcag = t.zeros(out_shape)
+            lcag = lcag.to(result.device)
+            for i in range(out_shape[0]):
+                lcag[i][np.tril_indices_from(lcag[0], k=-1)] = result[
+                    i, permutations_indices
+                ]
+            # lcag[:, np.tril_indices_from(lcag[:], k=-1)] = result[:, permutations_indices]
+            lcag = lcag + t.transpose(lcag, 1, 2)
+            return lcag
 
-        # Final set of linear layers
-        x = self.final_mlp(x)  # Series of 2-layer ELU net per node (b, l, d)
+        x = get_binary_shots(
+            x, build_binary_permutation_indices(n_leaves), (batch, n_leaves, n_leaves)
+        )
 
-        # Output what will be used for LCA
-        x = self.fc_out(x)  # (b, l*l, c)
-        out = x.reshape(batch, n_leaves, n_leaves, self.num_classes)
+        x = x.reshape(batch, 1, n_leaves * n_leaves).repeat(
+            1, self.num_classes, 1
+        )  # copy the vqc output across n_classes dimensions and let the nn handle the decoding
+        x = x.permute(0, 2, 1)  # (b, c, l, l) -> split the leaves
 
-        # Change to LCA shape
-        # x is currently the flattened rows of the predicted LCA but without the diagonal
-        # We need to create an empty LCA then populate the off-diagonals with their corresponding values
-        # out = t.zeros((batch, n_leaves, n_leaves, self.num_classes), device=device)  # (b, l, l, c)
-        # ind_upper = t.triu_indices(n_leaves, n_leaves, offset=1)
-        # ind_lower = t.tril_indices(n_leaves, n_leaves, offset=-1)
+        skip = x if self.skip_block else None
+        x = self.block[0](x)  # initial mlp
+        for seq_mlp in self.block[1]:
+            x = seq_mlp(x)
 
-        # Assign the values to their corresponding position in the LCA
-        # The right side is just some quick mafs to get the correct edge predictions from the flattened x array
-        # out[:, ind_upper[0], ind_upper[1], :] = x[:, (ind_upper[0] * (n_leaves - 1)) + ind_upper[1] - 1, :]
-        # out[:, ind_lower[0], ind_lower[1], :] = x[:, (ind_lower[0] * (n_leaves - 1)) + ind_lower[1], :]
+        x = t.cat((x, skip), dim=2) if self.skip_block else x  # Skip connection
+        x = self.block[2](x)  # (b, c, l, l) -> final mlp
 
-        # Need in the order for cross entropy loss
-        out = out.permute(0, 3, 1, 2)  # (b, c, l, l)
+        x = x.reshape(batch, n_leaves, n_leaves, self.num_classes)
+        x = x.permute(0, 3, 1, 2)  # (b, c, l, l)
 
-        # Symmetrize
-        if self.symmetrize:
-            out = t.div(out + t.transpose(out, 2, 3), 2)  # (b, c, l, l)
+        x = t.div(x + t.transpose(x, 2, 3), 2) if self.symmetrize else x  # (b, c, l, l)
 
-        return out
+        return x
