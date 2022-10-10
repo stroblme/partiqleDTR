@@ -6,8 +6,8 @@ n_momenta: 4
 
 # Classical
 epochs: 80
-normalize: False
-normalize_individually: True
+normalize: True
+normalize_individually: False
 zero_mean: False
 dim_feedforward: 512
 dim_feedforward_range: [4, 2048, "log"]
