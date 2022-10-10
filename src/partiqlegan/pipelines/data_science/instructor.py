@@ -173,7 +173,7 @@ class Instructor:
                 labels_for_plotting = []
                 for mode in ["train", "val"]:
                     data_batch = DataLoader(
-                        DataWrapper(self.data[mode], normalize=self.normalize),
+                        DataWrapper(self.data[mode], normalize=self.normalize, normalize_individually=self.normalize_individually, zero_mean=self.zero_mean),
                         batch_size=self.batch_size,
                         shuffle=True,
                         collate_fn=rel_pad_collate_fn,
