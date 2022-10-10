@@ -63,7 +63,8 @@ class DataWrapper(Dataset):
                 if zero_mean:
                     self.data.x[i] = (event - (dmax - dmin)/2) / (dmax - dmin)
                 else:
-                    self.data.x[i] = (event - dmin) / (dmax - dmin)
+                    # self.data.x[i] = (event - dmin) / (dmax - dmin)
+                    self.data.x[i] = (event) / (dmax - dmin)
 
     def __len__(self):
         return len(self.data)
