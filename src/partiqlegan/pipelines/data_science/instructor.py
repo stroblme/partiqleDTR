@@ -34,12 +34,12 @@ class DataWrapper(Dataset):
     A wrapper for t.utils.data.Dataset.
     """
 
-    def __init__(self, data, normalize=False):
+    def __init__(self, data, normalize=False, normalize_individually=True, zero_mean=False):
         dmax = 0
         dmin = 1
 
-        normalize_individually = False
-        zero_mean = False
+        # normalize_individually = True
+        # zero_mean = False
 
         self.data = data
         if normalize:
@@ -87,6 +87,8 @@ class Instructor:
         batch_size: int,
         epochs: int,
         normalize: bool,
+        normalize_individually: bool,
+        zero_mean: bool,
         plot_mode: str = "val",
         plotting_rows: int = 4,
         log_gradients:bool = False,
@@ -142,6 +144,8 @@ class Instructor:
         self.data = data
         self.epochs = epochs
         self.normalize = normalize
+        self.normalize_individually = normalize_individually
+        self.zero_mean = zero_mean
         self.batch_size = batch_size
         self.optimizer = t.optim.Adam(self.model.parameters(), lr=learning_rate)
         # learning rate scheduler, same as in NRI
