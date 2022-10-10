@@ -20,3 +20,25 @@ addopts = """
 fail_under = 0
 show_missing = true
 exclude_lines = ["pragma: no cover", "raise NotImplementedError"]
+
+[tool.poetry]
+name = "partiqlegan"
+version = "0.1.0"
+description = ""
+authors = ["lc3267 <melvin.strobl@kit.edu>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.8"
+qiskit = "^0.38.0"
+pytorch = "^1.0.2"
+black = "^22.6.0"
+kedro = "^0.18.3"
+kedro-viz = "^5.1.1"
+kedro-mlflow = "^0.11.3"
+formattex = "^0.0.3"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
