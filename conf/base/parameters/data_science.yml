@@ -7,8 +7,8 @@ n_momenta: 4
 # Classical
 epochs: 80
 normalize: True
-dim_feedforward: 256
-dim_feedforward_range: [4, 512, "log"]
+dim_feedforward: 512
+dim_feedforward_range: [4, 2048, "log"]
 batchnorm: True
 
 dropout_rate: 0.4
