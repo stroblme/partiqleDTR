@@ -7,8 +7,10 @@ n_momenta: 4
 # Classical
 epochs: 80
 normalize: True
+normalize_individually: True
+zero_mean: False
 dim_feedforward: 512
-dim_feedforward_range: [4, 2048, "log"]
+dim_feedforward_range: [4, 512, "log"]
 batchnorm: True
 
 dropout_rate: 0.4
@@ -30,7 +32,7 @@ n_blocks: 4
 n_blocks_range: [1, 5, "linear"]
 n_layers_mlp: 2 # initial mlp layers before the blocks
 n_layers_mlp_range: [1, 5, "linear"]
-n_additional_mlp_layers: 0 # additional layers within a block
+n_additional_mlp_layers: 1 # additional layers within a block
 n_additional_mlp_layers_range: [1, 5, "linear"]
 n_final_mlp_layers: 2 # layers after the blocks
 n_final_mlp_layers_range: [1, 5, "linear"]
