@@ -477,6 +477,12 @@ class TreeSet(Dataset):
         """In our use x will be the array of leaf attributes and y the LCA matrix, i.e. the labels"""
         self.x = x
         self.y = y
+
+        # TODO: verify that
+        aggregated_x = np.concatenate([*x], axis=0)
+        self.mean = np.mean(aggregated_x, axis=0)
+        self.std = np.std(aggregated_x, axis=0)
+
         return
 
     def __len__(self):

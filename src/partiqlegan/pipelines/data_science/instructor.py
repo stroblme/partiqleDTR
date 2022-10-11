@@ -10,6 +10,8 @@ from torch.nn.functional import cross_entropy
 from torch.optim.lr_scheduler import StepLR
 from torch.utils.data import Dataset, DataLoader
 
+import numpy as np
+
 import mlflow
 
 import torchinfo
@@ -42,7 +44,7 @@ class DataWrapper(Dataset):
         # zero_mean = False
 
         self.data = data
-        if normalize:
+        if normalize=="one":
             if not normalize_individually:
                 for i, event in enumerate(data.x):
                     dmax = event.max() if event.max() > dmax else dmax
@@ -65,6 +67,16 @@ class DataWrapper(Dataset):
                 else:
                     # self.data.x[i] = (event - dmin) / (dmax - dmin)
                     self.data.x[i] = (event) / (dmax - dmin)
+
+        elif normalize=="zmuv":
+            for i, event in enumerate(data.x):
+                # adj_mean = t.repeat_interleave(t.Tensor([data.mean]), event.shape[0], dim=0)
+                # adj_std = t.repeat_interleave(t.Tensor([data.std]), event.shape[0], dim=0)
+                adj_mean = np.repeat([data.mean], event.shape[0], axis=0)
+                adj_std = np.repeat([data.std], event.shape[0], axis=0)
+                self.data.x[i] = (event - adj_mean)/adj_std
+
+
 
     def __len__(self):
         return len(self.data)
