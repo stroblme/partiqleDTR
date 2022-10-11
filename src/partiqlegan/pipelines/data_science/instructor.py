@@ -469,6 +469,8 @@ class Instructor:
         it = 0
         for logits, lcag_ref in zip(batch_logits, batch_ref):
             lcag = logits.max(0)[1]
+            lcag = t.where(lcag_ref==-1, lcag_ref, lcag)
+
             graph = GraphVisualization()
 
             graph.lca2graph(lcag)
