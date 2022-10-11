@@ -236,6 +236,7 @@ class Instructor:
                         collate_fn=rel_pad_collate_fn,
                     )  # to handle varying input size
 
+                    # might seem better to be put in data processing or sth.
                     weights = calculate_class_weights(data_batch, self.n_classes, len(data_batch), False)
                     weights = weights.to(self.device)
 
@@ -265,7 +266,7 @@ class Instructor:
 
                             logits = self.model(states)
                             loss = cross_entropy(logits, labels, weight=weights, ignore_index=-1)
-                            acc = self.edge_accuracy(logits, labels)
+                            acc = self.edge_accuracy(logits, labels, ignore_index=-1)
 
                             # self.plotBatchGraphs(logits, labels)
                             
@@ -491,21 +492,25 @@ class Instructor:
 
         return plt
 
-    def edge_accuracy(self, logits: t.Tensor, labels: t.Tensor) -> float:
+    def edge_accuracy(self, logits: t.Tensor, labels: t.Tensor, ignore_index: int=None) -> float:
         # logits: [Batch, Classes, LCA_0, LCA_1]
         probs = logits.softmax(1)  # get softmax for probabilities
         preds = probs.max(1)[1]  # find maximum across the classes (batches are on 0)
 
         correct = 0.0
         for batch_label, batch_preds in zip(labels, preds):
-            # set everything to -1 which is not relevant for grading
-            batch_preds = t.where(batch_label==-1, batch_label, batch_preds)
-
+            if ignore_index is not None:
+                # set everything to -1 which is not relevant for grading
+                batch_preds = t.where(batch_label==ignore_index, batch_label, batch_preds)
+        
             # which are the correct predictions
             a = (batch_label == batch_preds)
 
-            # create a mask hiding the irrelevant entries
-            b = (batch_label != t.ones(batch_label.shape)*-1)
+            if ignore_index is not None:
+                # create a mask hiding the irrelevant entries
+                b = (batch_label != t.ones(batch_label.shape)*ignore_index)
+            else:
+                b = (batch_label == batch_label)    # simply create an "True"-matrix to hide the mask
 
             # correct += (a == b).float().sum()/(labels.size(1) * labels.size(2)) # divide by the size of the matrix
             correct += (a == b).float().sum()/b.sum() # divide by the size of the matrix
