@@ -262,8 +262,8 @@ def create_model(
 
 
 def create_instructor(
-    dataset_lca_and_leaves: Dict,
     model: DataParallel,
+    dataset_lca_and_leaves: Dict,
     learning_rate: float,
     learning_rate_decay: int,
     gamma: float,
@@ -275,11 +275,12 @@ def create_instructor(
     plot_mode: str,
     plotting_rows: int,
     log_gradients: bool,
-    gradients_clamp: int,
-    gradients_spreader: float,
     detectAnomaly: bool,
     device: str,
     n_fsps: int,
+    n_classes: int,
+    gradients_clamp: int,
+    gradients_spreader: float,
     **kwargs: Dict,
 ) -> Instructor:
     instructor = Instructor(
@@ -296,11 +297,12 @@ def create_instructor(
         plot_mode=plot_mode,
         plotting_rows=plotting_rows,
         log_gradients=log_gradients,
-        gradients_clamp=gradients_clamp,
-        gradients_spreader=gradients_spreader,
         detectAnomaly=detectAnomaly,
         device=device,
         n_fsps=n_fsps,
+        n_classes=n_classes,
+        gradients_clamp=gradients_clamp,
+        gradients_spreader=gradients_spreader,
         **kwargs,
     )
 
