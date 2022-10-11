@@ -498,6 +498,16 @@ class Instructor:
 
         correct = 0.0
         for batch_label, batch_preds in zip(labels, preds):
-            correct += (batch_label == batch_preds).float().sum()/(labels.size(1) * labels.size(2)) # divide by the size of the matrix
+            # set everything to -1 which is not relevant for grading
+            batch_preds = t.where(batch_label==-1, batch_label, batch_preds)
+
+            # which are the correct predictions
+            a = (batch_label == batch_preds)
+
+            # create a mask hiding the irrelevant entries
+            b = (batch_label != t.ones(batch_label.shape)*-1)
+
+            # correct += (a == b).float().sum()/(labels.size(1) * labels.size(2)) # divide by the size of the matrix
+            correct += (a == b).float().sum()/b.sum() # divide by the size of the matrix
 
         return correct / labels.size(0) # divide by the batch size
