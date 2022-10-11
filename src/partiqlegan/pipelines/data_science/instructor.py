@@ -36,7 +36,7 @@ class DataWrapper(Dataset):
     A wrapper for t.utils.data.Dataset.
     """
 
-    def __init__(self, data, normalize=False, normalize_individually=True, zero_mean=False):
+    def __init__(self, data, normalize="", normalize_individually=True, zero_mean=False):
         dmax = 0
         dmin = 1
 
@@ -256,9 +256,10 @@ class Instructor:
                         sample_start = time.time()
                         states = [s.to(self.device) for s in states]
                         labels = labels.to(self.device)
-                        scale = 1 / labels.size(
-                            1
-                        )  # get the scaling dependent on the number of classes
+                        # scale = 1 / labels.size(
+                        #     1
+                        # )  # get the scaling dependent on the number of classes
+                        scale = 1 / self.n_classes
 
                         if mode == "train":
                             self.model.train()  # set the module in training mode
