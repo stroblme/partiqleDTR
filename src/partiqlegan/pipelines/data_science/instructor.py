@@ -72,6 +72,40 @@ class DataWrapper(Dataset):
     def __getitem__(self, i):
         return self.data[i]
 
+def calculate_class_weights(dataloader, num_classes, num_batches=100, amp_enabled=False):
+    """ Calculates class weights based on num_batches of the dataloader
+
+    This assumes there exists a -1 padding value that is not part of the class weights.
+    Any classes not found will have a weight of one set
+
+    Args:
+        dataloader(torch.Dataloader): Dataloader to iterate through when collecting batches
+        num_classes(int): Number of classes
+        num_batches(int, optional): Number of batches from dataloader to use to approximate class weights
+        amp_enabled(bool, optional): Enabled mixed precision. Creates weights tensor as half precision
+    Return:
+        (torch.tensor): Tensor of class weights, normalised to 1
+    """
+    weights = t.zeros((num_classes,))
+    for i, batch in zip(range(num_batches), dataloader):
+        index, count = t.unique(batch[1], sorted=True, return_counts=True)
+        # TODO: add padding value as input to specifically ignore
+        if -1 in index:
+            # This line here assumes that the lowest class found is -1 (padding) which should be ignored
+            weights[index[1:]] += count[1:]
+        else:
+            weights[index] += count
+
+    # The weights need to be the invers, since we scale down the most common classes
+    weights = 1 / weights
+    # Set inf to 1
+    weights = t.nan_to_num(weights, posinf=float('nan'))
+    # And normalise to sum to 1
+    weights = weights / weights.nansum()
+    # Finally, assign default value to any that were missing during calculation time
+    weights = t.nan_to_num(weights, nan=1)
+
+    return weights
 
 class Instructor:
     """
@@ -96,6 +130,7 @@ class Instructor:
         detectAnomaly: bool = False,
         device: str = "cpu",
         n_fsps=-1,
+        n_classes=-1,
         gradients_clamp=1000,
         gradients_spreader=1e-10,
         model_state_dict=None,
@@ -148,7 +183,10 @@ class Instructor:
         self.normalize_individually = normalize_individually
         self.zero_mean = zero_mean
         self.batch_size = batch_size
-        self.optimizer = t.optim.Adam(self.model.parameters(), lr=learning_rate)
+        self.optimizer = t.optim.Adam(self.model.parameters(), lr=learning_rate, amsgrad=False)
+
+        self.n_classes = n_classes
+        
         # learning rate scheduler, same as in NRI
 
         if model_state_dict is not None:
@@ -184,6 +222,9 @@ class Instructor:
                         collate_fn=rel_pad_collate_fn,
                     )  # to handle varying input size
 
+                    weights = calculate_class_weights(data_batch, self.n_classes, len(data_batch), False)
+                    weights = weights.to(self.device)
+
                     epoch_loss = 0.0
                     epoch_acc = 0.0
 
@@ -209,7 +250,7 @@ class Instructor:
                             self.model.train()  # set the module in training mode
 
                             logits = self.model(states)
-                            loss = cross_entropy(logits, labels, ignore_index=-1)
+                            loss = cross_entropy(logits, labels, weight=weights, ignore_index=-1)
                             acc = self.edge_accuracy(logits, labels)
 
                             # self.plotBatchGraphs(logits, labels)
@@ -256,7 +297,7 @@ class Instructor:
 
                                 logits = self.model(states)
 
-                                loss = cross_entropy(logits, labels, ignore_index=-1)
+                                loss = cross_entropy(logits, labels, weight=weights, ignore_index=-1)
                                 acc = self.edge_accuracy(logits, labels)
                         elif mode == "test":
                             self.model.eval()  # trigger evaluation forward mode
@@ -264,7 +305,7 @@ class Instructor:
 
                                 logits = self.model(states)
 
-                                loss = cross_entropy(logits, labels, ignore_index=-1)
+                                loss = cross_entropy(logits, labels, weight=weights, ignore_index=-1)
                                 acc = self.edge_accuracy(logits, labels)
                         else:
                             log.error("Unknown mode")
