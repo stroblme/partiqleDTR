@@ -135,7 +135,7 @@ class Instructor:
         gamma: float,
         batch_size: int,
         epochs: int,
-        normalize: bool,
+        normalize: str,
         normalize_individually: bool,
         zero_mean: bool,
         plot_mode: str = "val",
