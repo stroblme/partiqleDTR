@@ -44,7 +44,7 @@ class DataWrapper(Dataset):
         self.data = data
         if normalize=="one":
             dmax = 0
-            dmin = 1
+            dmin = 0
             if not normalize_individually:
                 for i, event in enumerate(data.x):
                     dmax = event.max() if event.max() > dmax else dmax
@@ -62,30 +62,30 @@ class DataWrapper(Dataset):
                     self.data.x[i] = (event) / (dmax - dmin)
         elif normalize=="smartone":
             dmax_p = 0
-            dmin_p = 1
-            dmax_e = 1
-            dmin_e = 1
+            dmin_p = 0
+            dmax_e = 0
+            dmin_e = 0
             if not normalize_individually:
                 for i, event in enumerate(data.x):
-                    dmax_p = event[:2].max() if event[:2].max() > dmax_p else dmax_p
-                    dmin_p = event[:2].min() if event[:2].min() < dmin_p else dmin_p
-                    dmax_e = event[3].max() if event[3].max() > dmax_e else dmax_e
-                    dmin_e = event[3].min() if event[3].min() < dmin_e else dmin_e
+                    dmax_p = event[:,:3].max() if event[:,:3].max() > dmax_p else dmax_p
+                    dmin_p = event[:,:3].min() if event[:,:3].min() < dmin_p else dmin_p
+                    dmax_e = event[:,3].max() if event[:,3].max() > dmax_e else dmax_e
+                    dmin_e = event[:,3].min() if event[:,3].min() < dmin_e else dmin_e
                     
             for i, event in enumerate(data.x):
                 if normalize_individually:
-                    dmax_p = event[:2].max()
-                    dmin_p = event[:2].min()
-                    dmax_e = event[3].max()
-                    dmin_e = event[3].min()
+                    dmax_p = event[:,:3].max()
+                    dmin_p = event[:,:3].min()
+                    dmax_e = event[:,3].max()
+                    dmin_e = event[:,3].min()
 
                 if zero_mean:
-                    self.data.x[i][:2] = (event[:2] - (dmax_p - dmin_p)/2) / (dmax_p - dmin_p)
+                    self.data.x[i][:,:3] = (event[:,:3] - (dmax_p - dmin_p)/2) / (dmax_p - dmin_p)
                     # self.data.x[i][3] = (event[3] - (dmax_e - dmin_e)/2) / (dmax_e - dmin_e)
-                    self.data.x[i][3] = (event[3]) / (dmax_e - dmin_e) # it does not make sense to shift the energy as this could result in negative energy values
+                    self.data.x[i][:,3] = (event[:,3]) / (dmax_e - dmin_e) # it does not make sense to shift the energy as this could result in negative energy values
                 else:
-                    self.data.x[i][:2] = (event[:2]) / (dmax_p - dmin_p)
-                    self.data.x[i][3] = (event[3]) / (dmax_e - dmin_e)
+                    self.data.x[i][:,:3] = (event[:,:3]) / (dmax_p - dmin_p)
+                    self.data.x[i][:,3] = (event[:,3]) / (dmax_e - dmin_e)
 
         elif normalize=="zmuv":
             for i, event in enumerate(data.x):
