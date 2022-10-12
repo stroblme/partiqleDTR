@@ -350,7 +350,7 @@ class Instructor:
                             log.error("Unknown mode")
 
                         epoch_loss += scale * loss.item()
-                        epoch_acc += scale * acc
+                        epoch_acc += scale * acc.item()
                         epoch_perfect_lcag += scale * perfect_lcag
 
                         if mode == "train":
