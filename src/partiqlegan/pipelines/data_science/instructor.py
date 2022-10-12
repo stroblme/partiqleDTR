@@ -401,9 +401,14 @@ class Instructor:
                             mlflow.log_figure(
                                 c_plt.gcf(), f"{mode}_e{epoch}_sample_graph.png"
                             )
+                            logits_string = '\n\n\n'.join('\n'.join('\t'.join(f"{x}" for x in y) for y in a_b) for a_b in selected_logits)
+                            labels_string = '\n\n\n'.join('\n'.join('\t'.join(f"{x}" for x in y) for y in a_b) for a_b in selected_labels)
+                            mlflow.log_text(logits_string, f"logits_graph_e{epoch}.txt")
+                            mlflow.log_text(labels_string, f"labels_graph_e{epoch}.txt")
+                            # mlflow.log_text()
                         except Exception as e:
                             log.error(
-                                f"Exception occured when trying to plot graphs in epoch {epoch}: {e}\n\tThe lcag matrices were:\n\t{labels.numpy()}\n\tand\n\t{logits.cpu().detach().numpy().max(0)[1]}"
+                                f"Exception occured when trying to plot graphs in epoch {epoch}: {e}\n\tThe lcag matrices were:\n\t{labels.numpy()}\n\tand\n\t{np.array([batch_logit.max(0)[1].numpy() for batch_logit in logits.cpu().detach()])}"
                             )
 
                         model_state_dict = self.model.state_dict()
@@ -564,8 +569,9 @@ class Instructor:
             else:
                 b = (batch_label == batch_label)    # simply create an "True"-matrix to hide the mask
 
-            if (a == b).float().sum() == 1:
+            if (a == b).float().sum()/b.sum() == 1:
                 correct += 1
+            log.info(f"Perfect lcag candidate was {(a == b).float().sum()/b.sum()}")
 
 
         return correct / labels.size(0) # divide by the batch size
