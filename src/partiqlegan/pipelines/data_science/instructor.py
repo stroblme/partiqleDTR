@@ -36,7 +36,7 @@ class DataWrapper(Dataset):
     A wrapper for t.utils.data.Dataset.
     """
 
-    def __init__(self, data, normalize=False, normalize_individually=True, zero_mean=False):
+    def __init__(self, data, normalize="", normalize_individually=True, zero_mean=False):
         dmax = 0
         dmin = 1
 
@@ -77,8 +77,8 @@ class DataWrapper(Dataset):
                 self.data.x[i] = (event - adj_mean)/adj_std
 
         # fill diagonal with zeros to ignore in loss
-        for i, lcag in enumerate(data.y):
-            np.fill_diagonal(self.data.y[i], -1)
+        # for i, lcag in enumerate(data.y):
+        #     np.fill_diagonal(self.data.y[i], -1)
 
     def __len__(self):
         return len(self.data)
@@ -257,9 +257,10 @@ class Instructor:
                         sample_start = time.time()
                         states = [s.to(self.device) for s in states]
                         labels = labels.to(self.device)
-                        scale = 1 / labels.size(
-                            1
-                        )  # get the scaling dependent on the number of classes
+                        # scale = 1 / labels.size(
+                        #     1
+                        # )  # get the scaling dependent on the number of classes
+                        scale = 1 / self.n_classes
 
                         if mode == "train":
                             self.model.train()  # set the module in training mode
@@ -512,7 +513,7 @@ class Instructor:
             else:
                 b = (batch_label == batch_label)    # simply create an "True"-matrix to hide the mask
 
-            # correct += (a == b).float().sum()/(labels.size(1) * labels.size(2)) # divide by the size of the matrix
             correct += (a == b).float().sum()/b.sum() # divide by the size of the matrix
+
 
         return correct / labels.size(0) # divide by the batch size
