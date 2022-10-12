@@ -6,7 +6,7 @@ n_momenta: 4
 
 # Classical
 epochs: 80
-normalize: "smartone"
+normalize: "one"
 normalize_individually: False
 zero_mean: False
 dim_feedforward: 512
