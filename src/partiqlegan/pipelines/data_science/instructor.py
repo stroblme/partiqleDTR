@@ -403,9 +403,9 @@ class Instructor:
                             )
                             logits_string = '\n\n\n'.join('\n'.join('\t'.join(f"{x}" for x in y) for y in a_b) for a_b in selected_logits)
                             labels_string = '\n\n\n'.join('\n'.join('\t'.join(f"{x}" for x in y) for y in a_b) for a_b in selected_labels)
-                            mlflow.log_text(logits_string, f"logits_graph_e{epoch}.txt")
-                            mlflow.log_text(labels_string, f"labels_graph_e{epoch}.txt")
-                            # mlflow.log_text()
+                            mlflow.log_text(logits_string, f"{mode}_e{epoch}_logits.txt")
+                            mlflow.log_text(labels_string, f"{mode}_e{epoch}_labels.txt")
+
                         except Exception as e:
                             log.error(
                                 f"Exception occured when trying to plot graphs in epoch {epoch}: {e}\n\tThe lcag matrices were:\n\t{labels.numpy()}\n\tand\n\t{np.array([batch_logit.max(0)[1].numpy() for batch_logit in logits.cpu().detach()])}"
