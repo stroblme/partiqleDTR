@@ -574,7 +574,7 @@ class Instructor:
 
             if (a == b).float().sum()/b.sum() == 1:
                 correct += 1
-            log.info(f"Perfect lcag candidate was {(a == b).float().sum()/b.sum()}")
+            # log.info(f"Perfect lcag candidate was {(a == b).float().sum()/b.sum()}")
 
 
         return correct / labels.size(0) # divide by the batch size
