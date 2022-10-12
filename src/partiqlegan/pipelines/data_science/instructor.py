@@ -77,8 +77,8 @@ class DataWrapper(Dataset):
                 self.data.x[i] = (event - adj_mean)/adj_std
 
         # fill diagonal with zeros to ignore in loss
-        # for i, lcag in enumerate(data.y):
-        #     np.fill_diagonal(self.data.y[i], -1)
+        for i, lcag in enumerate(data.y):
+            np.fill_diagonal(self.data.y[i], -1)
 
     def __len__(self):
         return len(self.data)
