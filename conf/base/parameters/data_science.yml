@@ -5,7 +5,7 @@ post_model_sel: "pqgnn" # only for split training
 n_momenta: 4
 
 # Classical
-epochs: 80
+epochs: 40
 normalize: "smartone"
 normalize_individually: False
 zero_mean: False
