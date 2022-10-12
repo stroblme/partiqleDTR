@@ -417,11 +417,13 @@ class Instructor:
                     if self.log_gradients and mode == "train":
                         all_grads.append(scale * epoch_grad)
 
+                    mlflow.log_metric(key=f"{mode}_loss", value=epoch_loss, step=epoch)
                     mlflow.log_metric(
                         key=f"{mode}_accuracy", value=epoch_acc, step=epoch
                     )
-                    mlflow.log_metric(key=f"{mode}_loss", value=epoch_loss, step=epoch)
-
+                    mlflow.log_metric(
+                        key=f"{mode}_perfect_lcag", value=epoch_perfect_lcag, step=epoch
+                    )
                     # learning rate scheduling
                     self.scheduler.step()
 
