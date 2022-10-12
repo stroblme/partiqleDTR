@@ -261,6 +261,7 @@ class Instructor:
 
                     epoch_loss = 0.0
                     epoch_acc = 0.0
+                    epoch_perfect_lcag = 0.0
 
                     if self.log_gradients:
                         epoch_grad = t.zeros(len([p for p in self.model.parameters()][0]))
@@ -287,6 +288,7 @@ class Instructor:
                             logits = self.model(states)
                             loss = cross_entropy(logits, labels, weight=weights, ignore_index=-1)
                             acc = self.edge_accuracy(logits, labels, ignore_index=-1)
+                            perfect_lcag = self.perfect_lcag(logits, labels, ignore_index=-1)
 
                             # self.plotBatchGraphs(logits, labels)
                             
@@ -333,7 +335,8 @@ class Instructor:
                                 logits = self.model(states)
 
                                 loss = cross_entropy(logits, labels, weight=weights, ignore_index=-1)
-                                acc = self.edge_accuracy(logits, labels)
+                                acc = self.edge_accuracy(logits, labels, ignore_index=-1)
+                                perfect_lcag = self.perfect_lcag(logits, labels, ignore_index=-1)
                         elif mode == "test":
                             self.model.eval()  # trigger evaluation forward mode
                             with t.no_grad():  # disable autograd in tensors
@@ -341,12 +344,14 @@ class Instructor:
                                 logits = self.model(states)
 
                                 loss = cross_entropy(logits, labels, weight=weights, ignore_index=-1)
-                                acc = self.edge_accuracy(logits, labels)
+                                acc = self.edge_accuracy(logits, labels, ignore_index=-1)
+                                perfect_lcag = self.perfect_lcag(logits, labels, ignore_index=-1)
                         else:
                             log.error("Unknown mode")
 
                         epoch_loss += scale * loss.item()
-                        epoch_acc += scale * acc.item()
+                        epoch_acc += scale * acc
+                        epoch_perfect_lcag += scale * perfect_lcag
 
                         if mode == "train":
                             log.debug(
@@ -533,6 +538,32 @@ class Instructor:
                 b = (batch_label == batch_label)    # simply create an "True"-matrix to hide the mask
 
             correct += (a == b).float().sum()/b.sum() # divide by the size of the matrix
+
+
+        return correct / labels.size(0) # divide by the batch size
+
+    def perfect_lcag(self, logits: t.Tensor, labels: t.Tensor, ignore_index: int=None) -> float:
+        # logits: [Batch, Classes, LCA_0, LCA_1]
+        probs = logits.softmax(1)  # get softmax for probabilities
+        preds = probs.max(1)[1]  # find maximum across the classes (batches are on 0)
+
+        correct = 0.0
+        for batch_label, batch_preds in zip(labels, preds):
+            if ignore_index is not None:
+                # set everything to -1 which is not relevant for grading
+                batch_preds = t.where(batch_label==ignore_index, batch_label, batch_preds)
+        
+            # which are the correct predictions
+            a = (batch_label == batch_preds)
+
+            if ignore_index is not None:
+                # create a mask hiding the irrelevant entries
+                b = (batch_label != t.ones(batch_label.shape)*ignore_index)
+            else:
+                b = (batch_label == batch_label)    # simply create an "True"-matrix to hide the mask
+
+            if (a == b).float().sum() == 1:
+                correct += 1
 
 
         return correct / labels.size(0) # divide by the batch size
