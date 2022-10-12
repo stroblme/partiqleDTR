@@ -37,8 +37,8 @@ n_additional_mlp_layers_range: [1, 5, "linear"]
 n_final_mlp_layers: 2 # layers after the blocks
 n_final_mlp_layers_range: [1, 5, "linear"]
 factor: True
-tokenize: -1
-embedding_dims: -1
+tokenize: -1 # currently not supported as findings in baumbauen did not show any advantage
+embedding_dims: -1 # no effect if tokenization not enabled
 symmetrize: True
 
 # Quantum
@@ -60,6 +60,6 @@ device: 'cpu' # anything but 'cpu' to use cuda devices instead
 
 # MLFLOW
 plot_mode: "val"
-plotting_rows: 4
+plotting_rows: 6
 log_gradients: False # set false when using models where the quantum layer is not the first one
 git_hash_identifier: "git_hash"
