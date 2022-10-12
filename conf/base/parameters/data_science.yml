@@ -9,7 +9,7 @@ epochs: 80
 normalize: "smartone"
 normalize_individually: False
 zero_mean: False
-dim_feedforward: 512
+dim_feedforward: 256
 dim_feedforward_range: [4, 2048, "log"]
 batchnorm: True
 
@@ -28,7 +28,7 @@ skip_block: True # activates skip connections on local scales
 skip_global: True # activates skip connections on global scales
 
 # GNN
-n_blocks: 4
+n_blocks: 3
 n_blocks_range: [1, 5, "linear"]
 n_layers_mlp: 2 # initial mlp layers before the blocks
 n_layers_mlp_range: [1, 5, "linear"]
