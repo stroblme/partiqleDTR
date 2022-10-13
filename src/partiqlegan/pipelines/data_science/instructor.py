@@ -352,7 +352,7 @@ class Instructor:
 
                         epoch_loss += scale * loss.item() # access via .item() to get a float value instead of a tensor obj
                         epoch_acc += acc.item() # access via .item() to get a float value instead of a tensor obj
-                        epoch_perfect_lcag += scale * perfect_lcag
+                        epoch_perfect_lcag += perfect_lcag # don't scale accuracy and perfect_lcag as they are not class dependent
 
                         if mode == "train":
                             log.debug(
@@ -511,7 +511,7 @@ class Instructor:
         for it, (logits, lcag_ref) in enumerate(zip(batch_logits, batch_ref)):
             lcag = logits.max(0)[1]
             assert lcag_ref.shape == lcag.shape
-            
+
             lcag = t.where(lcag_ref==-1, lcag_ref, lcag)
 
             graph = GraphVisualization()
