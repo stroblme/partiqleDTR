@@ -5,11 +5,11 @@ post_model_sel: "pqgnn" # only for split training
 n_momenta: 4
 
 # Classical
-epochs: 30
-normalize: "zmuv"
+epochs: 60
+normalize: "smartone" # one, smartone, zmuv
 normalize_individually: False
 zero_mean: False
-dim_feedforward: 512
+dim_feedforward: 1024
 dim_feedforward_range: [4, 2048, "log"]
 batchnorm: True
 
