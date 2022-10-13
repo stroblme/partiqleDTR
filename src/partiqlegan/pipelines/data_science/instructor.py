@@ -536,10 +536,39 @@ class Instructor:
 
         return plt
 
-    def edge_accuracy(self, logits: t.Tensor, labels: t.Tensor, ignore_index: int=None) -> float:
-        # logits: [Batch, Classes, LCA_0, LCA_1]
-        probs = logits.softmax(1)  # get softmax for probabilities
-        preds = probs.max(1)[1]  # find maximum across the classes (batches are on 0)
+
+    def logic_accuracy(self, logits: t.Tensor, labels: t.Tensor, ignore_index: int=None) -> float:
+        
+
+        def two_child_fix(lcag):
+            max_c = lcag.max()
+
+            class_indices = [t.where(lcag==c) for c in range(1, max_c)]
+
+
+        correct = 0.0
+        for batch_label, batch_preds in zip(labels, preds):
+            # logits: [Batch, Classes, LCA_0, LCA_1]
+            probs = logits.softmax(1)  # get softmax for probabilities
+            preds = probs.max(0)[1]  # find maximum across the classes (batches are on 0)
+            if ignore_index is not None:
+                # set everything to -1 which is not relevant for grading
+                batch_preds = t.where(batch_label==ignore_index, batch_label, batch_preds)
+        
+            batch_preds = two_child_fix(batch_preds)
+            # which are the correct predictions
+            a = (batch_label == batch_preds)
+
+            if ignore_index is not None:
+                # create a mask hiding the irrelevant entries
+                b = (batch_label != t.ones(batch_label.shape)*ignore_index)
+            else:
+                b = (batch_label == batch_label)    # simply create an "True"-matrix to hide the mask
+
+            correct += (a == b).float().sum()/b.sum() # divide by the size of the matrix
+
+
+        return correct / labels.size(0) # divide by the batch size
 
         correct = 0.0
         for batch_label, batch_preds in zip(labels, preds):
