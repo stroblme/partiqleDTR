@@ -355,7 +355,7 @@ class Instructor:
 
                         epoch_loss += (1 / self.n_classes) * loss.item() # access via .item() to get a float value instead of a tensor obj
                         epoch_acc += acc.item() # access via .item() to get a float value instead of a tensor obj
-                        epoch_logic_acc += logic_acc
+                        epoch_logic_acc += logic_acc.item() # access via .item() to get a float value instead of a tensor obj
                         epoch_perfect_lcag += perfect_lcag # don't scale accuracy and perfect_lcag as they are not class dependent
 
                         if mode == "train":
@@ -574,6 +574,8 @@ class Instructor:
                     lcag[index] -= 1
                 
                 working_lcag = copy.deepcopy(lcag)
+
+            return lcag
 
 
         correct = 0.0
