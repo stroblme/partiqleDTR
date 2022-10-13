@@ -281,7 +281,8 @@ class Instructor:
                         # scale = 1 / labels.size(
                         #     1
                         # )  # get the scaling dependent on the number of classes
-                        scale = 1 / self.n_classes
+                        # scale = 1 / self.n_classes
+                        scale = 1
 
                         if mode == "train":
                             self.model.train()  # set the module in training mode
