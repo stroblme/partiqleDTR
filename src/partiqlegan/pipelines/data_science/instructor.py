@@ -282,8 +282,6 @@ class Instructor:
                         # scale = 1 / labels.size(
                         #     1
                         # )  # get the scaling dependent on the number of classes
-                        # scale = 1 / self.n_classes
-                        scale = 1
 
                         if mode == "train":
                             self.model.train()  # set the module in training mode
@@ -355,14 +353,14 @@ class Instructor:
                         else:
                             log.error("Unknown mode")
 
-                        epoch_loss += scale * loss.item() # access via .item() to get a float value instead of a tensor obj
+                        epoch_loss += (1 / self.n_classes) * loss.item() # access via .item() to get a float value instead of a tensor obj
                         epoch_acc += acc.item() # access via .item() to get a float value instead of a tensor obj
                         epoch_logic_acc += logic_acc
                         epoch_perfect_lcag += perfect_lcag # don't scale accuracy and perfect_lcag as they are not class dependent
 
                         if mode == "train":
                             log.debug(
-                                f"Sample evaluation in epoch {epoch}, iteration {i} took {time.time() - sample_start} seconds. Loss was {scale*loss.item()}"
+                                f"Sample evaluation in epoch {epoch}, iteration {i} took {time.time() - sample_start} seconds. Loss was {(1 / self.n_classes)*loss.item()}"
                             )
 
                         if mode == self.plot_mode:
@@ -425,7 +423,7 @@ class Instructor:
 
                         except Exception as e:
                             log.error(
-                                f"Exception occured when trying to plot graphs in epoch {epoch}: {e}\n\tThe lcag matrices were:\n\n{labels_string}\n\tand\n\n{logits_string}"
+                                f"Exception occured when trying to plot graphs in epoch {epoch}: {e}\n\tThe lcag matrices were:\n\n{labels_string}\n\tand\n\n{logits_string}\n{traceback.print_exc()}"
                             )
 
                         model_state_dict = self.model.state_dict()
@@ -437,7 +435,7 @@ class Instructor:
                         }
 
                     if self.log_gradients and mode == "train":
-                        all_grads.append(scale * epoch_grad)
+                        all_grads.append(epoch_grad)
 
                     mlflow.log_metric(key=f"{mode}_loss", value=epoch_loss, step=epoch)
                     mlflow.log_metric(
