@@ -1,3 +1,4 @@
+from pydoc import locate
 import time
 import traceback
 import random
@@ -386,13 +387,17 @@ class Instructor:
                         best_acc = epoch_acc
                         result = self.model
                         try:
+                            assert len(logits_for_plotting) == len(labels_for_plotting)
+                            plotting_indices = [random.choice(range(len(logits_for_plotting))) for i in range(self.plotting_rows)]
+
+                            [random.choice(range(len(logits_for_plotting))) for i in range(self.plotting_rows)]
                             selected_logits = [
-                                random.choice(logits_for_plotting).cpu().detach()
-                                for i in range(self.plotting_rows)
+                                logits_for_plotting[i].cpu().detach()
+                                for i in plotting_indices
                             ]
                             selected_labels = [
-                                random.choice(labels_for_plotting)
-                                for i in range(self.plotting_rows)
+                                labels_for_plotting[i]
+                                for i in plotting_indices
                             ]
                             logits_string = '\n\n\n'.join('\n'.join('\t'.join(f"{x}" for x in y) for y in a_b.max(0)[1]) for a_b in selected_logits)
                             labels_string = '\n\n\n'.join('\n'.join('\t'.join(f"{x}" for x in y) for y in a_b) for a_b in selected_labels)
@@ -411,7 +416,7 @@ class Instructor:
 
                         except Exception as e:
                             log.error(
-                                f"Exception occured when trying to plot graphs in epoch {epoch}: {e}\n\tThe lcag matrices were:\n\t{labels_string}\n\tand\n\t{logits_string}"
+                                f"Exception occured when trying to plot graphs in epoch {epoch}: {e}\n\tThe lcag matrices were:\n\n{labels_string}\n\tand\n\n{logits_string}"
                             )
 
                         model_state_dict = self.model.state_dict()
@@ -505,6 +510,8 @@ class Instructor:
 
         for it, (logits, lcag_ref) in enumerate(zip(batch_logits, batch_ref)):
             lcag = logits.max(0)[1]
+            assert lcag_ref.shape == lcag.shape
+            
             lcag = t.where(lcag_ref==-1, lcag_ref, lcag)
 
             graph = GraphVisualization()
