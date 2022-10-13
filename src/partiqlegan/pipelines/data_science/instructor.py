@@ -548,12 +548,10 @@ class Instructor:
 
     def logic_accuracy(self, logits: t.Tensor, labels: t.Tensor, ignore_index: int=None) -> float:
         
-
         def two_child_fix(lcag):
             max_c = lcag.max()
 
             class_indices = [t.where(lcag==c) for c in range(1, max_c)]
-
 
         correct = 0.0
         for batch_label, batch_preds in zip(labels, preds):
@@ -581,7 +579,6 @@ class Instructor:
 
     def edge_accuracy(self, logits: t.Tensor, labels: t.Tensor, ignore_index: int=None) -> float:
         
-
         correct = 0.0
         for batch_label, batch_preds in zip(labels, preds):
             # logits: [Batch, Classes, LCA_0, LCA_1]
@@ -606,7 +603,6 @@ class Instructor:
         return correct / labels.size(0) # divide by the batch size
 
     def perfect_lcag(self, logits: t.Tensor, labels: t.Tensor, ignore_index: int=None) -> float:
-        
 
         correct = 0.0
         for batch_label, batch_preds in zip(labels, preds):
