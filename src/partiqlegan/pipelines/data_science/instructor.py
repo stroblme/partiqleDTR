@@ -262,6 +262,7 @@ class Instructor:
 
                     epoch_loss = 0.0
                     epoch_acc = 0.0
+                    epoch_logic_acc = 0.0
                     epoch_perfect_lcag = 0.0
 
                     if self.log_gradients:
@@ -290,6 +291,7 @@ class Instructor:
                             logits = self.model(states)
                             loss = cross_entropy(logits, labels, weight=weights, ignore_index=-1)
                             acc = self.edge_accuracy(logits, labels, ignore_index=-1)
+                            logic_acc = self.logic_accuracy(logits, labels, ignore_index=-1)
                             perfect_lcag = self.perfect_lcag(logits, labels, ignore_index=-1)
 
                             # self.plotBatchGraphs(logits, labels)
