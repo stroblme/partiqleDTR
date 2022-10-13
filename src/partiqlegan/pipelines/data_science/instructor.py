@@ -504,8 +504,8 @@ class Instructor:
             rows, cols, figsize=(15, 15), gridspec_kw={"width_ratios": [1, 1]}
         )
         fig.tight_layout()
-        it = 0
-        for logits, lcag_ref in zip(batch_logits, batch_ref):
+
+        for it, (logits, lcag_ref) in enumerate(zip(batch_logits, batch_ref)):
             lcag = logits.max(0)[1]
             lcag = t.where(lcag_ref==-1, lcag_ref, lcag)
 
@@ -522,10 +522,10 @@ class Instructor:
             plt.sca(ax[it][1])
             graph_ref.visualize(opt="max", ax=ax[it][1])
 
-            if it >= rows:
-                break
 
-            it += 1
+            # if it >= rows:
+            #     break
+
 
         return plt
 
