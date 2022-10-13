@@ -155,22 +155,22 @@ class qmlp(nn.Module):
 
         def encoding(qc, n_qubits, q_params, identifier):
             for i in range(n_qubits):
-                energy = q_params[i][0]
+                energy = q_params[i][3]
 
                 px = (
-                    q_params[i][1] * energy * t.pi,
+                    q_params[i][0] * energy * t.pi,
                     i,
                     f"{identifier[:-3]}_rx_{i}",
                 )
                 qc.rx(*px)
                 py = (
-                    q_params[i][2] * energy * t.pi,
+                    q_params[i][1] * energy * t.pi,
                     i,
                     f"{identifier[:-3]}_ry_{i}",
                 )
                 qc.ry(*py)
                 pz = (
-                    q_params[i][3] * energy * t.pi,
+                    q_params[i][2] * energy * t.pi,
                     i,
                 )  # rz does not accept identifier
                 qc.rz(*pz)
