@@ -281,7 +281,8 @@ class Instructor:
                         # scale = 1 / labels.size(
                         #     1
                         # )  # get the scaling dependent on the number of classes
-                        scale = 1 / self.n_classes
+                        # scale = 1 / self.n_classes
+                        scale = 1
 
                         if mode == "train":
                             self.model.train()  # set the module in training mode
@@ -351,8 +352,8 @@ class Instructor:
                             log.error("Unknown mode")
 
                         epoch_loss += scale * loss.item() # access via .item() to get a float value instead of a tensor obj
-                        epoch_acc += scale * acc.item() # access via .item() to get a float value instead of a tensor obj
-                        epoch_perfect_lcag += perfect_lcag # don't scale this metric since it is not class dependent
+                        epoch_acc += acc.item() # access via .item() to get a float value instead of a tensor obj
+                        epoch_perfect_lcag += perfect_lcag # don't scale accuracy and perfect_lcag as they are not class dependent
 
                         if mode == "train":
                             log.debug(
@@ -390,7 +391,7 @@ class Instructor:
                             assert len(logits_for_plotting) == len(labels_for_plotting)
                             plotting_indices = [random.choice(range(len(logits_for_plotting))) for i in range(self.plotting_rows)]
 
-                            [random.choice(range(len(logits_for_plotting))) for i in range(self.plotting_rows)]
+                            
                             selected_logits = [
                                 logits_for_plotting[i].cpu().detach()
                                 for i in plotting_indices
