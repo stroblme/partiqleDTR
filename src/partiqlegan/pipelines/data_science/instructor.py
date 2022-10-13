@@ -349,8 +349,8 @@ class Instructor:
                         else:
                             log.error("Unknown mode")
 
-                        epoch_loss += scale * loss.item()
-                        epoch_acc += scale * acc.item()
+                        epoch_loss += scale * loss.item() # access via .item() to get a float value instead of a tensor obj
+                        epoch_acc += scale * acc.item() # access via .item() to get a float value instead of a tensor obj
                         epoch_perfect_lcag += scale * perfect_lcag
 
                         if mode == "train":
