@@ -20,7 +20,7 @@ learning_rate_range: [1e-5, 1e-1, "log"]
 learning_rate_decay: 100
 learning_rate_decay_range: [1, 1000, "log"]
 gamma: 0.5
-batch_size: 4
+batch_size: 8
 batch_size_range: [1, 64, "log"]
 gradients_clamp: 1000
 gradients_spreader: 1e-10
