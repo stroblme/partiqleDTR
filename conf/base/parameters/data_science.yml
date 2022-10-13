@@ -9,18 +9,18 @@ epochs: 50
 normalize: "smartone"
 normalize_individually: False
 zero_mean: False
-dim_feedforward: 1024
+dim_feedforward: 512
 dim_feedforward_range: [4, 2048, "log"]
 batchnorm: True
 
-dropout_rate: 0.5
+dropout_rate: 0.4
 dropout_rate_range: [0.1, 1.0, "linear"]
 learning_rate: 0.001
 learning_rate_range: [1e-5, 1e-1, "log"]
 learning_rate_decay: 100
 learning_rate_decay_range: [1, 1000, "log"]
 gamma: 0.5
-batch_size: 6
+batch_size: 8
 batch_size_range: [1, 64, "log"]
 gradients_clamp: 1000
 gradients_spreader: 1e-10
@@ -60,6 +60,6 @@ device: 'cpu' # anything but 'cpu' to use cuda devices instead
 
 # MLFLOW
 plot_mode: "val"
-plotting_rows: 6
+plotting_rows: 4
 log_gradients: False # set false when using models where the quantum layer is not the first one
 git_hash_identifier: "git_hash"
