@@ -338,6 +338,7 @@ class Instructor:
 
                                 loss = cross_entropy(logits, labels, weight=weights, ignore_index=-1)
                                 acc = self.edge_accuracy(logits, labels, ignore_index=-1)
+                                logic_acc = self.logic_accuracy(logits, labels, ignore_index=-1)
                                 perfect_lcag = self.perfect_lcag(logits, labels, ignore_index=-1)
                         elif mode == "test":
                             self.model.eval()  # trigger evaluation forward mode
@@ -347,12 +348,14 @@ class Instructor:
 
                                 loss = cross_entropy(logits, labels, weight=weights, ignore_index=-1)
                                 acc = self.edge_accuracy(logits, labels, ignore_index=-1)
+                                logic_acc = self.logic_accuracy(logits, labels, ignore_index=-1)
                                 perfect_lcag = self.perfect_lcag(logits, labels, ignore_index=-1)
                         else:
                             log.error("Unknown mode")
 
                         epoch_loss += scale * loss.item() # access via .item() to get a float value instead of a tensor obj
                         epoch_acc += acc.item() # access via .item() to get a float value instead of a tensor obj
+                        epoch_logic_acc += logic_acc
                         epoch_perfect_lcag += perfect_lcag # don't scale accuracy and perfect_lcag as they are not class dependent
 
                         if mode == "train":
@@ -377,6 +380,9 @@ class Instructor:
                         data_batch
                     )  # to the already scaled loss, apply the number of all iterations (no. of mini batches)
                     epoch_acc /= len(
+                        data_batch
+                    )  # to the already scaled accuracy, apply the number of all iterations (no. of mini batches)
+                    epoch_logic_acc /= len(
                         data_batch
                     )  # to the already scaled accuracy, apply the number of all iterations (no. of mini batches)
                     epoch_perfect_lcag /= len(
@@ -434,6 +440,9 @@ class Instructor:
                     mlflow.log_metric(key=f"{mode}_loss", value=epoch_loss, step=epoch)
                     mlflow.log_metric(
                         key=f"{mode}_accuracy", value=epoch_acc, step=epoch
+                    )
+                    mlflow.log_metric(
+                        key=f"{mode}_logic_accuracy", value=epoch_logic_acc, step=epoch
                     )
                     mlflow.log_metric(
                         key=f"{mode}_perfect_lcag", value=epoch_perfect_lcag, step=epoch
