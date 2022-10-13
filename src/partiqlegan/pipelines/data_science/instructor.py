@@ -351,7 +351,7 @@ class Instructor:
                             log.error("Unknown mode")
 
                         epoch_loss += scale * loss.item() # access via .item() to get a float value instead of a tensor obj
-                        epoch_acc += scale * acc.item() # access via .item() to get a float value instead of a tensor obj
+                        epoch_acc += acc.item() # access via .item() to get a float value instead of a tensor obj
                         epoch_perfect_lcag += scale * perfect_lcag
 
                         if mode == "train":
@@ -390,7 +390,7 @@ class Instructor:
                             assert len(logits_for_plotting) == len(labels_for_plotting)
                             plotting_indices = [random.choice(range(len(logits_for_plotting))) for i in range(self.plotting_rows)]
 
-                            [random.choice(range(len(logits_for_plotting))) for i in range(self.plotting_rows)]
+                            
                             selected_logits = [
                                 logits_for_plotting[i].cpu().detach()
                                 for i in plotting_indices
