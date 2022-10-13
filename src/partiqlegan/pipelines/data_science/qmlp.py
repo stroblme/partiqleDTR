@@ -405,8 +405,8 @@ class qmlp(nn.Module):
         )  # copy the vqc output across n_classes dimensions and let the nn handle the decoding
         x = x.permute(0, 2, 1)  # (b, c, l, l) -> split the leaves
 
-        skip = x if self.skip_block else None
         x = self.block[0](x)  # initial mlp
+        skip = x if self.skip_block else None
         for seq_mlp in self.block[1]:
             x = seq_mlp(x)
 
