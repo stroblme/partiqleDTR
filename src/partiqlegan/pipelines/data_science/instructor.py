@@ -554,17 +554,19 @@ class Instructor:
             class_indices = [t.where(lcag==c) for c in range(1, max_c)]
 
         correct = 0.0
-        for batch_label, batch_preds in zip(labels, preds):
+        for batch_label, batch_preds in zip(labels, logits):
             # logits: [Batch, Classes, LCA_0, LCA_1]
-            probs = logits.softmax(1)  # get softmax for probabilities
+            probs = batch_preds.softmax(1)  # get softmax for probabilities
             preds = probs.max(0)[1]  # find maximum across the classes (batches are on 0)
+
+            preds = two_child_fix(preds)
+
             if ignore_index is not None:
                 # set everything to -1 which is not relevant for grading
-                batch_preds = t.where(batch_label==ignore_index, batch_label, batch_preds)
+                preds = t.where(batch_label==ignore_index, batch_label, preds)
         
-            batch_preds = two_child_fix(batch_preds)
             # which are the correct predictions
-            a = (batch_label == batch_preds)
+            a = (batch_label == preds)
 
             if ignore_index is not None:
                 # create a mask hiding the irrelevant entries
@@ -580,16 +582,16 @@ class Instructor:
     def edge_accuracy(self, logits: t.Tensor, labels: t.Tensor, ignore_index: int=None) -> float:
         
         correct = 0.0
-        for batch_label, batch_preds in zip(labels, preds):
+        for batch_label, batch_preds in zip(labels, logits):
             # logits: [Batch, Classes, LCA_0, LCA_1]
             probs = batch_preds.softmax(1)  # get softmax for probabilities
             preds = probs.max(0)[1]  # find maximum across the classes (batches are on 0)
             if ignore_index is not None:
                 # set everything to -1 which is not relevant for grading
-                batch_preds = t.where(batch_label==ignore_index, batch_label, batch_preds)
+                preds = t.where(batch_label==ignore_index, batch_label, preds)
         
             # which are the correct predictions
-            a = (batch_label == batch_preds)
+            a = (batch_label == preds)
 
             if ignore_index is not None:
                 # create a mask hiding the irrelevant entries
@@ -605,17 +607,17 @@ class Instructor:
     def perfect_lcag(self, logits: t.Tensor, labels: t.Tensor, ignore_index: int=None) -> float:
 
         correct = 0.0
-        for batch_label, batch_preds in zip(labels, preds):
+        for batch_label, batch_preds in zip(labels, logits):
             # logits: [Batch, Classes, LCA_0, LCA_1]
-            probs = logits.softmax(1)  # get softmax for probabilities
+            probs = batch_preds.softmax(1)  # get softmax for probabilities
             preds = probs.max(0)[1]  # find maximum across the classes (batches are on 0)
             
             if ignore_index is not None:
                 # set everything to -1 which is not relevant for grading
-                batch_preds = t.where(batch_label==ignore_index, batch_label, batch_preds)
+                preds = t.where(batch_label==ignore_index, batch_label, preds)
         
             # which are the correct predictions
-            a = (batch_label == batch_preds)
+            a = (batch_label == preds)
 
             if ignore_index is not None:
                 # create a mask hiding the irrelevant entries
