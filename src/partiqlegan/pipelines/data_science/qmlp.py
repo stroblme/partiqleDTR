@@ -155,22 +155,22 @@ class qmlp(nn.Module):
 
         def encoding(qc, n_qubits, q_params, identifier):
             for i in range(n_qubits):
-                energy = q_params[i][0]
+                energy = q_params[i][3]
 
                 px = (
-                    q_params[i][1] * energy * t.pi,
+                    q_params[i][0] * energy * t.pi,
                     i,
                     f"{identifier[:-3]}_rx_{i}",
                 )
                 qc.rx(*px)
                 py = (
-                    q_params[i][2] * energy * t.pi,
+                    q_params[i][1] * energy * t.pi,
                     i,
                     f"{identifier[:-3]}_ry_{i}",
                 )
                 qc.ry(*py)
                 pz = (
-                    q_params[i][3] * energy * t.pi,
+                    q_params[i][2] * energy * t.pi,
                     i,
                 )  # rz does not accept identifier
                 qc.rz(*pz)
@@ -405,8 +405,8 @@ class qmlp(nn.Module):
         )  # copy the vqc output across n_classes dimensions and let the nn handle the decoding
         x = x.permute(0, 2, 1)  # (b, c, l, l) -> split the leaves
 
-        skip = x if self.skip_block else None
         x = self.block[0](x)  # initial mlp
+        skip = x if self.skip_block else None
         for seq_mlp in self.block[1]:
             x = seq_mlp(x)
 
