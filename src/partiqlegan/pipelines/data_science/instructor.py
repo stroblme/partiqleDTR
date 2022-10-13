@@ -520,7 +520,7 @@ class Instructor:
             plt.sca(ax[it][1])
             graph_ref.visualize(opt="max", ax=ax[it][1])
 
-            if it * cols > rows:
+            if it >= rows:
                 break
 
             it += 1
