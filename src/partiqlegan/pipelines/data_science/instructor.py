@@ -1,4 +1,4 @@
-from pydoc import locate
+import copy
 import time
 import traceback
 import random
@@ -519,7 +519,7 @@ class Instructor:
         fig.tight_layout()
 
         for it, (logits, lcag_ref) in enumerate(zip(batch_logits, batch_ref)):
-            probs = logits.softmax(1) # TODO: verify this is correct
+            probs = logits.softmax(0) # TODO: verify this is correct
             lcag = probs.max(0)[1]
             assert lcag_ref.shape == lcag.shape
 
@@ -551,19 +551,43 @@ class Instructor:
         def two_child_fix(lcag):
             max_c = lcag.max()
 
-            class_indices = [t.where(lcag==c) for c in range(1, max_c)]
+            def convToPair(pair: t.Tensor):
+                return (int(pair[0]), int(pair[1]))
+            
+            working_lcag = copy.deepcopy(lcag)
+            while(working_lcag.max() > 0):
+                next_c = 0
+                for c in range(1, max_c+1):
+                    directPairs = list((working_lcag == c).nonzero())
+                    directPairs.sort(key=lambda dp: sum(dp))
+
+                    if len(directPairs) > 0:
+                        next_c = c
+                        break
+                    
+                if next_c == 1:
+                    working_lcag -= 1
+                    continue
+
+                for pair in directPairs:
+                    index = convToPair(pair)
+                    lcag[index] -= 1
+                
+                working_lcag = copy.deepcopy(lcag)
+
 
         correct = 0.0
         for label, logit in zip(labels, logits):
             # logits: [Batch, Classes, LCA_0, LCA_1]
-            probs = logit.softmax(1)  # get softmax for probabilities
+            probs = logit.softmax(0)  # get softmax for probabilities
             prediction = probs.max(0)[1]  # find maximum across the classes (batches are on 0)
-
-            prediction = two_child_fix(prediction)
 
             if ignore_index is not None:
                 # set everything to -1 which is not relevant for grading
                 prediction = t.where(label==ignore_index, label, prediction)
+
+            prediction = two_child_fix(prediction)
+
         
             # which are the correct predictions
             a = (label == prediction)
@@ -582,9 +606,9 @@ class Instructor:
     def edge_accuracy(self, logits: t.Tensor, labels: t.Tensor, ignore_index: int=None) -> float:
         
         correct = 0.0
-        for labe, logit in zip(labels, logit):
+        for labe, logit in zip(labels, logits):
             # logits: [Batch, Classes, LCA_0, LCA_1]
-            probs = logit.softmax(1)  # get softmax for probabilities
+            probs = logit.softmax(0)  # get softmax for probabilities
             prediction = probs.max(0)[1]  # find maximum across the classes (batches are on 0)
             if ignore_index is not None:
                 # set everything to -1 which is not relevant for grading
@@ -609,7 +633,7 @@ class Instructor:
         correct = 0.0
         for label, logit in zip(labels, logits):
             # logits: [Batch, Classes, LCA_0, LCA_1]
-            probs = logit.softmax(1)  # get softmax for probabilities
+            probs = logit.softmax(0)  # get softmax for probabilities
             prediction = probs.max(0)[1]  # find maximum across the classes (batches are on 0)
             
             if ignore_index is not None:
