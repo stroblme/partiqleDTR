@@ -416,7 +416,7 @@ class Instructor:
 
                         except Exception as e:
                             log.error(
-                                f"Exception occured when trying to plot graphs in epoch {epoch}: {e}\n\tThe lcag matrices were:\n\n{labels_string}\n\tand\n\n{logits_string}"
+                                f"Exception occured when trying to plot graphs in epoch {epoch}: {e}\n\tThe lcag matrices were:\n\n{labels_string}\n\tand\n\n{logits_string}\n{traceback.print_exc()}"
                             )
 
                         model_state_dict = self.model.state_dict()
