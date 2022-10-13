@@ -606,12 +606,14 @@ class Instructor:
         return correct / labels.size(0) # divide by the batch size
 
     def perfect_lcag(self, logits: t.Tensor, labels: t.Tensor, ignore_index: int=None) -> float:
-        # logits: [Batch, Classes, LCA_0, LCA_1]
-        probs = logits.softmax(1)  # get softmax for probabilities
-        preds = probs.max(1)[1]  # find maximum across the classes (batches are on 0)
+        
 
         correct = 0.0
         for batch_label, batch_preds in zip(labels, preds):
+            # logits: [Batch, Classes, LCA_0, LCA_1]
+            probs = logits.softmax(1)  # get softmax for probabilities
+            preds = probs.max(0)[1]  # find maximum across the classes (batches are on 0)
+            
             if ignore_index is not None:
                 # set everything to -1 which is not relevant for grading
                 batch_preds = t.where(batch_label==ignore_index, batch_label, batch_preds)
