@@ -510,7 +510,8 @@ class Instructor:
         fig.tight_layout()
 
         for it, (logits, lcag_ref) in enumerate(zip(batch_logits, batch_ref)):
-            lcag = logits.max(0)[1]
+            probs = logits.softmax(1) # TODO: verify this is correct
+            lcag = probs.max(0)[1]
             assert lcag_ref.shape == lcag.shape
 
             lcag = t.where(lcag_ref==-1, lcag_ref, lcag)
