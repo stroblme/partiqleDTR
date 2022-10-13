@@ -387,13 +387,15 @@ class Instructor:
                         result = self.model
                         try:
                             selected_logits = [
-                                random.choice(logits_for_plotting).cpu()
+                                random.choice(logits_for_plotting).cpu().detach()
                                 for i in range(self.plotting_rows)
                             ]
                             selected_labels = [
                                 random.choice(labels_for_plotting)
                                 for i in range(self.plotting_rows)
                             ]
+                            logits_string = '\n\n\n'.join('\n'.join('\t'.join(f"{x}" for x in y) for y in a_b.max(0)[1]) for a_b in selected_logits)
+                            labels_string = '\n\n\n'.join('\n'.join('\t'.join(f"{x}" for x in y) for y in a_b) for a_b in selected_labels)
 
                             c_plt = self.plotBatchGraphs(
                                 selected_logits,
