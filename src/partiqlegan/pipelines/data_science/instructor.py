@@ -588,6 +588,27 @@ class Instructor:
                 # set everything to -1 which is not relevant for grading
                 prediction = t.where(label==ignore_index, label, prediction)
 
+            # test_lcag_a = t.Tensor([    [-1,  1,  2,  2],
+            #                             [ 1, -1,  2,  1],
+            #                             [ 2,  2, -1,  2],
+            #                             [ 2,  1,  2, -1]])
+            # test_lcag_b = t.Tensor([    [-1,  1,  2,  2],
+            #                             [ 1, -1,  2,  0],
+            #                             [ 2,  2, -1,  2],
+            #                             [ 2,  0,  2, -1]])
+            # test_lcag_c = t.Tensor([    [-1,  1,  3,  3],
+            #                             [ 1, -1,  3,  3],
+            #                             [ 3,  3, -1,  1],
+            #                             [ 3,  3,  1, -1]])
+            # test_lcag_d = t.Tensor([    [-1,  1,  3, -1],
+            #                             [ 1, -1,  3, -1],
+            #                             [ 3,  3, -1, -1],
+            #                             [-1, -1, -1, -1]])
+
+            # test_lcag_a = two_child_fix(test_lcag_a)
+            # test_lcag_b = two_child_fix(test_lcag_b)
+            # test_lcag_c = two_child_fix(test_lcag_c)
+            # test_lcag_d = two_child_fix(test_lcag_d)
             prediction = two_child_fix(prediction)
 
         
