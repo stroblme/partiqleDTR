@@ -1,8 +1,11 @@
 import numpy as np
+import time
 
 import torch as t
 from torch import nn
 import torch.nn.functional as F
+
+import mlflow
 
 from .utils import *
 
@@ -64,7 +67,7 @@ class MLP(nn.Module):
         return self.batch_norm_layer(x) if self.batchnorm else x  # (b, l, d)
 
 
-class gnn(nn.Module):
+class qgnn(nn.Module):
     """NRI model built off the official implementation.
 
     Contains adaptations to make it work with our use case, plus options for extra layers to give it some more oomph
@@ -108,12 +111,13 @@ class gnn(nn.Module):
         add_rot_gates=True,
         **kwargs,
     ):
-        super(gnn, self).__init__()
+        super(qgnn, self).__init__()
 
         assert dim_feedforward % 2 == 0, "dim_feedforward must be an even number"
 
         self.num_classes = n_classes
         self.layers = n_layers_vqc  # dim_feedforward//8
+        self.total_n_fsps = n_fsps  # used for padding in forward path
         self.factor = factor
         self.tokenize = tokenize
         self.symmetrize = symmetrize
@@ -295,8 +299,11 @@ class gnn(nn.Module):
             print(f"Set up embedding for {len(self.tokenize)} inputs")
 
         # Create first half of inital NRI half-block to go from leaves to edges
+        # initial_mlp = [
+        #     MLP(n_momenta, dim_feedforward, dim_feedforward, dropout_rate, batchnorm)
+        # ]
         initial_mlp = [
-            MLP(n_momenta, dim_feedforward, dim_feedforward, dropout_rate, batchnorm)
+            MLP(n_fsps, dim_feedforward, dim_feedforward, dropout_rate, batchnorm)
         ]
         # Add any additional layers as per request
         initial_mlp.extend(
@@ -527,6 +534,69 @@ class gnn(nn.Module):
             # Now merge the embedding outputs with x (mask has deleted the old tokenized feats)
             x = t.cat([x[..., mask], *emb_x], dim=-1)  # (b, l, d + embeddings)
             del emb_x
+
+
+
+        x = x.reshape(batch, n_leaves * feats)  # flatten the last two dims
+        x = t.nn.functional.pad(
+            x, (0, (self.total_n_fsps * feats) - (n_leaves * feats)), mode="constant", value=0
+        )  # pad up to the largest lcag size. subtract the current size to prevent unnecessary padding.
+        # note that x.size() is here n_leaves * feats
+
+        # set the weights to zero which are either involved in a controlled operation or directly operating on qubits not relevant to the current graph (i.e. where the input was zero padded before)
+        # this is supposed to ensure, that the actual measurement of the circuit is not impacted by any random weights contributing to meaningless 
+        # print(self.quantum_layer._weights)
+        with t.no_grad():
+            for i, p in enumerate(self.var_params):
+                if int(p._name[-1]) > n_leaves or int(p._name[-3]) > n_leaves:
+                    self.quantum_layer._weights[i] = 0.0
+        # print(self.quantum_layer._weights)
+
+        x = self.quantum_layer(x)
+
+        
+
+        def build_binary_permutation_indices(digits):
+            """
+            Generate the binary permutation indices.
+            :param digits:
+            :return:
+            """
+            n_permutations = (digits**2 - digits) // 2
+            permutations_indices = []
+            for i in range(2**digits):
+                if bin(i).count("1") == 2:
+                    permutations_indices.append(i)
+            assert len(permutations_indices) == n_permutations
+            return permutations_indices
+
+        def get_binary_shots(result, permutations_indices, out_shape):
+            """
+            Generate the binary shots.
+            :param result:
+            :param permutations_indices:
+            :param out_shape:
+            :return:
+            """
+            lcag = t.zeros(out_shape)
+            lcag = lcag.to(result.device)
+            for i in range(out_shape[0]):
+                lcag[i][np.tril_indices_from(lcag[0], k=-1)] = result[
+                    i, permutations_indices
+                ]
+            # lcag[:, np.tril_indices_from(lcag[:], k=-1)] = result[:, permutations_indices]
+            lcag = lcag + t.transpose(lcag, 1, 2)
+            return lcag
+
+        x = get_binary_shots(
+            x, build_binary_permutation_indices(n_leaves), (batch, n_leaves, n_leaves)
+        )
+
+
+
+
+
+
 
         # Initial set of linear layers
         # (b, l, m) -> (b, l, d)

@@ -13,7 +13,7 @@ from .hyperparam_optimizer import Hyperparam_Optimizer
 from .instructor import Instructor
 from .gnn import gnn
 from .qftgnn import qftgnn
-from .qgnn_new import qgnn
+from .qgnn import qgnn
 from .dqgnn import dqgnn
 from .dgnn import dgnn
 from .pqgnn import pqgnn
