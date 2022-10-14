@@ -30,7 +30,7 @@ skip_global: True # activates skip connections on global scales
 # GNN
 n_blocks: 3
 n_blocks_range: [1, 5, "linear"]
-n_layers_mlp: 4 # initial mlp layers before the blocks
+n_layers_mlp: 2 # initial mlp layers before the blocks
 n_layers_mlp_range: [1, 5, "linear"]
 n_additional_mlp_layers: 0 # additional layers within a block
 n_additional_mlp_layers_range: [1, 5, "linear"]
