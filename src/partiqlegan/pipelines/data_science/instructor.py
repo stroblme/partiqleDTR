@@ -451,10 +451,10 @@ class Instructor:
                     self.scheduler.step()
 
         except GradientsNanException as e:
-            log.error(f"Gradients became NAN during training\n{e}")
+            log.error(f"Gradients became NAN during training\n{traceback.print_exc()}")
         except Exception as e:
-            log.error(f"Exception occured during training\n{e}\n")
-            traceback.print_exc()
+            log.error(f"Exception occured during training\n{traceback.print_exc()}\n")
+            
 
         # quickly print the gradients..
         if self.log_gradients and len(all_grads) > 0:
