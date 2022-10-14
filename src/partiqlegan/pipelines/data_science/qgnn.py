@@ -1,21 +1,8 @@
 import numpy as np
-import matplotlib.pyplot as plt
-
-from enum import Enum
-import time
-
-from .graph_visualization import hierarchy_pos
 
 import torch as t
 from torch import nn
 import torch.nn.functional as F
-from torch.autograd import Function
-
-import networkx as nx
-import torch_geometric as tg
-from torch_geometric.utils.convert import to_networkx
-from torch_geometric.utils import add_self_loops, degree
-import mlflow
 
 from .utils import *
 
@@ -23,15 +10,13 @@ import qiskit as q
 from qiskit import transpile, assemble
 from qiskit.visualization import *
 from qiskit_machine_learning.neural_networks import CircuitQNN, TwoLayerQNN
-from qiskit_machine_learning.connectors import TorchConnector
 
 import logging
 
 qiskit_logger = logging.getLogger("qiskit")
 qiskit_logger.setLevel(logging.WARNING)
 log = logging.getLogger(__name__)
-
-import os
+from qiskit_machine_learning.connectors import TorchConnector
 
 os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
@@ -39,27 +24,18 @@ os.environ["CUDA_VISIBLE_DEVICES"] = ""
 class MLP(nn.Module):
     """Two-layer fully-connected ELU net with batch norm."""
 
-    def __init__(
-        self,
-        n_in,
-        n_hid,
-        n_out,
-        do_prob,
-        batchnorm=True,
-        activation=F.elu,
-        device=t.device("cpu"),
-    ):
+    def __init__(self, n_in, n_hid, n_out, do_prob, batchnorm=True):
         super(MLP, self).__init__()
 
         self.batchnorm = batchnorm
 
-        self.fc1 = nn.Linear(n_in, n_hid, device=device)
-        self.fc2 = nn.Linear(n_hid, n_out, device=device)
+        self.fc1 = nn.Linear(n_in, n_hid)
+        self.fc2 = nn.Linear(n_hid, n_out)
         if self.batchnorm:
             self.bn = nn.BatchNorm1d(n_out, momentum=0.1, track_running_stats=True)
             # self.bn = nn.BatchNorm1d(n_out, momentum=0.1, track_running_stats=False)  # Use this to overfit
         self.dropout_prob = do_prob
-        self.activation = activation
+
         self.init_weights()
 
     def init_weights(self):
@@ -82,56 +58,13 @@ class MLP(nn.Module):
         Output: (b, l, d)
         """
         # Input shape: [num_sims, num_things, num_features]
-        x = self.activation(self.fc1(inputs))  # (b, l, d)
+        x = F.elu(self.fc1(inputs))  # (b, l, d)
         x = F.dropout(x, self.dropout_prob, training=self.training)  # (b, l, d)
-        x = self.activation(self.fc2(x))  # (b, l, d)
+        x = F.elu(self.fc2(x))  # (b, l, d)
         return self.batch_norm_layer(x) if self.batchnorm else x  # (b, l, d)
 
 
-class qMessagePassing(tg.nn.MessagePassing):
-    def __init__(self, in_channels, out_channels):
-        super().__init__(aggr='add', flow='target_to_source')  # "Add" aggregation (Step 5).
-        self.lin = t.nn.Linear(in_channels, out_channels, bias=False)
-        self.bias = t.nn.Parameter(t.Tensor(out_channels))
-
-        self.reset_parameters()
-
-    def reset_parameters(self):
-        self.lin.reset_parameters()
-        self.bias.data.zero_()
-
-    def forward(self, x, edge_index):
-        # x has shape [N, in_channels]
-        # edge_index has shape [2, E]
-
-        # Step 1: Add self-loops to the adjacency matrix.
-        # edge_index, _ = add_self_loops(edge_index, num_nodes=x.size(0))
-
-        # Step 2: Linearly transform node feature matrix.
-        x = self.lin(x)
-
-        # Step 3: Compute normalization.
-        row, col = edge_index
-        deg = degree(col, x.size(0), dtype=x.dtype)
-        deg_inv_sqrt = deg.pow(-0.5)
-        deg_inv_sqrt[deg_inv_sqrt == float('inf')] = 0
-        norm = deg_inv_sqrt[row] * deg_inv_sqrt[col]
-
-        # Step 4-5: Start propagating messages.
-        out = self.propagate(edge_index, x=x, norm=norm) # internally calls message, aggregate, update
-
-        # Step 6: Apply a final bias vector.
-        out += self.bias
-
-        return out
-
-    def message(self, x_j, norm):
-        # x_j has shape [E, out_channels]
-
-        # Step 4: Normalize node features.
-        return norm.view(-1, 1) * x_j
-
-class qgnn(nn.Module):
+class gnn(nn.Module):
     """NRI model built off the official implementation.
 
     Contains adaptations to make it work with our use case, plus options for extra layers to give it some more oomph
@@ -155,11 +88,18 @@ class qgnn(nn.Module):
         self,
         n_momenta,  # d
         n_classes,  # l
-        dim_feedforward=6,  # ff
+        n_blocks=3,
+        dim_feedforward=128,  # ff
         n_layers_mlp=2,
         n_layers_vqc=3,
-        skip_block=False,
+        n_additional_mlp_layers=2,
+        n_final_mlp_layers=2,
+        skip_block=True,
+        skip_global=True,
         dropout_rate=0.3,
+        factor=True,
+        tokenize=-1,
+        embedding_dims=-1,
         batchnorm=True,
         symmetrize=True,
         n_fsps: int = -1,
@@ -168,20 +108,20 @@ class qgnn(nn.Module):
         add_rot_gates=True,
         **kwargs,
     ):
-        super(qgnn, self).__init__()
+        super(gnn, self).__init__()
 
         assert dim_feedforward % 2 == 0, "dim_feedforward must be an even number"
-        # n_fsps = 4
-        self.layers = n_layers_vqc  # dim_feedforward//8
-        self.total_n_fsps = n_fsps  # used for padding in forward path
+
         self.num_classes = n_classes
+        self.layers = n_layers_vqc  # dim_feedforward//8
+        self.factor = factor
+        self.tokenize = tokenize
         self.symmetrize = symmetrize
+        self.block_additional_mlp_layers = n_additional_mlp_layers
         self.skip_block = skip_block
+        self.skip_global = skip_global
         # self.max_leaves = max_leaves
 
-        # self.initial_mlp = pre_trained_module.initial_mlp
-        # self.blocks = pre_trained_module.blocks
-        # self.final_mlp = pre_trained_module.final_mlp
 
         self.qi = q.utils.QuantumInstance(
             q.Aer.get_backend("aer_simulator_statevector")
@@ -204,22 +144,22 @@ class qgnn(nn.Module):
 
         def encoding(qc, n_qubits, q_params, identifier):
             for i in range(n_qubits):
-                energy = q_params[i][0]
+                energy = q_params[i][3]
 
                 px = (
-                    q_params[i][1] * energy * t.pi,
+                    q_params[i][0] * energy * t.pi,
                     i,
                     f"{identifier[:-3]}_rx_{i}",
                 )
                 qc.rx(*px)
                 py = (
-                    q_params[i][2] * energy * t.pi,
+                    q_params[i][1] * energy * t.pi,
                     i,
                     f"{identifier[:-3]}_ry_{i}",
                 )
                 qc.ry(*py)
                 pz = (
-                    q_params[i][3] * energy * t.pi,
+                    q_params[i][2] * energy * t.pi,
                     i,
                 )  # rz does not accept identifier
                 qc.rz(*pz)
@@ -311,200 +251,368 @@ class qgnn(nn.Module):
             print(f"Interpreter Input {x}")
             return x
 
-        # start = time.time()
-        # self.qnn = CircuitQNN(
-        #     self.qc,
-        #     self.enc_params,
-        #     self.var_params,
-        #     quantum_instance=self.qi,
-        #     # interpret=interpreter,
-        #     # output_shape=(n_fsps**2, n_classes),
-        #     # sampling=True,
-        #     input_gradients=True,
-        # )
-        # self.initial_weights = 0.1 * (
-        #     2 * q.utils.algorithm_globals.random.random(self.qnn.num_weights) - 1
-        # )
-        # log.info(f"Transpilation took {time.time() - start}")
-        # self.quantum_layer = TorchConnector(
-        #     self.qnn, initial_weights=self.initial_weights
-        # )
-        # log.info(f"Initialization done")
+        start = time.time()
+        self.qnn = CircuitQNN(
+            self.qc,
+            self.enc_params,
+            self.var_params,
+            quantum_instance=self.qi,
+            # interpret=interpreter,
+            # output_shape=(n_fsps**2, n_classes),
+            # sampling=True,
+            input_gradients=True,
+        )
+        self.initial_weights = 0.1 * (
+            2 * q.utils.algorithm_globals.random.random(self.qnn.num_weights) - 1
+        )
+        log.info(f"Transpilation took {time.time() - start}")
+        self.quantum_layer = TorchConnector(
+            self.qnn, initial_weights=self.initial_weights
+        )
+        log.info(f"Initialization done")
 
-        # last layer input size depends if we do a concat before (use skip cons)
-        final_input_dim = 2 * dim_feedforward if self.skip_block else dim_feedforward
 
-        self.block = nn.ModuleList(
+
+
+
+
+        # Set up embedding for tokens and adjust input dims
+        if self.tokenize != -1:
+            assert (embedding_dims is not None) and isinstance(
+                embedding_dims, int
+            ), "embedding_dims must be set to an integer is tokenize is given"
+
+            # Initialise the embedding layers, ignoring pad values
+            self.embed = nn.ModuleDict({})
+            for idx, n_tokens in self.tokenize.items():
+                # NOTE: This assumes a pad value of 0 for the input array x
+                self.embed[str(idx)] = nn.Embedding(
+                    n_tokens, embedding_dims, padding_idx=0
+                )
+
+            # And update the infeatures to include the embedded feature dims and delete the original, now tokenized feats
+            n_momenta = n_momenta + (len(self.tokenize) * (embedding_dims - 1))
+            print(f"Set up embedding for {len(self.tokenize)} inputs")
+
+        # Create first half of inital NRI half-block to go from leaves to edges
+        initial_mlp = [
+            MLP(n_momenta, dim_feedforward, dim_feedforward, dropout_rate, batchnorm)
+        ]
+        # Add any additional layers as per request
+        initial_mlp.extend(
             [
                 MLP(
-                    self.num_classes,
+                    dim_feedforward,
                     dim_feedforward,
                     dim_feedforward,
                     dropout_rate,
                     batchnorm,
-                    activation=F.elu,
-                    device=self.device,
-                ),
-                nn.Sequential(
-                    *[
-                        MLP(
-                            dim_feedforward,
-                            dim_feedforward,
-                            dim_feedforward,
-                            dropout_rate,
-                            batchnorm,
-                            activation=F.elu,
-                            device=self.device,
-                        )
-                        for _ in range(n_layers_mlp)
-                    ]
-                ),
-                MLP(
-                    final_input_dim,
-                    final_input_dim // 2,
-                    self.num_classes,
-                    dropout_rate,
-                    batchnorm,
-                    activation=F.elu,
-                    device=self.device,
                 )
-                # This is what would be needed for a concat instead of addition of the skip connection
-                # MLP(dim_feedforward * 2, dim_feedforward, dim_feedforward, dropout, batchnorm) if (block_additional_mlp_layers > 0) else None,
+                for _ in range(n_layers_mlp - 1)
             ]
         )
+        self.initial_mlp = nn.Sequential(*initial_mlp)
 
-        self.qgat = qMessagePassing(4, 4)
+        # MLP to reduce feature dimensions from first Node2Edge before blocks begin
+        self.pre_blocks_mlp = MLP(
+            dim_feedforward * 2,
+            dim_feedforward,
+            dim_feedforward,
+            dropout_rate,
+            batchnorm,
+        )
+
+        block_dim = 3 * dim_feedforward if self.skip_block else 2 * dim_feedforward
+        global_dim = 2 * dim_feedforward if self.skip_global else dim_feedforward
+
+        if self.factor:
+            # MLPs within NRI blocks
+            # The blocks have minimum 1 MLP layer, and if specified they add more with a skip connection
+            # List of blocks
+            self.blocks = nn.ModuleList(
+                [
+                    # List of MLP sequences within each block
+                    nn.ModuleList(
+                        [
+                            # MLP layers before Edge2Node (start of block)
+                            nn.ModuleList(
+                                [
+                                    MLP(
+                                        dim_feedforward,
+                                        dim_feedforward,
+                                        dim_feedforward,
+                                        dropout_rate,
+                                        batchnorm,
+                                    ),
+                                    nn.Sequential(
+                                        *[
+                                            MLP(
+                                                dim_feedforward,
+                                                dim_feedforward,
+                                                dim_feedforward,
+                                                dropout_rate,
+                                                batchnorm,
+                                            )
+                                            for _ in range(n_additional_mlp_layers)
+                                        ]
+                                    ),
+                                    # This is what would be needed for a concat instead of addition of the skip connection
+                                    # MLP(dim_feedforward * 2, dim_feedforward, dim_feedforward, dropout, batchnorm) if (block_additional_mlp_layers > 0) else None,
+                                ]
+                            ),
+                            # MLP layers between Edge2Node and Node2Edge (middle of block)
+                            nn.ModuleList(
+                                [
+                                    MLP(
+                                        dim_feedforward,
+                                        dim_feedforward,
+                                        dim_feedforward,
+                                        dropout_rate,
+                                        batchnorm,
+                                    ),
+                                    nn.Sequential(
+                                        *[
+                                            MLP(
+                                                dim_feedforward,
+                                                dim_feedforward,
+                                                dim_feedforward,
+                                                dropout_rate,
+                                                batchnorm,
+                                            )
+                                            for _ in range(n_additional_mlp_layers)
+                                        ]
+                                    ),
+                                    # This is what would be needed for a concat instead of addition of the skip connection
+                                    # MLP(dim_feedforward * 2, dim_feedforward, dim_feedforward, dropout, batchnorm) if (block_additional_mlp_layers > 0) else None,
+                                ]
+                            ),
+                            # MLP layer after Node2Edge (end of block)
+                            # This is just to reduce feature dim after skip connection was concatenated
+                            MLP(
+                                block_dim,
+                                dim_feedforward,
+                                dim_feedforward,
+                                dropout_rate,
+                                batchnorm,
+                            ),
+                        ]
+                    )
+                    for _ in range(n_blocks)
+                ]
+            )
+            print("Using factor graph MLP encoder.")
+        else:
+            self.mlp3 = MLP(
+                dim_feedforward,
+                dim_feedforward,
+                dim_feedforward,
+                dropout_rate,
+                batchnorm,
+            )
+            self.mlp4 = MLP(
+                dim_feedforward * 2,
+                dim_feedforward,
+                dim_feedforward,
+                dropout_rate,
+                batchnorm,
+            )
+            print("Using MLP encoder.")
+
+        # Final linear layers as requested
+        # self.final_mlp = nn.Sequential(*[MLP(dim_feedforward, dim_feedforward, dim_feedforward, dropout, batchnorm) for _ in range(final_mlp_layers)])
+        final_mlp = [
+            MLP(global_dim, dim_feedforward, dim_feedforward, dropout_rate, batchnorm)
+        ]
+        # Add any additional layers as per request
+        final_mlp.extend(
+            [
+                MLP(
+                    dim_feedforward,
+                    dim_feedforward,
+                    dim_feedforward,
+                    dropout_rate,
+                    batchnorm,
+                )
+                for _ in range(n_final_mlp_layers - 1)
+            ]
+        )
+        self.final_mlp = nn.Sequential(*final_mlp)
+
+        self.fc_out = nn.Linear(dim_feedforward, self.num_classes)
+
+        self.init_weights()
+
+    def init_weights(self):
+        for m in self.modules():
+            if isinstance(m, nn.Linear):
+                nn.init.xavier_normal_(m.weight.data)
+                m.bias.data.fill_(0.1)
+
+    def edge2node(self, x, rel_rec):
+        """
+        Input: (b, l*l, d), (b, l*l, l)
+        Output: (b, l, d)
+        """
+        # TODO assumes that batched matrix product just works
+        # TODO these do not have to be members
+        incoming = t.matmul(rel_rec.permute(0, 2, 1), x)  # (b, l, d)
+        denom = rel_rec.sum(1)[:, 1]
+        return incoming / denom.reshape(-1, 1, 1)  # (b, l, d)
+        # return incoming / incoming.size(1)  # (b, l, d)
+
+    def node2edge(self, x, rel_rec, rel_send):
+        """
+        Input: (b, l, d), (b, l*(l-1), l), (b, l*(l-1), l)
+        Output: (b, l*l(l-1), 2d)
+        """
+        # TODO assumes that batched matrix product just works
+        receivers = t.matmul(rel_rec, x)  # (b, l*l, d)
+        senders = t.matmul(rel_send, x)  # (b, l*l, d)
+        edges = t.cat([senders, receivers], dim=2)  # (b, l*l, 2d)
+
+        return edges
 
     def forward(self, inputs):
         """
         Input: (l, b, d)
         Output: (b, c, l, l)
         """
+        # inputs=inputs.view(inputs.size(1), inputs.size(0), -1)
+
         if isinstance(inputs, (list, tuple)):
-            (
-                x,
-                rel_rec,
-                rel_send,
-            ) = inputs  # get the actual state from the list of states, rel_rec and rel_send
-        else:  # in case we are running torchinfo, rel_rec and rel_send are not provided
+            inputs, rel_rec, rel_send = inputs
+        else:
             rel_rec = None
             rel_send = None
-            x = inputs
 
-        n_leaves, batch, feats = x.size()  # get the representative sizes
-        assert x.device == self.device  # check if we are running on the same device
+        n_leaves, batch, feats = inputs.size()
+        device = inputs.device
 
-        x = x.permute(1, 0, 2)  # (b, l, f)
+        # NOTE create rel matrices on the fly if not given as input
+        if rel_rec is None:
+            # rel_rec = t.eye(
+            #     n_leaves,
+            #     device=device
+            # ).repeat_interleave(n_leaves-1, dim=1).T  # (l*(l-1), l)
+            # rel_rec = rel_rec.unsqueeze(0).expand(inputs.size(1), -1, -1)
+            rel_rec = construct_rel_recvs([inputs.size(0)], device=device)
 
-        def build_fully_connected(input):
-            batch, n_leaves, n_feats = input.size()
+        if rel_send is None:
+            # rel_send = t.eye(n_leaves, device=device).repeat(n_leaves, 1)
+            # rel_send[t.arange(0, n_leaves*n_leaves, n_leaves + 1)] = 0
+            # rel_send = rel_send[rel_send.sum(dim=1) > 0]  # (l*(l-1), l)
+            # rel_send = rel_send.unsqueeze(0).expand(inputs.size(1), -1, -1)
+            rel_send = construct_rel_sends([inputs.size(0)], device=device)
 
-            max_nodes = np.sum(range(n_leaves+1))
-            graph_list = []
-            for data_batch in input:
+        # Input shape: [batch, num_atoms, num_timesteps, num_dims]
+        # Input shape: [num_sims, num_atoms, num_timesteps, num_dims]
+        # x = inputs.view(inputs.size(0), inputs.size(1), -1)
+        # New shape: [num_sims, num_atoms, num_timesteps*num_dims]
+        # Need to match expected shape
+        # TODO should batch_first be a dataset parameter?
+        # (l, b, m) -> (b, l, m)
+        x = inputs.permute(1, 0, 2)  # (b, l, m)
 
-                edges = []
-                for level in range(n_leaves-1):
-                    for n_level in range(level+1):
-                        level_node_idx = n_level + (2**level-1)
-                        max_level_node_idx = level + (2**level-1)
-                        for n_other in range(max_level_node_idx+1, max_nodes):
-                            edges.append([level_node_idx, n_other])
+        # Create embeddings and merge back into x
+        # TODO: Move mask creation to init, optimise this loop
+        if self.tokenize != -1:
+            emb_x = []
+            # We'll use this to drop tokenized features from x
+            mask = t.ones(feats, dtype=t.bool, device=device)
+            for idx, emb in self.embed.items():
+                # Note we need to convert tokens to type long here for embedding layer
+                emb_x.append(emb(x[..., int(idx)].long()))  # List of (b, l, emb_dim)
+                mask[int(idx)] = False
 
-                edges = t.Tensor(edges).long().permute(1,0)
-                embeddings = t.zeros(max_nodes, n_feats)
-                embeddings[-n_leaves:] = data_batch
-                # edges = t.combinations(t.Tensor(range(n_leaves)).long()).permute(1,0)
-                graph_batch = tg.data.Data(x=embeddings, edge_index=edges)
+            # Now merge the embedding outputs with x (mask has deleted the old tokenized feats)
+            x = t.cat([x[..., mask], *emb_x], dim=-1)  # (b, l, d + embeddings)
+            del emb_x
 
-                graph_list.append(graph_batch)
+        # Initial set of linear layers
+        # (b, l, m) -> (b, l, d)
+        x = self.initial_mlp(
+            x
+        )  # Series of 2-layer ELU net per node  (b, l, d) optionally includes embeddings
 
-            return tg.data.Batch().from_data_list(graph_list)
+        # (b, l, d), (b, l*l, l), (b, l*l, l) -> (b, l, 2*d)
+        x = self.node2edge(x, rel_rec, rel_send)  # (b, l*l, 2d)
 
-        x = build_fully_connected(x)
+        # All things related to NRI blocks are in here
+        if self.factor:
+            x = self.pre_blocks_mlp(x)  # (b, l*l, d)
 
-        vis = to_networkx(x)
-        plt.close()
-        plt.figure(1,figsize=(8,8)) 
-        pos=nx.circular_layout(vis)
-        # pos = hierarchy_pos(vis, max(max(x.edge_index)))
-        nx.draw(vis, pos, cmap=plt.get_cmap('Set3'),node_size=70,linewidths=6)
-        plt.savefig("graph.png")
+            # Skip connection to jump over all NRI blocks
+            x_global_skip = x
 
+            for block in self.blocks:
+                x_skip = x  # (b, l*l, d)
 
-        x.x = self.qgat(x.x, x.edge_index) # messages flow to uninitialized nodes in graph
+                # First MLP sequence
+                x = block[0][0](x)  # (b, l*l, d)
+                if self.block_additional_mlp_layers > 0:
+                    x_first_skip = x  # (b, l*l, d)
+                    x = block[0][1](x)  # (b, l*l, d)
+                    x = x + x_first_skip  # (b, l*l, d)
+                    del x_first_skip
 
-        x = x.reshape(batch, n_leaves * feats)  # flatten the last two dims
-        x = t.nn.functional.pad(
-            x, (0, (self.total_n_fsps * feats) - (n_leaves * feats)), mode="constant", value=0
-        )  # pad up to the largest lcag size. subtract the current size to prevent unnecessary padding.
-        # note that x.size() is here n_leaves * feats
+                # Create nodes from edges
+                x = self.edge2node(x, rel_rec)  # (b, l, d)
 
-        # set the weights to zero which are either involved in a controlled operation or directly operating on qubits not relevant to the current graph (i.e. where the input was zero padded before)
-        # this is supposed to ensure, that the actual measurement of the circuit is not impacted by any random weights contributing to meaningless 
-        # print(self.quantum_layer._weights)
-        with t.no_grad():
-            for i, p in enumerate(self.var_params):
-                if int(p._name[-1]) > n_leaves or int(p._name[-3]) > n_leaves:
-                    self.quantum_layer._weights[i] = 0.0
-        # print(self.quantum_layer._weights)
+                # Second MLP sequence
+                x = block[1][0](x)  # (b, l, d)
+                if self.block_additional_mlp_layers > 0:
+                    x_second_skip = x  # (b, l*l, d)
+                    x = block[1][1](x)  # (b, l*l, d)
+                    x = x + x_second_skip  # (b, l*l, d)
+                    del x_second_skip
 
-        x = self.quantum_layer(x)
+                # Create edges from nodes
+                x = self.node2edge(x, rel_rec, rel_send)  # (b, l*l, 2d)
 
-        
+                if self.skip_block:
+                    # Final MLP in block to reduce dimensions again
+                    x = t.cat((x, x_skip), dim=2)  # Skip connection  # (b, l*l, 3d)
+                x = block[2](x)  # (b, l*l, d)
+                del x_skip
 
-        def build_binary_permutation_indices(digits):
-            """
-            Generate the binary permutation indices.
-            :param digits:
-            :return:
-            """
-            n_permutations = (digits**2 - digits) // 2
-            permutations_indices = []
-            for i in range(2**digits):
-                if bin(i).count("1") == 2:
-                    permutations_indices.append(i)
-            assert len(permutations_indices) == n_permutations
-            return permutations_indices
+            if self.skip_global:
+                # Global skip connection
+                x = t.cat(
+                    (x, x_global_skip), dim=2
+                )  # Skip connection  # (b, l*(l-1), 2d)
 
-        def get_binary_shots(result, permutations_indices, out_shape):
-            """
-            Generate the binary shots.
-            :param result:
-            :param permutations_indices:
-            :param out_shape:
-            :return:
-            """
-            lcag = t.zeros(out_shape)
-            lcag = lcag.to(result.device)
-            for i in range(out_shape[0]):
-                lcag[i][np.tril_indices_from(lcag[0], k=-1)] = result[
-                    i, permutations_indices
-                ]
-            # lcag[:, np.tril_indices_from(lcag[:], k=-1)] = result[:, permutations_indices]
-            lcag = lcag + t.transpose(lcag, 1, 2)
-            return lcag
+            # Cleanup
+            del rel_rec, rel_send
 
-        x = get_binary_shots(
-            x, build_binary_permutation_indices(n_leaves), (batch, n_leaves, n_leaves)
-        )
+        # else:
+        #     x = self.mlp3(x)  # (b, l*(l-1), d)
+        #     x = t.cat((x, x_skip), dim=2)  # Skip connection  # (b, l*(l-1), 2d)
+        #     x = self.mlp4(x)  # (b, l*(l-1), d)
 
-        x = x.reshape(batch, 1, n_leaves * n_leaves).repeat(
-            1, self.num_classes, 1
-        )  # copy the vqc output across n_classes dimensions and let the nn handle the decoding
-        x = x.permute(0, 2, 1)  # (b, c, l, l) -> split the leaves
+        # Final set of linear layers
+        x = self.final_mlp(x)  # Series of 2-layer ELU net per node (b, l, d)
 
-        skip = x if self.skip_block else None
-        x = self.block[0](x)  # initial mlp
-        for seq_mlp in self.block[1]:
-            x = seq_mlp(x)
+        # Output what will be used for LCA
+        x = self.fc_out(x)  # (b, l*l, c)
+        out = x.reshape(batch, n_leaves, n_leaves, self.num_classes)
 
-        x = t.cat((x, skip), dim=2) if self.skip_block else x  # Skip connection
-        x = self.block[2](x)  # (b, c, l, l) -> final mlp
+        # Change to LCA shape
+        # x is currently the flattened rows of the predicted LCA but without the diagonal
+        # We need to create an empty LCA then populate the off-diagonals with their corresponding values
+        # out = t.zeros((batch, n_leaves, n_leaves, self.num_classes), device=device)  # (b, l, l, c)
+        # ind_upper = t.triu_indices(n_leaves, n_leaves, offset=1)
+        # ind_lower = t.tril_indices(n_leaves, n_leaves, offset=-1)
 
-        x = x.reshape(batch, n_leaves, n_leaves, self.num_classes)
-        x = x.permute(0, 3, 1, 2)  # (b, c, l, l)
+        # Assign the values to their corresponding position in the LCA
+        # The right side is just some quick mafs to get the correct edge predictions from the flattened x array
+        # out[:, ind_upper[0], ind_upper[1], :] = x[:, (ind_upper[0] * (n_leaves - 1)) + ind_upper[1] - 1, :]
+        # out[:, ind_lower[0], ind_lower[1], :] = x[:, (ind_lower[0] * (n_leaves - 1)) + ind_lower[1], :]
 
-        x = t.div(x + t.transpose(x, 2, 3), 2) if self.symmetrize else x  # (b, c, l, l)
+        # Need in the order for cross entropy loss
+        out = out.permute(0, 3, 1, 2)  # (b, c, l, l)
 
-        return x
+        # Symmetrize
+        if self.symmetrize:
+            out = t.div(out + t.transpose(out, 2, 3), 2)  # (b, c, l, l)
+
+        return out
