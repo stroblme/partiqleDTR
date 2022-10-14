@@ -549,7 +549,7 @@ class Instructor:
     def logic_accuracy(self, logits: t.Tensor, labels: t.Tensor, ignore_index: int=None) -> float:
         
         def two_child_fix(lcag):
-            max_c = lcag.max()
+            max_c = lcag.max().int()
 
             def convToPair(pair: t.Tensor):
                 return (int(pair[0]), int(pair[1]))
