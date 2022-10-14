@@ -608,22 +608,22 @@ class Instructor:
     def edge_accuracy(self, logits: t.Tensor, labels: t.Tensor, ignore_index: int=None) -> float:
         
         correct = 0.0
-        for labe, logit in zip(labels, logits):
+        for label, logit in zip(labels, logits):
             # logits: [Batch, Classes, LCA_0, LCA_1]
             probs = logit.softmax(0)  # get softmax for probabilities
             prediction = probs.max(0)[1]  # find maximum across the classes (batches are on 0)
             if ignore_index is not None:
                 # set everything to -1 which is not relevant for grading
-                prediction = t.where(labe==ignore_index, labe, prediction)
+                prediction = t.where(label==ignore_index, label, prediction)
         
             # which are the correct predictions
-            a = (labe == prediction)
+            a = (label == prediction)
 
             if ignore_index is not None:
                 # create a mask hiding the irrelevant entries
-                b = (labe != t.ones(labe.shape)*ignore_index)
+                b = (label != t.ones(label.shape)*ignore_index)
             else:
-                b = (labe == labe)    # simply create an "True"-matrix to hide the mask
+                b = (label == label)    # simply create an "True"-matrix to hide the mask
 
             correct += (a == b).float().sum()/b.sum() # divide by the size of the matrix
 
