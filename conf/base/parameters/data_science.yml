@@ -9,7 +9,7 @@ epochs: 20
 normalize: "smartone" # one, smartone, zmuv
 normalize_individually: False
 zero_mean: False
-dim_feedforward: 64
+dim_feedforward: 32
 dim_feedforward_range: [4, 2048, "log"]
 batchnorm: True
 
