@@ -109,6 +109,7 @@ class qgnn(nn.Module):
         device: str = "cpu",
         data_reupload=True,
         add_rot_gates=True,
+        padding_dropout=True,
         **kwargs,
     ):
         super(qgnn, self).__init__()
@@ -125,6 +126,7 @@ class qgnn(nn.Module):
         self.skip_block = skip_block
         self.skip_global = skip_global
         # self.max_leaves = max_leaves
+        self.padding_dropout = padding_dropout
 
 
         self.qi = q.utils.QuantumInstance(
@@ -546,11 +548,12 @@ class qgnn(nn.Module):
         # set the weights to zero which are either involved in a controlled operation or directly operating on qubits not relevant to the current graph (i.e. where the input was zero padded before)
         # this is supposed to ensure, that the actual measurement of the circuit is not impacted by any random weights contributing to meaningless 
         # print(self.quantum_layer._weights)
-        with t.no_grad():
-            for i, p in enumerate(self.var_params):
-                if int(p._name[-1]) > n_leaves or int(p._name[-3]) > n_leaves:
-                    self.quantum_layer._weights[i] = 0.0
-        # print(self.quantum_layer._weights)
+        if self.padding_dropout:
+            with t.no_grad():
+                for i, p in enumerate(self.var_params):
+                    if int(p._name[-1]) > n_leaves or int(p._name[-3]) > n_leaves:
+                        self.quantum_layer._weights[i] = 0.0
+            # print(self.quantum_layer._weights)
 
         x = self.quantum_layer(x)
 
