@@ -588,8 +588,12 @@ class qgnn(nn.Module):
             lcag = lcag + t.transpose(lcag, 1, 2)
             return lcag
 
+        # x = get_binary_shots(
+        #     x, build_binary_permutation_indices(n_leaves), (batch, n_leaves, n_leaves)
+        # )
+
         x = get_binary_shots(
-            x, build_binary_permutation_indices(n_leaves), (batch, n_leaves, n_leaves)
+            x, build_binary_permutation_indices(self.total_n_fsps), (batch, self.total_n_fsps, self.total_n_fsps)
         )
 
 
