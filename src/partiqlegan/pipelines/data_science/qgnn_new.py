@@ -4,11 +4,17 @@ import matplotlib.pyplot as plt
 from enum import Enum
 import time
 
+from .graph_visualization import hierarchy_pos
+
 import torch as t
 from torch import nn
 import torch.nn.functional as F
 from torch.autograd import Function
 
+import networkx as nx
+import torch_geometric as tg
+from torch_geometric.utils.convert import to_networkx
+from torch_geometric.utils import add_self_loops, degree
 import mlflow
 
 from .utils import *
@@ -82,7 +88,50 @@ class MLP(nn.Module):
         return self.batch_norm_layer(x) if self.batchnorm else x  # (b, l, d)
 
 
-class qmlp(nn.Module):
+class qMessagePassing(tg.nn.MessagePassing):
+    def __init__(self, in_channels, out_channels):
+        super().__init__(aggr='add', flow='target_to_source')  # "Add" aggregation (Step 5).
+        self.lin = t.nn.Linear(in_channels, out_channels, bias=False)
+        self.bias = t.nn.Parameter(t.Tensor(out_channels))
+
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        self.lin.reset_parameters()
+        self.bias.data.zero_()
+
+    def forward(self, x, edge_index):
+        # x has shape [N, in_channels]
+        # edge_index has shape [2, E]
+
+        # Step 1: Add self-loops to the adjacency matrix.
+        # edge_index, _ = add_self_loops(edge_index, num_nodes=x.size(0))
+
+        # Step 2: Linearly transform node feature matrix.
+        x = self.lin(x)
+
+        # Step 3: Compute normalization.
+        row, col = edge_index
+        deg = degree(col, x.size(0), dtype=x.dtype)
+        deg_inv_sqrt = deg.pow(-0.5)
+        deg_inv_sqrt[deg_inv_sqrt == float('inf')] = 0
+        norm = deg_inv_sqrt[row] * deg_inv_sqrt[col]
+
+        # Step 4-5: Start propagating messages.
+        out = self.propagate(edge_index, x=x, norm=norm) # internally calls message, aggregate, update
+
+        # Step 6: Apply a final bias vector.
+        out += self.bias
+
+        return out
+
+    def message(self, x_j, norm):
+        # x_j has shape [E, out_channels]
+
+        # Step 4: Normalize node features.
+        return norm.view(-1, 1) * x_j
+
+class qgnn(nn.Module):
     """NRI model built off the official implementation.
 
     Contains adaptations to make it work with our use case, plus options for extra layers to give it some more oomph
@@ -117,10 +166,9 @@ class qmlp(nn.Module):
         device: str = "cpu",
         data_reupload=True,
         add_rot_gates=True,
-        padding_drouput=True,
         **kwargs,
     ):
-        super(qmlp, self).__init__()
+        super(qgnn, self).__init__()
 
         assert dim_feedforward % 2 == 0, "dim_feedforward must be an even number"
         # n_fsps = 4
@@ -130,7 +178,7 @@ class qmlp(nn.Module):
         self.symmetrize = symmetrize
         self.skip_block = skip_block
         # self.max_leaves = max_leaves
-        self.padding_drouput = padding_drouput
+
         # self.initial_mlp = pre_trained_module.initial_mlp
         # self.blocks = pre_trained_module.blocks
         # self.final_mlp = pre_trained_module.final_mlp
@@ -156,22 +204,22 @@ class qmlp(nn.Module):
 
         def encoding(qc, n_qubits, q_params, identifier):
             for i in range(n_qubits):
-                energy = q_params[i][3]
+                energy = q_params[i][0]
 
                 px = (
-                    q_params[i][0] * energy * t.pi,
+                    q_params[i][1] * energy * t.pi,
                     i,
                     f"{identifier[:-3]}_rx_{i}",
                 )
                 qc.rx(*px)
                 py = (
-                    q_params[i][1] * energy * t.pi,
+                    q_params[i][2] * energy * t.pi,
                     i,
                     f"{identifier[:-3]}_ry_{i}",
                 )
                 qc.ry(*py)
                 pz = (
-                    q_params[i][2] * energy * t.pi,
+                    q_params[i][3] * energy * t.pi,
                     i,
                 )  # rz does not accept identifier
                 qc.rz(*pz)
@@ -263,25 +311,25 @@ class qmlp(nn.Module):
             print(f"Interpreter Input {x}")
             return x
 
-        start = time.time()
-        self.qnn = CircuitQNN(
-            self.qc,
-            self.enc_params,
-            self.var_params,
-            quantum_instance=self.qi,
-            # interpret=interpreter,
-            # output_shape=(n_fsps**2, n_classes),
-            # sampling=True,
-            input_gradients=True,
-        )
-        self.initial_weights = 0.1 * (
-            2 * q.utils.algorithm_globals.random.random(self.qnn.num_weights) - 1
-        )
-        log.info(f"Transpilation took {time.time() - start}")
-        self.quantum_layer = TorchConnector(
-            self.qnn, initial_weights=self.initial_weights
-        )
-        log.info(f"Initialization done")
+        # start = time.time()
+        # self.qnn = CircuitQNN(
+        #     self.qc,
+        #     self.enc_params,
+        #     self.var_params,
+        #     quantum_instance=self.qi,
+        #     # interpret=interpreter,
+        #     # output_shape=(n_fsps**2, n_classes),
+        #     # sampling=True,
+        #     input_gradients=True,
+        # )
+        # self.initial_weights = 0.1 * (
+        #     2 * q.utils.algorithm_globals.random.random(self.qnn.num_weights) - 1
+        # )
+        # log.info(f"Transpilation took {time.time() - start}")
+        # self.quantum_layer = TorchConnector(
+        #     self.qnn, initial_weights=self.initial_weights
+        # )
+        # log.info(f"Initialization done")
 
         # last layer input size depends if we do a concat before (use skip cons)
         final_input_dim = 2 * dim_feedforward if self.skip_block else dim_feedforward
@@ -325,6 +373,8 @@ class qmlp(nn.Module):
             ]
         )
 
+        self.qgat = qMessagePassing(4, 4)
+
     def forward(self, inputs):
         """
         Input: (l, b, d)
@@ -344,7 +394,45 @@ class qmlp(nn.Module):
         n_leaves, batch, feats = x.size()  # get the representative sizes
         assert x.device == self.device  # check if we are running on the same device
 
-        x = x.permute(1, 0, 2)  # (b, l, m)
+        x = x.permute(1, 0, 2)  # (b, l, f)
+
+        def build_fully_connected(input):
+            batch, n_leaves, n_feats = input.size()
+
+            max_nodes = np.sum(range(n_leaves+1))
+            graph_list = []
+            for data_batch in input:
+
+                edges = []
+                for level in range(n_leaves-1):
+                    for n_level in range(level+1):
+                        level_node_idx = n_level + (2**level-1)
+                        max_level_node_idx = level + (2**level-1)
+                        for n_other in range(max_level_node_idx+1, max_nodes):
+                            edges.append([level_node_idx, n_other])
+
+                edges = t.Tensor(edges).long().permute(1,0)
+                embeddings = t.zeros(max_nodes, n_feats)
+                embeddings[-n_leaves:] = data_batch
+                # edges = t.combinations(t.Tensor(range(n_leaves)).long()).permute(1,0)
+                graph_batch = tg.data.Data(x=embeddings, edge_index=edges)
+
+                graph_list.append(graph_batch)
+
+            return tg.data.Batch().from_data_list(graph_list)
+
+        x = build_fully_connected(x)
+
+        vis = to_networkx(x)
+        plt.close()
+        plt.figure(1,figsize=(8,8)) 
+        pos=nx.circular_layout(vis)
+        # pos = hierarchy_pos(vis, max(max(x.edge_index)))
+        nx.draw(vis, pos, cmap=plt.get_cmap('Set3'),node_size=70,linewidths=6)
+        plt.savefig("graph.png")
+
+
+        x.x = self.qgat(x.x, x.edge_index) # messages flow to uninitialized nodes in graph
 
         x = x.reshape(batch, n_leaves * feats)  # flatten the last two dims
         x = t.nn.functional.pad(
@@ -355,11 +443,10 @@ class qmlp(nn.Module):
         # set the weights to zero which are either involved in a controlled operation or directly operating on qubits not relevant to the current graph (i.e. where the input was zero padded before)
         # this is supposed to ensure, that the actual measurement of the circuit is not impacted by any random weights contributing to meaningless 
         # print(self.quantum_layer._weights)
-        if self.padding_drouput:
-            with t.no_grad():
-                for i, p in enumerate(self.var_params):
-                    if int(p._name[-1]) > n_leaves or int(p._name[-3]) > n_leaves:
-                        self.quantum_layer._weights[i] = 0.0
+        with t.no_grad():
+            for i, p in enumerate(self.var_params):
+                if int(p._name[-1]) > n_leaves or int(p._name[-3]) > n_leaves:
+                    self.quantum_layer._weights[i] = 0.0
         # print(self.quantum_layer._weights)
 
         x = self.quantum_layer(x)
@@ -407,8 +494,8 @@ class qmlp(nn.Module):
         )  # copy the vqc output across n_classes dimensions and let the nn handle the decoding
         x = x.permute(0, 2, 1)  # (b, c, l, l) -> split the leaves
 
-        x = self.block[0](x)  # initial mlp
         skip = x if self.skip_block else None
+        x = self.block[0](x)  # initial mlp
         for seq_mlp in self.block[1]:
             x = seq_mlp(x)
 
