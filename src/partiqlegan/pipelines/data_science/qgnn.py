@@ -305,7 +305,7 @@ class qgnn(nn.Module):
         #     MLP(n_momenta, dim_feedforward, dim_feedforward, dropout_rate, batchnorm)
         # ]
         initial_mlp = [
-            MLP(n_fsps, dim_feedforward, dim_feedforward, dropout_rate, batchnorm)
+            MLP(1, dim_feedforward, dim_feedforward, dropout_rate, batchnorm)
         ]
         # Add any additional layers as per request
         initial_mlp.extend(
@@ -565,12 +565,11 @@ class qgnn(nn.Module):
             :param digits:
             :return:
             """
-            n_permutations = (digits**2 - digits) // 2
             permutations_indices = []
             for i in range(2**digits):
-                if bin(i).count("1") == 2:
+                if bin(i).count("1") == 1:
                     permutations_indices.append(i)
-            assert len(permutations_indices) == n_permutations
+            assert len(permutations_indices) == digits
             return permutations_indices
 
         def get_binary_shots(result, permutations_indices, out_shape):
@@ -584,26 +583,17 @@ class qgnn(nn.Module):
             lcag = t.zeros(out_shape)
             lcag = lcag.to(result.device)
             for i in range(out_shape[0]):
-                lcag[i][np.tril_indices_from(lcag[0], k=-1)] = result[
+                lcag[i] = result[
                     i, permutations_indices
                 ]
             # lcag[:, np.tril_indices_from(lcag[:], k=-1)] = result[:, permutations_indices]
-            lcag = lcag + t.transpose(lcag, 1, 2)
             return lcag
 
-        # x = get_binary_shots(
-        #     x, build_binary_permutation_indices(n_leaves), (batch, n_leaves, n_leaves)
-        # )
-
         x = get_binary_shots(
-            x, build_binary_permutation_indices(self.total_n_fsps), (batch, self.total_n_fsps, self.total_n_fsps)
+            x, build_binary_permutation_indices(n_leaves), (batch, n_leaves)
         )
 
-
-
-
-
-
+        x = x.reshape(batch, n_leaves, 1)
 
         # Initial set of linear layers
         # (b, l, m) -> (b, l, d)
