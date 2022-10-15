@@ -8,8 +8,8 @@ max_children: 3 # careful, this only controls how many children a single particl
 min_children: 2
 isp_weight: 1.0
 train_events_per_top: 100
-val_events_per_top: 20
-test_events_per_top: 10
+val_events_per_top: 30
+test_events_per_top: 15
 seed: 1111
 iso_retries: 0
 pad_to: -1
