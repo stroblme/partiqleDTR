@@ -15,9 +15,9 @@ batchnorm: True
 
 dropout_rate: 0.2
 dropout_rate_range: [0.1, 1.0, "linear"]
-learning_rate: 0.001
+learning_rate: 0.01
 learning_rate_range: [1e-5, 1e-1, "log"]
-learning_rate_decay: 100
+learning_rate_decay: 200
 learning_rate_decay_range: [1, 1000, "log"]
 gamma: 0.5
 batch_size: 4
