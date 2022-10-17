@@ -612,7 +612,7 @@ class qgnn(nn.Module):
             x = x.reshape(batch, n_leaves, 1)
         else:
             x = get_all_shots(
-                x, (batch, 2**n_leaves-1)
+                x, (batch, 2**self.total_n_fsps-1)
             )
 
             x = x.reshape(batch, 1, 2**n_leaves-1).repeat(
