@@ -118,6 +118,7 @@ class qmlp(nn.Module):
         data_reupload=True,
         add_rot_gates=True,
         padding_dropout=True,
+        mutually_exclusive_meas=False,
         **kwargs,
     ):
         super(qmlp, self).__init__()
@@ -134,6 +135,7 @@ class qmlp(nn.Module):
         # self.initial_mlp = pre_trained_module.initial_mlp
         # self.blocks = pre_trained_module.blocks
         # self.final_mlp = pre_trained_module.final_mlp
+        self.mutually_exclusive_meas = mutually_exclusive_meas
 
         self.qi = q.utils.QuantumInstance(
             q.Aer.get_backend("aer_simulator_statevector")
@@ -375,7 +377,7 @@ class qmlp(nn.Module):
             n_permutations = (digits**2 - digits) // 2
             permutations_indices = []
             for i in range(2**digits):
-                if bin(i).count("1") == 2:
+                if bin(i).count("1") == 2: # TODO: verify this
                     permutations_indices.append(i)
             assert len(permutations_indices) == n_permutations
             return permutations_indices

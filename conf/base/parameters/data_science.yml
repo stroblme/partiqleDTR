@@ -49,6 +49,7 @@ add_rot_gates_range: [True, False]
 n_layers_vqc: 3
 n_layers_vqc_range: [1, 5, "linear"]
 padding_dropout: False
+mutually_exclusive_meas: False
 #TODO specify when available
 redis_host: "localhost"
 redis_port: 6379
