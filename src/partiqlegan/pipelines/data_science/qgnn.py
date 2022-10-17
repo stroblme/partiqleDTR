@@ -615,7 +615,7 @@ class qgnn(nn.Module):
                 x, (batch, 2**self.total_n_fsps-1)
             )
 
-            x = x.reshape(batch, 1, 2**n_leaves-1).repeat(
+            x = x.reshape(batch, 1, 2**self.total_n_fsps-1).repeat(
                 1, n_leaves, 1
             )
             # x = x.permute(0, 2, 1)  # (b, c, l, l) -> split the leaves
