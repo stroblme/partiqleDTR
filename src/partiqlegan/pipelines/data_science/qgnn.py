@@ -610,7 +610,9 @@ class qgnn(nn.Module):
                 x, (batch, 2**n_leaves-1)
             )
 
-            x = x.reshape(batch, 2**n_leaves-1, 1)
+            x = x.reshape(batch, 1, 2**n_leaves-1).repeat(
+                1, n_leaves, 1
+            )
 
         # Initial set of linear layers
         # (b, l, 1) -> (b, l, d)
