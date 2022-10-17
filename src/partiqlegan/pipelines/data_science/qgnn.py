@@ -110,6 +110,7 @@ class qgnn(nn.Module):
         data_reupload=True,
         add_rot_gates=True,
         padding_dropout=True,
+        mutually_exclusive_meas=True,
         **kwargs,
     ):
         super(qgnn, self).__init__()
@@ -127,7 +128,7 @@ class qgnn(nn.Module):
         self.skip_global = skip_global
         # self.max_leaves = max_leaves
         self.padding_dropout = padding_dropout
-
+        self.mutually_exclusive_meas = mutually_exclusive_meas
 
         self.qi = q.utils.QuantumInstance(
             q.Aer.get_backend("aer_simulator_statevector")
@@ -589,14 +590,30 @@ class qgnn(nn.Module):
             # lcag[:, np.tril_indices_from(lcag[:], k=-1)] = result[:, permutations_indices]
             return lcag
 
-        x = get_binary_shots(
-            x, build_binary_permutation_indices(n_leaves), (batch, n_leaves)
-        )
+        def get_all_shots(result, out_shape):
+            lcag = t.zeros(out_shape)
+            lcag = lcag.to(result.device)
+            for i in range(out_shape[0]):
+                lcag[i] = result[
+                    i, out_shape[1]
+                ]
+            return lcag
 
-        x = x.reshape(batch, n_leaves, 1)
+        if self.mutually_exclusive_meas:
+            x = get_binary_shots(
+                x, build_binary_permutation_indices(n_leaves), (batch, n_leaves)
+            )
+
+            x = x.reshape(batch, n_leaves, 1)
+        else:
+            x = get_all_shots(
+                x, (batch, 2**n_leaves-1)
+            )
+
+            x = x.reshape(batch, 2**n_leaves-1, 1)
 
         # Initial set of linear layers
-        # (b, l, m) -> (b, l, d)
+        # (b, l, 1) -> (b, l, d)
         x = self.initial_mlp(
             x
         )  # Series of 2-layer ELU net per node  (b, l, d) optionally includes embeddings

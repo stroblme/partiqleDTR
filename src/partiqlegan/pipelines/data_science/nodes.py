@@ -222,6 +222,7 @@ def create_model(
     add_rot_gates: bool,
     n_layers_vqc: bool,
     padding_dropout: bool,
+    mutually_exclusive_meas: bool,
     pre_trained_model: DataParallel = None,
     **kwargs,
 ) -> DataParallel:
@@ -248,6 +249,7 @@ def create_model(
         add_rot_gates=add_rot_gates,
         n_layers_vqc=n_layers_vqc,
         padding_dropout=padding_dropout,
+        mutually_exclusive_meas=mutually_exclusive_meas,
         pre_trained_model=pre_trained_model,
         **kwargs,
     )
