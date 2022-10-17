@@ -305,9 +305,14 @@ class qgnn(nn.Module):
         # initial_mlp = [
         #     MLP(n_momenta, dim_feedforward, dim_feedforward, dropout_rate, batchnorm)
         # ]
-        initial_mlp = [
-            MLP(1, dim_feedforward, dim_feedforward, dropout_rate, batchnorm)
-        ]
+        if self.mutually_exclusive_meas:
+            initial_mlp = [
+                MLP(1, dim_feedforward, dim_feedforward, dropout_rate, batchnorm)
+            ]
+        else:
+            initial_mlp = [
+                MLP(2**self.total_n_fsps-1, dim_feedforward, dim_feedforward, dropout_rate, batchnorm)
+            ]
         # Add any additional layers as per request
         initial_mlp.extend(
             [
@@ -613,6 +618,8 @@ class qgnn(nn.Module):
             x = x.reshape(batch, 1, 2**n_leaves-1).repeat(
                 1, n_leaves, 1
             )
+            # x = x.permute(0, 2, 1)  # (b, c, l, l) -> split the leaves
+
 
         # Initial set of linear layers
         # (b, l, 1) -> (b, l, d)
