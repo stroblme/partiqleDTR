@@ -223,6 +223,7 @@ def create_model(
     n_layers_vqc: bool,
     padding_dropout: bool,
     mutually_exclusive_meas: bool,
+    backend: str,
     pre_trained_model: DataParallel = None,
     **kwargs,
 ) -> DataParallel:
@@ -250,6 +251,7 @@ def create_model(
         n_layers_vqc=n_layers_vqc,
         padding_dropout=padding_dropout,
         mutually_exclusive_meas=mutually_exclusive_meas,
+        backend=backend,
         pre_trained_model=pre_trained_model,
         **kwargs,
     )

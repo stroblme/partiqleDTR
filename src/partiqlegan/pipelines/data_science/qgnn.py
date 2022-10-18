@@ -111,6 +111,7 @@ class qgnn(nn.Module):
         add_rot_gates=True,
         padding_dropout=True,
         mutually_exclusive_meas=True,
+        backend="aer_simulator_statevector",
         **kwargs,
     ):
         super(qgnn, self).__init__()
@@ -130,8 +131,20 @@ class qgnn(nn.Module):
         self.padding_dropout = padding_dropout
         self.mutually_exclusive_meas = mutually_exclusive_meas
 
+        if backend != "aer_simulator_statevector":
+            import ibmq_access
+            self.provider = q.IBMQ.enable_account(
+                token=ibmq_access.token,
+                hub=ibmq_access.hub,
+                group=ibmq_access.group,
+                project=ibmq_access.project,
+            )
+            self.backend = self.provider.get_backend(backend)
+        else:
+            self.backend = q.Aer.get_backend(backend)
+
         self.qi = q.utils.QuantumInstance(
-            q.Aer.get_backend("aer_simulator_statevector")
+            self.backend
         )
 
         self.enc_params = []
