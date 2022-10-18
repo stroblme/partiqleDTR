@@ -132,15 +132,17 @@ class qgnn(nn.Module):
         self.mutually_exclusive_meas = mutually_exclusive_meas
 
         if backend != "aer_simulator_statevector":
-            import ibmq_access
+            from .ibmq_access import token, hub, group, project
+            log.info(f"Searching for backend {backend} on IBMQ using token {token[:10]}****, hub {hub}, group {group} and project {project}")
             self.provider = q.IBMQ.enable_account(
-                token=ibmq_access.token,
-                hub=ibmq_access.hub,
-                group=ibmq_access.group,
-                project=ibmq_access.project,
+                token=token,
+                hub=hub,
+                group=group,
+                project=project,
             )
             self.backend = self.provider.get_backend(backend)
         else:
+            log.info(f"Using simulator backend {backend}")
             self.backend = q.Aer.get_backend(backend)
 
         self.qi = q.utils.QuantumInstance(
@@ -253,6 +255,8 @@ class qgnn(nn.Module):
         log.info(
             f"Building Quantum Circuit with {self.layers} layers and {n_fsps} qubits"
         )
+        # assert self.backend.configuration().num_qubits <= n_fsps
+
         self.qc = q.QuantumCircuit(n_fsps)
         circuit_builder(self.qc, n_fsps, self.layers)
 
