@@ -327,8 +327,11 @@ class qgnn(nn.Module):
                 MLP(1, dim_feedforward, dim_feedforward, dropout_rate, batchnorm)
             ]
         else:
+            # initial_mlp = [
+            #     MLP(2**self.total_n_fsps, dim_feedforward, dim_feedforward, dropout_rate, batchnorm)
+            # ]
             initial_mlp = [
-                MLP(2**self.total_n_fsps-1, dim_feedforward, dim_feedforward, dropout_rate, batchnorm)
+                MLP(2**(self.total_n_fsps-1)+1, dim_feedforward, dim_feedforward, dropout_rate, batchnorm)
             ]
         # Add any additional layers as per request
         initial_mlp.extend(
@@ -595,6 +598,23 @@ class qgnn(nn.Module):
             assert len(permutations_indices) == digits
             return permutations_indices
 
+        def build_related_permutation_indices(digits):
+            """
+            Generate the binary permutation indices.
+            :param digits:
+            :return:
+            """
+            permutations_indices = []
+            for d in range(digits):
+                permutations_indices.append([])
+                for i in range(0, 2**digits):
+                    if bin(i).count("1") == 0:
+                        permutations_indices[d].append(i)
+                    elif len(bin(i))-2 >= d:
+                        if bin(i)[-d-1] == "1":
+                            permutations_indices[d].append(i)
+            return permutations_indices
+
         def get_binary_shots(result, permutations_indices, out_shape):
             """
             Generate the binary shots.
@@ -617,9 +637,27 @@ class qgnn(nn.Module):
             lcag = lcag.to(result.device)
             for i in range(out_shape[0]):
                 lcag[i] = result[
-                    i, out_shape[1]
+                    i, out_shape[1]-1
                 ]
             return lcag
+
+        def get_related_shots(result, permutations_indices, out_shape):
+            """
+            Generate the binary shots.
+            :param result:
+            :param permutations_indices:
+            :param out_shape:
+            :return:
+            """
+            lcag = t.zeros(out_shape)
+            lcag = lcag.to(result.device)
+            for i in range(out_shape[0]): # iterate batches
+                lcag[i] = t.stack([result[
+                    i, permutations_indices[j]
+                ] for j in range(out_shape[1])])
+            # lcag[:, np.tril_indices_from(lcag[:], k=-1)] = result[:, permutations_indices]
+            return lcag
+
 
         if self.mutually_exclusive_meas:
             x = get_binary_shots(
@@ -628,13 +666,17 @@ class qgnn(nn.Module):
 
             x = x.reshape(batch, n_leaves, 1)
         else:
-            x = get_all_shots(
-                x, (batch, 2**self.total_n_fsps-1)
+            # x = get_all_shots(
+            #     x, (batch, 2**self.total_n_fsps)
+            # )
+
+            x = get_related_shots(
+                x, build_related_permutation_indices(self.total_n_fsps), (batch, n_leaves, 2**(self.total_n_fsps-1)+1)
             )
 
-            x = x.reshape(batch, 1, 2**self.total_n_fsps-1).repeat(
-                1, n_leaves, 1
-            )
+            # x = x.reshape(batch, 1, 2**self.total_n_fsps).repeat(
+            #     1, n_leaves, 1
+            # )
             # x = x.permute(0, 2, 1)  # (b, c, l, l) -> split the leaves
 
 
