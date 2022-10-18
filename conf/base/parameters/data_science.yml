@@ -42,7 +42,7 @@ embedding_dims: -1 # no effect if tokenization not enabled
 symmetrize: True
 
 # Quantum
-data_reupload: False
+data_reupload: True
 data_reupload_range: [True, False]
 add_rot_gates: True
 add_rot_gates_range: [True, False]
