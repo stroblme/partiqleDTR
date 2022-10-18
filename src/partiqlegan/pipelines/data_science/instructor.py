@@ -238,7 +238,7 @@ class Instructor:
             log.info(f"Anomaly detection enabled")
             t.autograd.set_detect_anomaly(True)
 
-        log.info(f"Training started with a batch size of {self.batch_size}")
+        log.info(f"Starting loops from epoch {start_epoch} using modes {enabled_modes}.")
         result = None
         best_acc = 0
         all_grads = []
