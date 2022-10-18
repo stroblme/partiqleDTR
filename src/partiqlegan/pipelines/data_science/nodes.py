@@ -313,10 +313,11 @@ def create_instructor(
     return {"instructor": instructor}
 
 
-def train(instructor: Instructor, start_epoch=1):
+def train(instructor: Instructor, start_epoch=1, enabled_modes=["train", "val"]):
 
     result = instructor.train(
-        start_epoch
+        start_epoch=start_epoch,
+        enabled_modes=enabled_modes
     )  # returns a dict of e.g. the model, checkpoints and the gradients
 
     return result

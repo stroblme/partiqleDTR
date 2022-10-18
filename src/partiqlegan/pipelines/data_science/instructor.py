@@ -233,7 +233,7 @@ class Instructor:
         )
         self.detectAnomaly = detectAnomaly  # TODO: introduce as parameter if helpful
 
-    def train(self, start_epoch=1):
+    def train(self, start_epoch=1, enabled_modes=["train", "val"]):
         if self.detectAnomaly:
             log.info(f"Anomaly detection enabled")
             t.autograd.set_detect_anomaly(True)
@@ -248,7 +248,7 @@ class Instructor:
             for epoch in range(start_epoch, 1 + self.epochs):
                 logits_for_plotting = []
                 labels_for_plotting = []
-                for mode in ["train", "val"]:
+                for mode in enabled_modes:
                     data_batch = DataLoader(
                         DataWrapper(self.data[mode], normalize=self.normalize, normalize_individually=self.normalize_individually, zero_mean=self.zero_mean),
                         batch_size=self.batch_size,
