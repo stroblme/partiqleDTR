@@ -110,7 +110,7 @@ class qgnn(nn.Module):
         data_reupload=True,
         add_rot_gates=True,
         padding_dropout=True,
-        mutually_exclusive_meas=True,
+        measurement="entangled",
         backend="aer_simulator_statevector",
         **kwargs,
     ):
@@ -129,7 +129,7 @@ class qgnn(nn.Module):
         self.skip_global = skip_global
         # self.max_leaves = max_leaves
         self.padding_dropout = padding_dropout
-        self.mutually_exclusive_meas = mutually_exclusive_meas
+        self.measurement = measurement
 
         if backend != "aer_simulator_statevector":
             from .ibmq_access import token, hub, group, project
@@ -322,17 +322,20 @@ class qgnn(nn.Module):
         # initial_mlp = [
         #     MLP(n_momenta, dim_feedforward, dim_feedforward, dropout_rate, batchnorm)
         # ]
-        if self.mutually_exclusive_meas:
+        if self.measurement == "mutually_exclusive_meas":
             initial_mlp = [
                 MLP(1, dim_feedforward, dim_feedforward, dropout_rate, batchnorm)
             ]
-        else:
-            # initial_mlp = [
-            #     MLP(2**self.total_n_fsps, dim_feedforward, dim_feedforward, dropout_rate, batchnorm)
-            # ]
+        elif self.measurement == "all":
+            initial_mlp = [
+                MLP(2**self.total_n_fsps, dim_feedforward, dim_feedforward, dropout_rate, batchnorm)
+            ]
+        elif self.measurement == "entangled":
             initial_mlp = [
                 MLP(2**(self.total_n_fsps-1)+1, dim_feedforward, dim_feedforward, dropout_rate, batchnorm)
             ]
+        else:
+            raise ValueError("Invalid measurement specified")
         # Add any additional layers as per request
         initial_mlp.extend(
             [
@@ -659,27 +662,27 @@ class qgnn(nn.Module):
             return lcag
 
 
-        if self.mutually_exclusive_meas:
+        if self.measurement == "mutually_exclusive_meas":
             x = get_binary_shots(
                 x, build_binary_permutation_indices(n_leaves), (batch, n_leaves)
             )
 
             x = x.reshape(batch, n_leaves, 1)
-        else:
-            # x = get_all_shots(
-            #     x, (batch, 2**self.total_n_fsps)
-            # )
+        elif self.measurement == "all":
+            x = get_all_shots(
+                x, (batch, 2**self.total_n_fsps)
+            )
 
+            x = x.reshape(batch, 1, 2**self.total_n_fsps).repeat(
+                1, n_leaves, 1
+            )
+            # x = x.permute(0, 2, 1)  # (b, c, l, l) -> split the leaves
+        elif self.measurement == "entangled":
             x = get_related_shots(
                 x, build_related_permutation_indices(self.total_n_fsps), (batch, n_leaves, 2**(self.total_n_fsps-1)+1)
             )
-
-            # x = x.reshape(batch, 1, 2**self.total_n_fsps).repeat(
-            #     1, n_leaves, 1
-            # )
-            # x = x.permute(0, 2, 1)  # (b, c, l, l) -> split the leaves
-
-
+        else:
+            raise ValueError("Invalid measurement specified")
         # Initial set of linear layers
         # (b, l, 1) -> (b, l, d)
         x = self.initial_mlp(
