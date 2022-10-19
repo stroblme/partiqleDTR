@@ -110,6 +110,7 @@ class qgnn(nn.Module):
         data_reupload=True,
         add_rot_gates=True,
         padding_dropout=True,
+        predefined_vqc="",
         measurement="entangled",
         backend="aer_simulator_statevector",
         **kwargs,
@@ -130,6 +131,7 @@ class qgnn(nn.Module):
         # self.max_leaves = max_leaves
         self.padding_dropout = padding_dropout
         self.measurement = measurement
+        self.predefined_vqc = predefined_vqc
 
         if backend != "aer_simulator_statevector":
             from .ibmq_access import token, hub, group, project
@@ -243,13 +245,43 @@ class qgnn(nn.Module):
                         f"{identifier}_crz_{n_qubits - i - 1}_{n_qubits - i}",
                     )
 
+        def build_circuit_19(qc, n_qubits, identifier):
+            for i in range(n_qubits):
+                qc.rx(
+                    q.circuit.Parameter(f"{identifier}_rx_0_{i}"),
+                    i,
+                    f"{identifier}_rx_0_{i}",
+                )
+                qc.rz(q.circuit.Parameter(f"{identifier}_rz_1_{i}"), i)
+
+            for i in range(n_qubits - 1):
+                if i == 0:
+                    qc.crx(
+                        q.circuit.Parameter(f"{identifier}_crx_{i+1}_{i}"),
+                        i,
+                        n_qubits - 1,
+                        f"{identifier}_crx_{i+1}_{i}",
+                    )
+                else:
+                    qc.crx(
+                        q.circuit.Parameter(f"{identifier}_crx_{i+1}_{i}"),
+                        n_qubits - i,
+                        n_qubits - i - 1,
+                        f"{identifier}_crx_{i+1}_{i}",
+                    )
+
         def circuit_builder(qc, n_qubits, n_hidden):
             enc_params = gen_encoding_params(n_qubits, f"enc")
             for i in range(n_hidden):
                 if data_reupload or i == 0:
                     encoding(qc, n_qubits, enc_params, f"enc_{i}")
                 qc.barrier()
-                variational(qc, n_qubits, f"var_{i}")
+                if self.predefined_vqc == "":
+                    variational(qc, n_qubits, f"var_{i}")
+                elif self.predefined_vqc == "circuit_19":
+                    build_circuit_19(qc, n_qubits, f"var_{i}")
+                else:
+                    raise ValueError("Invalid circuit specified")
                 qc.barrier()
 
         log.info(
