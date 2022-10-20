@@ -67,5 +67,5 @@ device: 'cpu' # anything but 'cpu' to use cuda devices instead
 # MLFLOW
 plot_mode: "val"
 plotting_rows: 4
-log_gradients: False # set false when using models where the quantum layer is not the first one
+log_gradients: True # set false when using models where the quantum layer is not the first one
 git_hash_identifier: "git_hash"
