@@ -354,7 +354,7 @@ class qgnn(nn.Module):
         # initial_mlp = [
         #     MLP(n_momenta, dim_feedforward, dim_feedforward, dropout_rate, batchnorm)
         # ]
-        if self.measurement == "mutually_exclusive_meas":
+        if self.measurement == "mutually_exclusive":
             initial_mlp = [
                 MLP(1, dim_feedforward, dim_feedforward, dropout_rate, batchnorm)
             ]
@@ -694,7 +694,7 @@ class qgnn(nn.Module):
             return lcag
 
 
-        if self.measurement == "mutually_exclusive_meas":
+        if self.measurement == "mutually_exclusive":
             x = get_binary_shots(
                 x, build_binary_permutation_indices(n_leaves), (batch, n_leaves)
             )
