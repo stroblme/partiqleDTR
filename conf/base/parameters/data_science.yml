@@ -17,9 +17,9 @@ batchnorm: True
 
 dropout_rate: 0.2
 dropout_rate_range: [0.1, 1.0, "linear"]
-learning_rate: 0.01
+learning_rate: 0.001
 learning_rate_range: [1e-5, 1e-1, "log"]
-learning_rate_decay: 200
+learning_rate_decay: 100
 learning_rate_decay_range: [1, 1000, "log"]
 gamma: 0.5
 batch_size: 8
@@ -52,7 +52,7 @@ n_layers_vqc: 3
 n_layers_vqc_range: [1, 5, "linear"]
 padding_dropout: False
 predefined_vqc: "circuit_19" # "", "circuit_10", .. tba.
-measurement: "entangled" # mutually_exclusive, all, entangled
+measurement: "mutually_exclusive" # mutually_exclusive, all, entangled
 backend: "aer_simulator_statevector" # aer_simulator_statevector, perth
 #TODO specify when available
 redis_host: "localhost"
@@ -67,5 +67,5 @@ device: 'cpu' # anything but 'cpu' to use cuda devices instead
 # MLFLOW
 plot_mode: "val"
 plotting_rows: 4
-log_gradients: False # set false when using models where the quantum layer is not the first one
+log_gradients: True # set false when using models where the quantum layer is not the first one
 git_hash_identifier: "git_hash"
