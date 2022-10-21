@@ -202,10 +202,10 @@ class qgnn(nn.Module):
                         i,
                         f"{identifier}_ry_{i}",
                     )
-                    qc.rz(
-                        q.circuit.Parameter(f"{identifier}_rz_0_{i}"),
-                        i,
-                    )
+                    # qc.rz(
+                    #     q.circuit.Parameter(f"{identifier}_rz_0_{i}"),
+                    #     i,
+                    # )
                 if i == 0:
                     qc.crx(
                         q.circuit.Parameter(f"{identifier}_crx_{n_qubits - 1}_{i}"),
@@ -219,12 +219,12 @@ class qgnn(nn.Module):
                         n_qubits - 1,
                         f"{identifier}_cry_{n_qubits - 1}_{i}",
                     )
-                    qc.crz(
-                        q.circuit.Parameter(f"{identifier}_crz_{n_qubits - 1}_{i}"),
-                        i,
-                        n_qubits - 1,
-                        f"{identifier}_crz_{n_qubits - 1}_{i}",
-                    )
+                    # qc.crz(
+                    #     q.circuit.Parameter(f"{identifier}_crz_{n_qubits - 1}_{i}"),
+                    #     i,
+                    #     n_qubits - 1,
+                    #     f"{identifier}_crz_{n_qubits - 1}_{i}",
+                    # )
                 else:
                     qc.crx(
                         q.circuit.Parameter(f"{identifier}_crx_{n_qubits - i - 1}_{n_qubits - i}"),
@@ -238,12 +238,12 @@ class qgnn(nn.Module):
                         n_qubits - i - 1,
                         f"{identifier}_cry_{n_qubits - i - 1}_{n_qubits - i}",
                     )
-                    qc.crz(
-                        q.circuit.Parameter(f"{identifier}_crz_{n_qubits - i - 1}_{n_qubits - i}"),
-                        n_qubits - i,
-                        n_qubits - i - 1,
-                        f"{identifier}_crz_{n_qubits - i - 1}_{n_qubits - i}",
-                    )
+                    # qc.crz(
+                    #     q.circuit.Parameter(f"{identifier}_crz_{n_qubits - i - 1}_{n_qubits - i}"),
+                    #     n_qubits - i,
+                    #     n_qubits - i - 1,
+                    #     f"{identifier}_crz_{n_qubits - i - 1}_{n_qubits - i}",
+                    # )
 
         def build_circuit_19(qc, n_qubits, identifier):
             for i in range(n_qubits):
