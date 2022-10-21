@@ -244,6 +244,9 @@ class Instructor:
         all_grads = []
         checkpoint = None
 
+        if enabled_modes == ["val"]:
+            self.epochs = 1
+
         try:  # catch things like gradient nan exceptions
             for epoch in range(start_epoch, 1 + self.epochs):
                 logits_for_plotting = []
