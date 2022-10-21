@@ -110,7 +110,9 @@ class qgnn(nn.Module):
         data_reupload=True,
         add_rot_gates=True,
         padding_dropout=True,
-        mutually_exclusive_meas=True,
+        predefined_vqc="",
+        measurement="entangled",
+        backend="aer_simulator_statevector",
         **kwargs,
     ):
         super(qgnn, self).__init__()
@@ -128,10 +130,25 @@ class qgnn(nn.Module):
         self.skip_global = skip_global
         # self.max_leaves = max_leaves
         self.padding_dropout = padding_dropout
-        self.mutually_exclusive_meas = mutually_exclusive_meas
+        self.measurement = measurement
+        self.predefined_vqc = predefined_vqc
+
+        if backend != "aer_simulator_statevector":
+            from .ibmq_access import token, hub, group, project
+            log.info(f"Searching for backend {backend} on IBMQ using token {token[:10]}****, hub {hub}, group {group} and project {project}")
+            self.provider = q.IBMQ.enable_account(
+                token=token,
+                hub=hub,
+                group=group,
+                project=project,
+            )
+            self.backend = self.provider.get_backend(backend)
+        else:
+            log.info(f"Using simulator backend {backend}")
+            self.backend = q.Aer.get_backend(backend)
 
         self.qi = q.utils.QuantumInstance(
-            q.Aer.get_backend("aer_simulator_statevector")
+            self.backend
         )
 
         self.enc_params = []
@@ -228,18 +245,50 @@ class qgnn(nn.Module):
                         f"{identifier}_crz_{n_qubits - i - 1}_{n_qubits - i}",
                     )
 
+        def build_circuit_19(qc, n_qubits, identifier):
+            for i in range(n_qubits):
+                qc.rx(
+                    q.circuit.Parameter(f"{identifier}_rx_0_{i}"),
+                    i,
+                    f"{identifier}_rx_0_{i}",
+                )
+                qc.rz(q.circuit.Parameter(f"{identifier}_rz_1_{i}"), i)
+
+            for i in range(n_qubits - 1):
+                if i == 0:
+                    qc.crx(
+                        q.circuit.Parameter(f"{identifier}_crx_{i+1}_{i}"),
+                        i,
+                        n_qubits - 1,
+                        f"{identifier}_crx_{i+1}_{i}",
+                    )
+                else:
+                    qc.crx(
+                        q.circuit.Parameter(f"{identifier}_crx_{i+1}_{i}"),
+                        n_qubits - i,
+                        n_qubits - i - 1,
+                        f"{identifier}_crx_{i+1}_{i}",
+                    )
+
         def circuit_builder(qc, n_qubits, n_hidden):
             enc_params = gen_encoding_params(n_qubits, f"enc")
             for i in range(n_hidden):
                 if data_reupload or i == 0:
                     encoding(qc, n_qubits, enc_params, f"enc_{i}")
                 qc.barrier()
-                variational(qc, n_qubits, f"var_{i}")
+                if self.predefined_vqc == "":
+                    variational(qc, n_qubits, f"var_{i}")
+                elif self.predefined_vqc == "circuit_19":
+                    build_circuit_19(qc, n_qubits, f"var_{i}")
+                else:
+                    raise ValueError("Invalid circuit specified")
                 qc.barrier()
 
         log.info(
             f"Building Quantum Circuit with {self.layers} layers and {n_fsps} qubits"
         )
+        # assert self.backend.configuration().num_qubits <= n_fsps
+
         self.qc = q.QuantumCircuit(n_fsps)
         circuit_builder(self.qc, n_fsps, self.layers)
 
@@ -305,9 +354,20 @@ class qgnn(nn.Module):
         # initial_mlp = [
         #     MLP(n_momenta, dim_feedforward, dim_feedforward, dropout_rate, batchnorm)
         # ]
-        initial_mlp = [
-            MLP(1, dim_feedforward, dim_feedforward, dropout_rate, batchnorm)
-        ]
+        if self.measurement == "mutually_exclusive":
+            initial_mlp = [
+                MLP(1, dim_feedforward, dim_feedforward, dropout_rate, batchnorm)
+            ]
+        elif self.measurement == "all":
+            initial_mlp = [
+                MLP(2**self.total_n_fsps, dim_feedforward, dim_feedforward, dropout_rate, batchnorm)
+            ]
+        elif self.measurement == "entangled":
+            initial_mlp = [
+                MLP(2**(self.total_n_fsps-1)+1, dim_feedforward, dim_feedforward, dropout_rate, batchnorm)
+            ]
+        else:
+            raise ValueError("Invalid measurement specified")
         # Add any additional layers as per request
         initial_mlp.extend(
             [
@@ -573,6 +633,23 @@ class qgnn(nn.Module):
             assert len(permutations_indices) == digits
             return permutations_indices
 
+        def build_related_permutation_indices(digits):
+            """
+            Generate the binary permutation indices.
+            :param digits:
+            :return:
+            """
+            permutations_indices = []
+            for d in range(digits):
+                permutations_indices.append([])
+                for i in range(0, 2**digits):
+                    if bin(i).count("1") == 0:
+                        permutations_indices[d].append(i)
+                    elif len(bin(i))-2 >= d:
+                        if bin(i)[-d-1] == "1":
+                            permutations_indices[d].append(i)
+            return permutations_indices
+
         def get_binary_shots(result, permutations_indices, out_shape):
             """
             Generate the binary shots.
@@ -595,23 +672,49 @@ class qgnn(nn.Module):
             lcag = lcag.to(result.device)
             for i in range(out_shape[0]):
                 lcag[i] = result[
-                    i, out_shape[1]
+                    i, out_shape[1]-1
                 ]
             return lcag
 
-        if self.mutually_exclusive_meas:
+        def get_related_shots(result, permutations_indices, out_shape):
+            """
+            Generate the binary shots.
+            :param result:
+            :param permutations_indices:
+            :param out_shape:
+            :return:
+            """
+            lcag = t.zeros(out_shape)
+            lcag = lcag.to(result.device)
+            for i in range(out_shape[0]): # iterate batches
+                lcag[i] = t.stack([result[
+                    i, permutations_indices[j]
+                ] for j in range(out_shape[1])])
+            # lcag[:, np.tril_indices_from(lcag[:], k=-1)] = result[:, permutations_indices]
+            return lcag
+
+
+        if self.measurement == "mutually_exclusive":
             x = get_binary_shots(
                 x, build_binary_permutation_indices(n_leaves), (batch, n_leaves)
             )
 
             x = x.reshape(batch, n_leaves, 1)
-        else:
+        elif self.measurement == "all":
             x = get_all_shots(
-                x, (batch, 2**n_leaves-1)
+                x, (batch, 2**self.total_n_fsps)
             )
 
-            x = x.reshape(batch, 2**n_leaves-1, 1)
-
+            x = x.reshape(batch, 1, 2**self.total_n_fsps).repeat(
+                1, n_leaves, 1
+            )
+            # x = x.permute(0, 2, 1)  # (b, c, l, l) -> split the leaves
+        elif self.measurement == "entangled":
+            x = get_related_shots(
+                x, build_related_permutation_indices(self.total_n_fsps), (batch, n_leaves, 2**(self.total_n_fsps-1)+1)
+            )
+        else:
+            raise ValueError("Invalid measurement specified")
         # Initial set of linear layers
         # (b, l, 1) -> (b, l, d)
         x = self.initial_mlp(

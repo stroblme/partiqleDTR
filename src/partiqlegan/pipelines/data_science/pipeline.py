@@ -63,7 +63,9 @@ def create_training_qgnn_pipeline(**kwargs) -> Pipeline:
                     "add_rot_gates": "params:add_rot_gates",
                     "n_layers_vqc": "params:n_layers_vqc",
                     "padding_dropout": "params:padding_dropout",
-                    "mutually_exclusive_meas": "params:mutually_exclusive_meas",
+                    "predefined_vqc": "params:predefined_vqc",
+                    "measurement": "params:measurement",
+                    "backend": "params:backend",
                     "n_fsps": "n_fsps",
                     "device": "params:device",
                 },
@@ -98,7 +100,7 @@ def create_training_qgnn_pipeline(**kwargs) -> Pipeline:
             ),
             node(
                 func=train,
-                inputs={"instructor": "instructor"},
+                inputs={"instructor": "instructor", "enabled_modes":"params:default_modes"},
                 outputs={
                     "trained_model": "trained_quantum_model",
                     "checkpoint": "checkpoint",
@@ -208,7 +210,9 @@ def create_resume_training_qgnn_pipeline(**kwargs) -> Pipeline:
                     "add_rot_gates": "params:add_rot_gates",
                     "n_layers_vqc": "params:n_layers_vqc",
                     "padding_dropout": "params:padding_dropout",
-                    "mutually_exclusive_meas": "params:mutually_exclusive_meas",
+                    "predefined_vqc": "params:predefined_vqc",
+                    "measurement": "params:measurement",
+                    "backend": "params:backend",
                     "n_fsps": "n_fsps",
                     "device": "params:device",
                 },
@@ -245,7 +249,7 @@ def create_resume_training_qgnn_pipeline(**kwargs) -> Pipeline:
             ),
             node(
                 func=train,
-                inputs={"instructor": "instructor", "start_epoch": "start_epoch"},
+                inputs={"instructor": "instructor", "start_epoch": "start_epoch", "enabled_modes":"params:default_modes"},
                 outputs={
                     "trained_model": "trained_quantum_model",
                     "checkpoint": "checkpoint_out",
@@ -256,7 +260,95 @@ def create_resume_training_qgnn_pipeline(**kwargs) -> Pipeline:
         ]
     )
 
-
+def create_validation_qgnn_pipeline(**kwargs) -> Pipeline:
+    return pipeline(
+        [
+            *create_metadata_nodes(**kwargs),
+            node(
+                func=unpack_checkpoint,
+                inputs={
+                    "checkpoint": "checkpoint",
+                },
+                outputs={
+                    "model_state_dict": "model_state_dict",
+                    "optimizer_state_dict": "optimizer_state_dict",
+                    "start_epoch": "start_epoch",
+                },
+                name="unpack_checkpoint",
+                tags="split_run",
+            ),
+            node(
+                func=create_model,
+                inputs={
+                    "n_classes": "n_classes",
+                    "n_momenta": "params:n_momenta",
+                    "model_sel": "params:model_sel",
+                    "n_blocks": "params:n_blocks",
+                    "dim_feedforward": "params:dim_feedforward",
+                    "n_layers_mlp": "params:n_layers_mlp",
+                    "n_additional_mlp_layers": "params:n_additional_mlp_layers",
+                    "n_final_mlp_layers": "params:n_final_mlp_layers",
+                    "skip_block": "params:skip_block",
+                    "skip_global": "params:skip_global",
+                    "dropout_rate": "params:dropout_rate",
+                    "factor": "params:factor",
+                    "tokenize": "params:tokenize",
+                    "embedding_dims": "params:embedding_dims",
+                    "batchnorm": "params:batchnorm",
+                    "symmetrize": "params:symmetrize",
+                    "data_reupload": "params:data_reupload",
+                    "add_rot_gates": "params:add_rot_gates",
+                    "n_layers_vqc": "params:n_layers_vqc",
+                    "padding_dropout": "params:padding_dropout",
+                    "predefined_vqc": "params:predefined_vqc",
+                    "measurement": "params:measurement",
+                    "backend": "params:backend",
+                    "n_fsps": "n_fsps",
+                    "device": "params:device",
+                },
+                outputs={"nri_model": "nri_model"},
+                name="create_model",
+            ),
+            node(
+                func=create_instructor,
+                inputs={
+                    "model": "nri_model",
+                    "dataset_lca_and_leaves": "dataset_lca_and_leaves",
+                    "learning_rate": "params:learning_rate",
+                    "learning_rate_decay": "params:learning_rate_decay",
+                    "gamma": "params:gamma",
+                    "batch_size": "params:batch_size",
+                    "epochs": "params:epochs",
+                    "normalize": "params:normalize",
+                    "normalize_individually": "params:normalize_individually",
+                    "zero_mean": "params:zero_mean",
+                    "plot_mode": "params:plot_mode",
+                    "plotting_rows": "params:plotting_rows",
+                    "log_gradients": "params:log_gradients",
+                    "device": "params:device",
+                    "n_fsps": "n_fsps",
+                    "n_classes": "n_classes",
+                    "gradients_clamp": "params:gradients_clamp",
+                    "gradients_spreader": "params:gradients_spreader",
+                    "detectAnomaly": "params:detect_anomaly",
+                    "model_state_dict": "model_state_dict",
+                    "optimizer_state_dict": "optimizer_state_dict",
+                },
+                outputs={"instructor": "instructor"},
+                name="create_instructor",
+            ),
+            node(
+                func=train,
+                inputs={"instructor": "instructor", "enabled_modes":"params:validation_mode"},
+                outputs={
+                    "trained_model": "trained_quantum_model",
+                    "checkpoint": "checkpoint_out",
+                    "gradients": "gradients",
+                },
+                name="train_qgnn",
+            ),
+        ]
+    )
 # additional pipeline just to add it as an exception in kedro
 def create_debug_training_qgnn_pipeline(**kwargs) -> Pipeline:
     return create_training_qgnn_pipeline(**kwargs)
