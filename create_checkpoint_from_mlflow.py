@@ -25,5 +25,9 @@ checkpoint = {
                 "optimizer_state_dict": optimizer_state_dict,
             }
 
+print(f"Checkpoint opened, writing to file at {os.path.join(artifact_uri[7:], 'checkpoint.pickle')}")
+
 with open(os.path.join(artifact_uri[7:], "checkpoint.pickle"), "wb") as f:
     pickle.dump(checkpoint, f, protocol=pickle.HIGHEST_PROTOCOL)
+
+print("Done. You'll need to overwrite the checkpoint.pickle file in /data/08_reporting in order to use it.")
