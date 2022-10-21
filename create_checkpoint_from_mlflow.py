@@ -11,6 +11,7 @@ start_time = datetime.datetime.utcfromtimestamp(run.info.start_time/1000).strfti
 input(f"Found a run from {start_time} at git hash {run.data.tags['git_hash'][:6]}. Continue?")
 artifact_uri = run.info.artifact_uri
 
+print(f"Opening Checkpoint for model.yml and optimizer.yml ...")
 with open(os.path.join(artifact_uri[7:], "model.yml"), "r") as f:
     model_state_dict = yaml.unsafe_load(f)
 
@@ -25,9 +26,12 @@ checkpoint = {
                 "optimizer_state_dict": optimizer_state_dict,
             }
 
-print(f"Checkpoint opened, writing to file at {os.path.join(artifact_uri[7:], 'checkpoint.pickle')}")
+print(f"Checkpoint opened, writing to file at {os.path.join(artifact_uri[7:], 'checkpoint.pickle')} ...")
 
 with open(os.path.join(artifact_uri[7:], "checkpoint.pickle"), "wb") as f:
     pickle.dump(checkpoint, f, protocol=pickle.HIGHEST_PROTOCOL)
 
-print("Done. You'll need to overwrite the checkpoint.pickle file in /data/08_reporting in order to use it.")
+input("Done. Press any key to write the checkpoint to /data/08_reporting as well.")
+
+with open(os.path.join("./data/08_reporting", "checkpoint.pickle"), "wb") as f:
+    pickle.dump(checkpoint, f, protocol=pickle.HIGHEST_PROTOCOL)
