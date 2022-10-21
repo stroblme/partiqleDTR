@@ -28,6 +28,8 @@ ax = plt.gca()
 
 cmap = mpl.cm.get_cmap('Dark2_r')
 
+hline_offset=0.5
+
 for i, metric in enumerate(metrics):
     if "loss" in metric:
         best = min(metric_histories[metric][1])
@@ -38,7 +40,7 @@ for i, metric in enumerate(metrics):
 
     ax.plot(*metric_histories[metric], color=cmap(i), label=metric)
     ax.set_xticks(metric_histories[metric][0][1::(len(metric_histories[metric][0])//10)]) # we start counting at 1, so it looks better if we have the max epoch shown
-    plt.axhline(y=best, xmin=1/len(metric_histories[metric][0]), xmax=(1+best_idx)/(len(metric_histories[metric][0])+1), color=cmap(i), linewidth=0.7, linestyle=':', label=f"best_{metric}")
+    plt.axhline(y=best, xmin=hline_offset/(len(metric_histories[metric][0])), xmax=(best_idx+hline_offset)/(len(metric_histories[metric][0])), color=cmap(i), linewidth=0.8, linestyle=':', label=f"best_{metric}")
 
 # Shrink current axis by 20%
 box = ax.get_position()
@@ -54,7 +56,7 @@ fig.patch.set_facecolor("#FAFAFA")
 plt.grid(color="#F1F1F1")
 
 # Put a legend to the right of the current axis
-ax.legend(loc='center left', bbox_to_anchor=(1, 0.5), facecolor="#FAFAFA", framealpha=1)
+ax.legend(loc='center left', bbox_to_anchor=(1, 0.5), facecolor="#FAFAFA", framealpha=0.3)
 title = input("Gimme a catchy title: \t")
 plt.title(title)
 plt.savefig("test.png", bbox_inches='tight')
