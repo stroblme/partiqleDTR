@@ -53,7 +53,7 @@ n_layers_vqc_range: [1, 5, "linear"]
 padding_dropout: False
 predefined_vqc: "circuit_19" # "", "circuit_19", .. tba.
 measurement: "entangled" # mutually_exclusive, all, entangled
-backend: "aer_simulator_statevector" # aer_simulator_statevector, perth
+backend: "ibm_perth" # aer_simulator_statevector, ibm_perth
 #TODO specify when available
 redis_host: "localhost"
 redis_port: 6379
