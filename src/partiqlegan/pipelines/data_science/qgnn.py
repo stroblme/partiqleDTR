@@ -202,10 +202,10 @@ class qgnn(nn.Module):
                         i,
                         f"{identifier}_ry_{i}",
                     )
-                    # qc.rz(
-                    #     q.circuit.Parameter(f"{identifier}_rz_0_{i}"),
-                    #     i,
-                    # )
+                    qc.rz(
+                        q.circuit.Parameter(f"{identifier}_rz_0_{i}"),
+                        i,
+                    )
                 if i == 0:
                     qc.crx(
                         q.circuit.Parameter(f"{identifier}_crx_{n_qubits - 1}_{i}"),
