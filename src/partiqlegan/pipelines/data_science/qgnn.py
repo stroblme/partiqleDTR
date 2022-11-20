@@ -254,19 +254,19 @@ class qgnn(nn.Module):
                 )
                 qc.rz(q.circuit.Parameter(f"{identifier}_rz_1_{i}"), i)
 
-            for i in range(n_qubits - 1):
+            for i in range(n_qubits):
                 if i == 0:
                     qc.crx(
                         q.circuit.Parameter(f"{identifier}_crx_{i+1}_{i}"),
-                        i,
                         n_qubits - 1,
+                        i,
                         f"{identifier}_crx_{i+1}_{i}",
                     )
                 else:
                     qc.crx(
                         q.circuit.Parameter(f"{identifier}_crx_{i+1}_{i}"),
-                        n_qubits - i,
                         n_qubits - i - 1,
+                        n_qubits - i,
                         f"{identifier}_crx_{i+1}_{i}",
                     )
 
