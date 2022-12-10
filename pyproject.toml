@@ -1,6 +1,6 @@
 [tool.kedro]
-package_name = "partiqlegan"
-project_name = "partiqlegan"
+package_name = "partiqleDTR"
+project_name = "partiqleDTR"
 project_version = "0.18.1"
 
 [tool.isort]
@@ -14,7 +14,7 @@ known_third_party = "kedro"
 [tool.pytest.ini_options]
 addopts = """
 --cov-report term-missing \
---cov src/partiqlegan -ra"""
+--cov src/partiqleDTR -ra"""
 
 [tool.coverage.report]
 fail_under = 0
@@ -22,7 +22,7 @@ show_missing = true
 exclude_lines = ["pragma: no cover", "raise NotImplementedError"]
 
 [tool.poetry]
-name = "partiqlegan"
+name = "partiqleDTR"
 version = "0.1.0"
 description = ""
 authors = ["lc3267 <melvin.strobl@kit.edu>"]

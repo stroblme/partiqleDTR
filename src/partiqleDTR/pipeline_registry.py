@@ -3,9 +3,9 @@ from typing import Dict
 
 from kedro.pipeline import Pipeline, pipeline
 
-from partiqlegan.pipelines import data_generation as dg
-from partiqlegan.pipelines import data_processing as dp
-from partiqlegan.pipelines import data_science as ds
+from partiqleDTR.pipelines import data_generation as dg
+from partiqleDTR.pipelines import data_processing as dp
+from partiqleDTR.pipelines import data_science as ds
 
 
 def register_pipelines() -> Dict[str, Pipeline]:

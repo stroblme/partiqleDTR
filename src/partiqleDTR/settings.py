@@ -1,5 +1,5 @@
 """Project settings."""
-from partiqlegan.hooks import ProjectHooks
+from partiqleDTR.hooks import ProjectHooks
 
 # Instantiate and list your project hooks here
 HOOKS = (ProjectHooks(),)

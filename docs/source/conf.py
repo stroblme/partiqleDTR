@@ -22,7 +22,7 @@ import re
 from kedro.framework.cli.utils import find_stylesheets
 from recommonmark.transform import AutoStructify
 
-from partiqlegan import __version__ as release
+from partiqleDTR import __version__ as release
 
 # -- Project information -----------------------------------------------------
 
