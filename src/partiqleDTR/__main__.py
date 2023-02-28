@@ -1,5 +1,5 @@
-"""partiqlegan file for ensuring the package is executable
-as `partiqlegan` and `python -m partiqlegan`
+"""partiqleDTR file for ensuring the package is executable
+as `partiqleDTR` and `python -m partiqleDTR`
 """
 import importlib
 from pathlib import Path
