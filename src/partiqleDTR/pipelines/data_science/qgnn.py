@@ -245,6 +245,31 @@ class qgnn(nn.Module):
                     #     f"{identifier}_crz_{n_qubits - i - 1}_{n_qubits - i}",
                     # )
 
+        def build_circuit_19_flipped(qc, n_qubits, identifier):
+            for i in range(n_qubits):
+                qc.rx(
+                    q.circuit.Parameter(f"{identifier}_rx_0_{i}"),
+                    i,
+                    f"{identifier}_rx_0_{i}",
+                )
+                qc.rz(q.circuit.Parameter(f"{identifier}_rz_1_{i}"), i)
+
+            for i in range(n_qubits):
+                if i == 0:
+                    qc.crx(
+                        q.circuit.Parameter(f"{identifier}_crx_{i+1}_{i}"),
+                        i,
+                        n_qubits - 1,
+                        f"{identifier}_crx_{i+1}_{i}",
+                    )
+                else:
+                    qc.crx(
+                        q.circuit.Parameter(f"{identifier}_crx_{i+1}_{i}"),
+                        n_qubits - i,
+                        n_qubits - i - 1,
+                        f"{identifier}_crx_{i+1}_{i}",
+                    )
+
         def build_circuit_19(qc, n_qubits, identifier):
             for i in range(n_qubits):
                 qc.rx(
@@ -280,6 +305,8 @@ class qgnn(nn.Module):
                     variational(qc, n_qubits, f"var_{i}")
                 elif self.predefined_vqc == "circuit_19":
                     build_circuit_19(qc, n_qubits, f"var_{i}")
+                elif self.predefined_vqc == "circuit_19_flipped":
+                    build_circuit_19_flipped(qc, n_qubits, f"var_{i}")
                 else:
                     raise ValueError("Invalid circuit specified")
                 qc.barrier()
