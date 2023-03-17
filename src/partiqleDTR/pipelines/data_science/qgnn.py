@@ -12,7 +12,10 @@ from .utils import *
 import qiskit as q
 from qiskit import transpile, assemble
 from qiskit.visualization import *
-from qiskit_machine_learning.neural_networks import CircuitQNN, TwoLayerQNN
+from qiskit_machine_learning.neural_networks import CircuitQNN, TwoLayerQNN, SamplerQNN
+
+from qiskit.primitives import BackendSampler
+from qiskit.providers.aer import QasmSimulator
 
 import logging
 
@@ -119,6 +122,7 @@ class qgnn(nn.Module):
 
         assert dim_feedforward % 2 == 0, "dim_feedforward must be an even number"
 
+        self.start=None
         self.num_classes = n_classes
         self.layers = n_layers_vqc  # dim_feedforward//8
         self.total_n_fsps = n_fsps  # used for padding in forward path
@@ -133,7 +137,7 @@ class qgnn(nn.Module):
         self.measurement = measurement
         self.predefined_vqc = predefined_vqc
 
-        if backend != "aer_simulator_statevector":
+        if "simulator" not in backend:
             from .ibmq_access import token, hub, group, project
             log.info(f"Searching for backend {backend} on IBMQ using token {token[:10]}****, hub {hub}, group {group} and project {project}")
             self.provider = q.IBMQ.enable_account(
@@ -146,10 +150,18 @@ class qgnn(nn.Module):
         else:
             log.info(f"Using simulator backend {backend}")
             self.backend = q.Aer.get_backend(backend)
+            # # self.backend = QasmSimulator()
+            # self.bs = BackendSampler(
+            #     self.backend,
+            #     # options={
+            #     #     "shots": 2048,
+            #     # },
+            #     skip_transpilation=False,
+            # )
 
-        self.qi = q.utils.QuantumInstance(
-            self.backend
-        )
+        # self.qi = q.utils.QuantumInstance(
+        #     self.backend
+        # )
 
         self.enc_params = []
         self.var_params = []
@@ -270,6 +282,31 @@ class qgnn(nn.Module):
                         f"{identifier}_crx_{i+1}_{i}",
                     )
 
+        def build_circuit_19_missing(qc, n_qubits, identifier):
+            for i in range(n_qubits):
+                qc.rx(
+                    q.circuit.Parameter(f"{identifier}_rx_0_{i}"),
+                    i,
+                    f"{identifier}_rx_0_{i}",
+                )
+                qc.rz(q.circuit.Parameter(f"{identifier}_rz_1_{i}"), i)
+
+            for i in range(n_qubits-1):
+                if i == 0:
+                    qc.crx(
+                        q.circuit.Parameter(f"{identifier}_crx_{i+1}_{i}"),
+                        i,
+                        n_qubits - 1,
+                        f"{identifier}_crx_{i+1}_{i}",
+                    )
+                else:
+                    qc.crx(
+                        q.circuit.Parameter(f"{identifier}_crx_{i+1}_{i}"),
+                        n_qubits - i,
+                        n_qubits - i - 1,
+                        f"{identifier}_crx_{i+1}_{i}",
+                    )
+
         def build_circuit_19(qc, n_qubits, identifier):
             for i in range(n_qubits):
                 qc.rx(
@@ -295,6 +332,31 @@ class qgnn(nn.Module):
                         f"{identifier}_crx_{i+1}_{i}",
                     )
 
+        def build_circuit_18(qc, n_qubits, identifier):
+            for i in range(n_qubits):
+                qc.rx(
+                    q.circuit.Parameter(f"{identifier}_rx_0_{i}"),
+                    i,
+                    f"{identifier}_rx_0_{i}",
+                )
+                qc.rz(q.circuit.Parameter(f"{identifier}_rz_1_{i}"), i)
+
+            for i in range(n_qubits):
+                if i == 0:
+                    qc.crz(
+                        q.circuit.Parameter(f"{identifier}_crz_{i+1}_{i}"),
+                        n_qubits - 1,
+                        i,
+                        f"{identifier}_crz_{i+1}_{i}",
+                    )
+                else:
+                    qc.crz(
+                        q.circuit.Parameter(f"{identifier}_crx_{i+1}_{i}"),
+                        n_qubits - i - 1,
+                        n_qubits - i,
+                        f"{identifier}_crz_{i+1}_{i}",
+                    )
+
         def circuit_builder(qc, n_qubits, n_hidden):
             enc_params = gen_encoding_params(n_qubits, f"enc")
             for i in range(n_hidden):
@@ -307,6 +369,10 @@ class qgnn(nn.Module):
                     build_circuit_19(qc, n_qubits, f"var_{i}")
                 elif self.predefined_vqc == "circuit_19_flipped":
                     build_circuit_19_flipped(qc, n_qubits, f"var_{i}")
+                elif self.predefined_vqc == "circuit_18":
+                    build_circuit_18(qc, n_qubits, f"var_{i}")
+                elif self.predefined_vqc == "circuit_19_missing":
+                    build_circuit_19_missing(qc, n_qubits, f"var_{i}")
                 else:
                     raise ValueError("Invalid circuit specified")
                 qc.barrier()
@@ -335,20 +401,34 @@ class qgnn(nn.Module):
             return x
 
         start = time.time()
-        self.qnn = CircuitQNN(
-            self.qc,
-            self.enc_params,
-            self.var_params,
-            quantum_instance=self.qi,
+        # self.qnn = CircuitQNN(
+        #     self.qc,
+        #     self.enc_params,
+        #     self.var_params,
+        #     quantum_instance=self.qi,
+        #     # interpret=interpreter,
+        #     # output_shape=(n_fsps**2, n_classes),
+        #     # sampling=True,
+        #     input_gradients=True,
+        # )
+        self.qnn = SamplerQNN(
+            circuit=self.qc,
+            # sampler=self.bs,
+            input_params=self.enc_params,
+            weight_params=self.var_params,
+            # quantum_instance=self.qi,
             # interpret=interpreter,
             # output_shape=(n_fsps**2, n_classes),
             # sampling=True,
-            input_gradients=True,
+            input_gradients=True, #set to true since we are using torch connector
         )
         self.initial_weights = 0.1 * (
             2 * q.utils.algorithm_globals.random.random(self.qnn.num_weights) - 1
         )
         log.info(f"Transpilation took {time.time() - start}")
+        # self.quantum_layer = TorchConnector(
+        #     self.qnn, initial_weights=self.initial_weights
+        # )
         self.quantum_layer = TorchConnector(
             self.qnn, initial_weights=self.initial_weights
         )
@@ -645,6 +725,9 @@ class qgnn(nn.Module):
 
         x = self.quantum_layer(x)
 
+        if self.start is not None:
+            print(f"Duration: {time.time()-self.start}")
+        self.start = time.time()
         
 
         def build_binary_permutation_indices(digits):
