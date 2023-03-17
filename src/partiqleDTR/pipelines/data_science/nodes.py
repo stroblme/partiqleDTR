@@ -221,6 +221,10 @@ def create_model(
     data_reupload: bool,
     add_rot_gates: bool,
     n_layers_vqc: bool,
+    padding_dropout: bool,
+    predefined_vqc: str,
+    measurement: str,
+    backend: str,
     pre_trained_model: DataParallel = None,
     **kwargs,
 ) -> DataParallel:
@@ -246,6 +250,10 @@ def create_model(
         data_reupload=data_reupload,
         add_rot_gates=add_rot_gates,
         n_layers_vqc=n_layers_vqc,
+        padding_dropout=padding_dropout,
+        predefined_vqc=predefined_vqc,
+        measurement=measurement,
+        backend=backend,
         pre_trained_model=pre_trained_model,
         **kwargs,
     )
@@ -309,10 +317,11 @@ def create_instructor(
     return {"instructor": instructor}
 
 
-def train(instructor: Instructor, start_epoch=1):
+def train(instructor: Instructor, start_epoch=1, enabled_modes=["train", "val"]):
 
     result = instructor.train(
-        start_epoch
+        start_epoch=start_epoch,
+        enabled_modes=enabled_modes
     )  # returns a dict of e.g. the model, checkpoints and the gradients
 
     return result

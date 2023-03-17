@@ -3,9 +3,9 @@ from typing import Dict
 
 from kedro.pipeline import Pipeline, pipeline
 
-from partiqlegan.pipelines import data_generation as dg
-from partiqlegan.pipelines import data_processing as dp
-from partiqlegan.pipelines import data_science as ds
+from partiqleDTR.pipelines import data_generation as dg
+from partiqleDTR.pipelines import data_processing as dp
+from partiqleDTR.pipelines import data_science as ds
 
 
 def register_pipelines() -> Dict[str, Pipeline]:
@@ -23,6 +23,7 @@ def register_pipelines() -> Dict[str, Pipeline]:
 
     training_qgnn_pipeline = ds.create_training_qgnn_pipeline()
     resume_training_qgnn_pipeline = ds.create_resume_training_qgnn_pipeline()
+    validation_qgnn_pipeline = ds.create_validation_qgnn_pipeline()
 
     debug_training_qgnn_pipeline = ds.create_debug_training_qgnn_pipeline()
     debug_training_optuna_pipeline = ds.create_debug_training_optuna_pipeline()
@@ -44,6 +45,7 @@ def register_pipelines() -> Dict[str, Pipeline]:
         # "data_processing_belleII_pipeline": data_processing_belleII_pipeline,
         "training_qgnn_pipeline": training_qgnn_pipeline,
         "resume_training_qgnn_pipeline": resume_training_qgnn_pipeline,
+        "validation_qgnn_pipeline": validation_qgnn_pipeline,
         "debug_training_qgnn_pipeline": debug_training_qgnn_pipeline,
         "debug_training_optuna_pipeline": debug_training_optuna_pipeline,
         # "split_training_qgnn_pipeline": split_training_qgnn_pipeline,

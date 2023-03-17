@@ -1,5 +1,6 @@
 venv
 mlruns
+.mlruns_bckp
 *.pdf
 .ipython
 *.png
