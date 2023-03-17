@@ -17,7 +17,7 @@ batchnorm: True
 
 dropout_rate: 0.2
 dropout_rate_range: [0.1, 1.0, "linear"]
-learning_rate: 0.001
+learning_rate: 0.01
 learning_rate_range: [1e-5, 1e-1, "log"]
 learning_rate_decay: 200
 learning_rate_decay_range: [1, 1000, "log"]
@@ -35,6 +35,7 @@ n_blocks_range: [1, 5, "linear"]
 n_layers_mlp: 2 # initial mlp layers before the blocks
 n_layers_mlp_range: [1, 5, "linear"]
 n_additional_mlp_layers: 0 # additional layers within a block
+
 n_additional_mlp_layers_range: [1, 5, "linear"]
 n_final_mlp_layers: 2 # layers after the blocks
 n_final_mlp_layers_range: [1, 5, "linear"]
@@ -51,9 +52,9 @@ add_rot_gates_range: [True, False]
 n_layers_vqc: 3
 n_layers_vqc_range: [1, 5, "linear"]
 padding_dropout: False
-predefined_vqc: "circuit_19" # "", "circuit_19", .. tba.
+predefined_vqc: "circuit_18" # "", "circuit_19_missing", "circuit_19_flipped", "circuit_19", .. tba.
 measurement: "entangled" # mutually_exclusive, all, entangled
-backend: "aer_simulator_statevector" # aer_simulator_statevector, ibm_perth
+backend: "aer_simulator" # aer_simulator, aer_simulator_statevector, ibm_perth
 #TODO specify when available
 redis_host: "localhost"
 redis_port: 6379
