@@ -8,6 +8,7 @@ import torch.nn.functional as F
 import mlflow
 
 from .utils import *
+from .circuits import pqc_circuits, iec_circuits, circuit_builder
 
 import qiskit as q
 from qiskit import transpile, assemble
@@ -111,8 +112,8 @@ class qgnn(nn.Module):
         n_fsps: int = -1,
         device: str = "cpu",
         data_reupload=True,
-        add_rot_gates=True,
         padding_dropout=True,
+        predefined_iec="",
         predefined_vqc="",
         measurement="entangled",
         backend="aer_simulator_statevector",
@@ -136,6 +137,7 @@ class qgnn(nn.Module):
         self.padding_dropout = padding_dropout
         self.measurement = measurement
         self.predefined_vqc = predefined_vqc
+        self.predefined_iec = predefined_iec
 
         if "simulator" not in backend:
             from .ibmq_access import token, hub, group, project
@@ -170,220 +172,12 @@ class qgnn(nn.Module):
             "cuda" if t.cuda.is_available() and device != "cpu" else "cpu"
         )
 
-        def gen_encoding_params(n_qubits, identifier):
-            q_params = []
-            for i in range(n_qubits):
-                q_params.append([])
-                for j in range(n_momenta):
-                    q_params[i].append(q.circuit.Parameter(f"{identifier}_{i}_{j}"))
-            return q_params
-
-        def encoding(qc, n_qubits, q_params, identifier):
-            for i in range(n_qubits):
-                energy = q_params[i][3]
-
-                px = (
-                    q_params[i][0] * energy * t.pi,
-                    i,
-                    f"{identifier[:-3]}_rx_{i}",
-                )
-                qc.rx(*px)
-                py = (
-                    q_params[i][1] * energy * t.pi,
-                    i,
-                    f"{identifier[:-3]}_ry_{i}",
-                )
-                qc.ry(*py)
-                pz = (
-                    q_params[i][2] * energy * t.pi,
-                    i,
-                )  # rz does not accept identifier
-                qc.rz(*pz)
-                # qc.ry(*param)
-
-        def variational(qc, n_qubits, identifier):
-            for i in range(n_qubits):
-                if add_rot_gates:
-                    qc.rx(
-                        q.circuit.Parameter(f"{identifier}_rx_0_{i}"),
-                        i,
-                        f"{identifier}_rx_{i}",
-                    )
-                    qc.ry(
-                        q.circuit.Parameter(f"{identifier}_ry_0_{i}"),
-                        i,
-                        f"{identifier}_ry_{i}",
-                    )
-                    # qc.rz(
-                    #     q.circuit.Parameter(f"{identifier}_rz_0_{i}"),
-                    #     i,
-                    # )
-                if i == 0:
-                    qc.crx(
-                        q.circuit.Parameter(f"{identifier}_crx_{n_qubits - 1}_{i}"),
-                        i,
-                        n_qubits - 1,
-                        f"{identifier}_crx_{n_qubits - 1}_{i}",
-                    )
-                    qc.cry(
-                        q.circuit.Parameter(f"{identifier}_cry_{n_qubits - 1}_{i}"),
-                        i,
-                        n_qubits - 1,
-                        f"{identifier}_cry_{n_qubits - 1}_{i}",
-                    )
-                    # qc.crz(
-                    #     q.circuit.Parameter(f"{identifier}_crz_{n_qubits - 1}_{i}"),
-                    #     i,
-                    #     n_qubits - 1,
-                    #     f"{identifier}_crz_{n_qubits - 1}_{i}",
-                    # )
-                else:
-                    qc.crx(
-                        q.circuit.Parameter(f"{identifier}_crx_{n_qubits - i - 1}_{n_qubits - i}"),
-                        n_qubits - i,
-                        n_qubits - i - 1,
-                        f"{identifier}_crx_{n_qubits - i - 1}_{n_qubits - i}",
-                    )
-                    qc.cry(
-                        q.circuit.Parameter(f"{identifier}_cry_{n_qubits - i - 1}_{n_qubits - i}"),
-                        n_qubits - i,
-                        n_qubits - i - 1,
-                        f"{identifier}_cry_{n_qubits - i - 1}_{n_qubits - i}",
-                    )
-                    # qc.crz(
-                    #     q.circuit.Parameter(f"{identifier}_crz_{n_qubits - i - 1}_{n_qubits - i}"),
-                    #     n_qubits - i,
-                    #     n_qubits - i - 1,
-                    #     f"{identifier}_crz_{n_qubits - i - 1}_{n_qubits - i}",
-                    # )
-
-        def build_circuit_19_flipped(qc, n_qubits, identifier):
-            for i in range(n_qubits):
-                qc.rx(
-                    q.circuit.Parameter(f"{identifier}_rx_0_{i}"),
-                    i,
-                    f"{identifier}_rx_0_{i}",
-                )
-                qc.rz(q.circuit.Parameter(f"{identifier}_rz_1_{i}"), i)
-
-            for i in range(n_qubits):
-                if i == 0:
-                    qc.crx(
-                        q.circuit.Parameter(f"{identifier}_crx_{i+1}_{i}"),
-                        i,
-                        n_qubits - 1,
-                        f"{identifier}_crx_{i+1}_{i}",
-                    )
-                else:
-                    qc.crx(
-                        q.circuit.Parameter(f"{identifier}_crx_{i+1}_{i}"),
-                        n_qubits - i,
-                        n_qubits - i - 1,
-                        f"{identifier}_crx_{i+1}_{i}",
-                    )
-
-        def build_circuit_19_missing(qc, n_qubits, identifier):
-            for i in range(n_qubits):
-                qc.rx(
-                    q.circuit.Parameter(f"{identifier}_rx_0_{i}"),
-                    i,
-                    f"{identifier}_rx_0_{i}",
-                )
-                qc.rz(q.circuit.Parameter(f"{identifier}_rz_1_{i}"), i)
-
-            for i in range(n_qubits-1):
-                if i == 0:
-                    qc.crx(
-                        q.circuit.Parameter(f"{identifier}_crx_{i+1}_{i}"),
-                        i,
-                        n_qubits - 1,
-                        f"{identifier}_crx_{i+1}_{i}",
-                    )
-                else:
-                    qc.crx(
-                        q.circuit.Parameter(f"{identifier}_crx_{i+1}_{i}"),
-                        n_qubits - i,
-                        n_qubits - i - 1,
-                        f"{identifier}_crx_{i+1}_{i}",
-                    )
-
-        def build_circuit_19(qc, n_qubits, identifier):
-            for i in range(n_qubits):
-                qc.rx(
-                    q.circuit.Parameter(f"{identifier}_rx_0_{i}"),
-                    i,
-                    f"{identifier}_rx_0_{i}",
-                )
-                qc.rz(q.circuit.Parameter(f"{identifier}_rz_1_{i}"), i)
-
-            for i in range(n_qubits):
-                if i == 0:
-                    qc.crx(
-                        q.circuit.Parameter(f"{identifier}_crx_{i+1}_{i}"),
-                        n_qubits - 1,
-                        i,
-                        f"{identifier}_crx_{i+1}_{i}",
-                    )
-                else:
-                    qc.crx(
-                        q.circuit.Parameter(f"{identifier}_crx_{i+1}_{i}"),
-                        n_qubits - i - 1,
-                        n_qubits - i,
-                        f"{identifier}_crx_{i+1}_{i}",
-                    )
-
-        def build_circuit_18(qc, n_qubits, identifier):
-            for i in range(n_qubits):
-                qc.rx(
-                    q.circuit.Parameter(f"{identifier}_rx_0_{i}"),
-                    i,
-                    f"{identifier}_rx_0_{i}",
-                )
-                qc.rz(q.circuit.Parameter(f"{identifier}_rz_1_{i}"), i)
-
-            for i in range(n_qubits):
-                if i == 0:
-                    qc.crz(
-                        q.circuit.Parameter(f"{identifier}_crz_{i+1}_{i}"),
-                        n_qubits - 1,
-                        i,
-                        f"{identifier}_crz_{i+1}_{i}",
-                    )
-                else:
-                    qc.crz(
-                        q.circuit.Parameter(f"{identifier}_crx_{i+1}_{i}"),
-                        n_qubits - i - 1,
-                        n_qubits - i,
-                        f"{identifier}_crz_{i+1}_{i}",
-                    )
-
-        def circuit_builder(qc, n_qubits, n_hidden):
-            enc_params = gen_encoding_params(n_qubits, f"enc")
-            for i in range(n_hidden):
-                if data_reupload or i == 0:
-                    encoding(qc, n_qubits, enc_params, f"enc_{i}")
-                qc.barrier()
-                if self.predefined_vqc == "":
-                    variational(qc, n_qubits, f"var_{i}")
-                elif self.predefined_vqc == "circuit_19":
-                    build_circuit_19(qc, n_qubits, f"var_{i}")
-                elif self.predefined_vqc == "circuit_19_flipped":
-                    build_circuit_19_flipped(qc, n_qubits, f"var_{i}")
-                elif self.predefined_vqc == "circuit_18":
-                    build_circuit_18(qc, n_qubits, f"var_{i}")
-                elif self.predefined_vqc == "circuit_19_missing":
-                    build_circuit_19_missing(qc, n_qubits, f"var_{i}")
-                else:
-                    raise ValueError("Invalid circuit specified")
-                qc.barrier()
-
         log.info(
             f"Building Quantum Circuit with {self.layers} layers and {n_fsps} qubits"
         )
-        # assert self.backend.configuration().num_qubits <= n_fsps
 
         self.qc = q.QuantumCircuit(n_fsps)
-        circuit_builder(self.qc, n_fsps, self.layers)
+        circuit_builder(self.qc, self.predefined_iec, self.predefined_vqc, n_fsps, self.layers, data_reupload=True)
 
         mlflow.log_figure(self.qc.draw(output="mpl"), f"circuit.png")
 
@@ -392,6 +186,7 @@ class qgnn(nn.Module):
                 self.enc_params.append(param)
             else:
                 self.var_params.append(param)
+
         log.info(
             f"Encoding Parameters: {len(self.enc_params)}, Variational Parameters: {len(self.var_params)}"
         )
