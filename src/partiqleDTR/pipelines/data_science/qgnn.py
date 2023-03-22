@@ -87,8 +87,8 @@ class qgnn(nn.Module):
         self.num_classes = n_classes
         self.layers = n_layers_vqc  # dim_feedforward//8
         self.total_n_fsps = n_fsps  # used for padding in forward path
-        self.factor = factor
-        self.tokenize = tokenize
+        # self.factor = factor
+        # self.tokenize = tokenize
         self.symmetrize = symmetrize
         self.block_additional_mlp_layers = n_additional_mlp_layers
         self.skip_block = skip_block
@@ -98,6 +98,7 @@ class qgnn(nn.Module):
         self.measurement = measurement
         self.predefined_vqc = predefined_vqc
         self.predefined_iec = predefined_iec
+        self.data_reupload = data_reupload
 
         if "simulator" not in backend:
             from .ibmq_access import token, hub, group, project
@@ -137,7 +138,7 @@ class qgnn(nn.Module):
         )
 
         self.qc = q.QuantumCircuit(n_fsps)
-        circuit_builder(self.qc, self.predefined_iec, self.predefined_vqc, n_fsps, self.layers, data_reupload=True)
+        circuit_builder(self.qc, self.predefined_iec, self.predefined_vqc, n_fsps, self.layers, data_reupload=self.data_reupload)
 
         mlflow.log_figure(self.qc.draw(output="mpl"), f"circuit.png")
 
@@ -174,24 +175,6 @@ class qgnn(nn.Module):
 
         log.info(f"Transpilation took {time.time() - start}")
         log.info(f"Initialization done")
-
-        # Set up embedding for tokens and adjust input dims
-        if self.tokenize != -1:
-            assert (embedding_dims is not None) and isinstance(
-                embedding_dims, int
-            ), "embedding_dims must be set to an integer is tokenize is given"
-
-            # Initialise the embedding layers, ignoring pad values
-            self.embed = nn.ModuleDict({})
-            for idx, n_tokens in self.tokenize.items():
-                # NOTE: This assumes a pad value of 0 for the input array x
-                self.embed[str(idx)] = nn.Embedding(
-                    n_tokens, embedding_dims, padding_idx=0
-                )
-
-            # And update the infeatures to include the embedded feature dims and delete the original, now tokenized feats
-            n_momenta = n_momenta + (len(self.tokenize) * (embedding_dims - 1))
-            print(f"Set up embedding for {len(self.tokenize)} inputs")
 
         # Create first half of inital NRI half-block to go from leaves to edges
         # initial_mlp = [
@@ -235,6 +218,9 @@ class qgnn(nn.Module):
             batchnorm,
         )
 
+        # calculate the dimensionality after each block and after all blocks
+        # dimensionality increases if we introduce skip connections as one additional 
+        # input is involved then
         block_dim = 3 * dim_feedforward if self.skip_block else 2 * dim_feedforward
         global_dim = 2 * dim_feedforward if self.skip_global else dim_feedforward
 
@@ -315,30 +301,14 @@ class qgnn(nn.Module):
 
         # NOTE create rel matrices on the fly if not given as input
         if rel_rec is None:
-            # rel_rec = t.eye(
-            #     n_leaves,
-            #     device=device
-            # ).repeat_interleave(n_leaves-1, dim=1).T  # (l*(l-1), l)
-            # rel_rec = rel_rec.unsqueeze(0).expand(inputs.size(1), -1, -1)
             rel_rec = construct_rel_recvs([inputs.size(0)], device=device)
 
         if rel_send is None:
-            # rel_send = t.eye(n_leaves, device=device).repeat(n_leaves, 1)
-            # rel_send[t.arange(0, n_leaves*n_leaves, n_leaves + 1)] = 0
-            # rel_send = rel_send[rel_send.sum(dim=1) > 0]  # (l*(l-1), l)
-            # rel_send = rel_send.unsqueeze(0).expand(inputs.size(1), -1, -1)
             rel_send = construct_rel_sends([inputs.size(0)], device=device)
 
-        # Input shape: [batch, num_atoms, num_timesteps, num_dims]
-        # Input shape: [num_sims, num_atoms, num_timesteps, num_dims]
-        # x = inputs.view(inputs.size(0), inputs.size(1), -1)
-        # New shape: [num_sims, num_atoms, num_timesteps*num_dims]
-        # Need to match expected shape
-        # TODO should batch_first be a dataset parameter?
         # (l, b, m) -> (b, l, m)
         x = inputs.permute(1, 0, 2)  # (b, l, m)
 
-        # Create embeddings and merge back into x
         # TODO: Move mask creation to init, optimise this loop
         if self.tokenize != -1:
             emb_x = []
@@ -400,12 +370,29 @@ class qgnn(nn.Module):
             )
         else:
             raise ValueError("Invalid measurement specified")
+
+
+        x = self.forward_nri(x, rel_rec, rel_send)
+
+        # Output what will be used for LCA
+        x = self.fc_out(x)  # (b, l*l, c)
+        x = x.reshape(batch, n_leaves, n_leaves, self.num_classes)
+
+        # Need in the order for cross entropy loss
+        x = x.permute(0, 3, 1, 2)  # (b, c, l, l)
+
+        # Symmetrize
+        if self.symmetrize:
+            x = t.div(x + t.transpose(x, 2, 3), 2)  # (b, c, l, l)
+
+        return x
+
+    def forward_nri(self, x, rel_rec, rel_send):
         # Initial set of linear layers
         # (b, l, 1) -> (b, l, d)
         x = self.initial_mlp(
             x
         )  # Series of 2-layer ELU net per node  (b, l, d) optionally includes embeddings
-
         # (b, l, d), (b, l*l, l), (b, l*l, l) -> (b, l, 2*d)
         x = self.node2edge(x, rel_rec, rel_send)  # (b, l*l, 2d)
 
@@ -456,35 +443,7 @@ class qgnn(nn.Module):
             # Cleanup
             del rel_rec, rel_send
 
-        # else:
-        #     x = self.mlp3(x)  # (b, l*(l-1), d)
-        #     x = t.cat((x, x_skip), dim=2)  # Skip connection  # (b, l*(l-1), 2d)
-        #     x = self.mlp4(x)  # (b, l*(l-1), d)
-
         # Final set of linear layers
         x = self.final_mlp(x)  # Series of 2-layer ELU net per node (b, l, d)
 
-        # Output what will be used for LCA
-        x = self.fc_out(x)  # (b, l*l, c)
-        out = x.reshape(batch, n_leaves, n_leaves, self.num_classes)
-
-        # Change to LCA shape
-        # x is currently the flattened rows of the predicted LCA but without the diagonal
-        # We need to create an empty LCA then populate the off-diagonals with their corresponding values
-        # out = t.zeros((batch, n_leaves, n_leaves, self.num_classes), device=device)  # (b, l, l, c)
-        # ind_upper = t.triu_indices(n_leaves, n_leaves, offset=1)
-        # ind_lower = t.tril_indices(n_leaves, n_leaves, offset=-1)
-
-        # Assign the values to their corresponding position in the LCA
-        # The right side is just some quick mafs to get the correct edge predictions from the flattened x array
-        # out[:, ind_upper[0], ind_upper[1], :] = x[:, (ind_upper[0] * (n_leaves - 1)) + ind_upper[1] - 1, :]
-        # out[:, ind_lower[0], ind_lower[1], :] = x[:, (ind_lower[0] * (n_leaves - 1)) + ind_lower[1], :]
-
-        # Need in the order for cross entropy loss
-        out = out.permute(0, 3, 1, 2)  # (b, c, l, l)
-
-        # Symmetrize
-        if self.symmetrize:
-            out = t.div(out + t.transpose(out, 2, 3), 2)  # (b, c, l, l)
-
-        return out
+        return x
