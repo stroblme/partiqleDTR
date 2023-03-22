@@ -191,21 +191,8 @@ class qgnn(nn.Module):
             f"Encoding Parameters: {len(self.enc_params)}, Variational Parameters: {len(self.var_params)}"
         )
 
-        def interpreter(x):
-            print(f"Interpreter Input {x}")
-            return x
-
         start = time.time()
-        # self.qnn = CircuitQNN(
-        #     self.qc,
-        #     self.enc_params,
-        #     self.var_params,
-        #     quantum_instance=self.qi,
-        #     # interpret=interpreter,
-        #     # output_shape=(n_fsps**2, n_classes),
-        #     # sampling=True,
-        #     input_gradients=True,
-        # )
+
         self.qnn = SamplerQNN(
             circuit=self.qc,
             # sampler=self.bs,
@@ -215,24 +202,18 @@ class qgnn(nn.Module):
             # interpret=interpreter,
             # output_shape=(n_fsps**2, n_classes),
             # sampling=True,
-            input_gradients=True, #set to true since we are using torch connector
+            input_gradients=True, #set to true as we are using torch connector
         )
-        self.initial_weights = 0.1 * (
-            2 * q.utils.algorithm_globals.random.random(self.qnn.num_weights) - 1
-        )
-        log.info(f"Transpilation took {time.time() - start}")
-        # self.quantum_layer = TorchConnector(
-        #     self.qnn, initial_weights=self.initial_weights
-        # )
+        
+        self.initial_weights = 2 * np.pi * q.utils.algorithm_globals.random.random(self.qnn.num_weights) - np.pi
+        
         self.quantum_layer = TorchConnector(
             self.qnn, initial_weights=self.initial_weights
         )
+
+
+        log.info(f"Transpilation took {time.time() - start}")
         log.info(f"Initialization done")
-
-
-
-
-
 
         # Set up embedding for tokens and adjust input dims
         if self.tokenize != -1:
