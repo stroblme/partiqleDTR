@@ -80,6 +80,18 @@ dataset_lca_and_leaves:
 #     type: pickle.PickleDataSet
 #     filepath: data/04_feature/torch_dataset_lca_and_leaves.pkl
 
+nri_model:
+  type: MemoryDataSet
+  copy_mode: assign
+
+instructor:
+  type: MemoryDataSet
+  copy_mode: assign
+
+trained_quantum_model:
+  type: MemoryDataSet
+  copy_mode: assign
+
 # trained_model:
 #   type: kedro_mlflow.io.artifacts.MlflowArtifactDataSet
 #   data_set:
