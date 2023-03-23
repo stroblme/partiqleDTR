@@ -14,9 +14,10 @@ def circuit_builder(qc, predefined_iec, predefined_vqc, n_qubits, n_layers, data
     except AttributeError:
         print(f"Circuit {predefined_vqc} not found in {[m for m in dir(pqc_circuits) if not m.startswith('__')]}")
 
+    reuse_params = None
     for i in range(n_layers):
         if data_reupload or i == 0:
-            iec_generator(qc, n_qubits, f"enc_{i}")
+            reuse_params = iec_generator(qc, n_qubits, f"enc_{i}", reuse_params)
 
         qc.barrier()
         pqc_generator(qc, n_qubits, f"var_{i}")
@@ -25,24 +26,34 @@ def circuit_builder(qc, predefined_iec, predefined_vqc, n_qubits, n_layers, data
         
 class iec_circuits:
 
-    def direct_mapping(qc, n_qubits, identifier):
+    def direct_mapping(qc, n_qubits, identifier, reuse_params=None):
         for i in range(n_qubits):
-            energy = q.circuit.Parameter(f"{identifier}_{i}_0")
+            if reuse_params is not None:
+                energy = reuse_params[0]
+                prx = reuse_params[1]
+                pry = reuse_params[2]
+                prz = reuse_params[3]
+            else:
+                energy = q.circuit.Parameter(f"{identifier}_{i}_0")
+                prx = q.circuit.Parameter(f"{identifier}_{i}_1")
+                pry = q.circuit.Parameter(f"{identifier}_{i}_2")
+                prz = q.circuit.Parameter(f"{identifier}_{i}_3")
 
             qc.rx(
-                q.circuit.Parameter(f"{identifier}_{i}_1") * energy * t.pi,
+                prx * energy * t.pi,
                 i,
                 f"{identifier}_rx_{i}"
             )
             qc.ry(
-                q.circuit.Parameter(f"{identifier}_{i}_2") * energy * t.pi,
+                pry * energy * t.pi,
                 i,
                 f"{identifier}_ry_{i}")
             qc.rz(
-                q.circuit.Parameter(f"{identifier}_{i}_3") * energy * t.pi,
+                prz * energy * t.pi,
                 i,
             )
-            # qc.ry(*param)
+
+        return [energy, prx, pry, prz]
 
 class pqc_circuits:
     
