@@ -197,6 +197,7 @@ class Instructor:
             p.register_hook(
                 lambda grad: t.clamp(grad, -gradients_clamp, gradients_clamp)
             )
+            # TODO: this hook causes issues when being used with dask
             p.register_hook(
                 lambda grad: t.where(
                     grad < gradients_spreader,
