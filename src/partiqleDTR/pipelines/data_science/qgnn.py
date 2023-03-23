@@ -321,22 +321,6 @@ class qgnn(nn.Module):
         # (l, b, m) -> (b, l, m)
         x = inputs.permute(1, 0, 2)  # (b, l, m)
 
-        # TODO: Move mask creation to init, optimise this loop
-        if self.tokenize != -1:
-            emb_x = []
-            # We'll use this to drop tokenized features from x
-            mask = t.ones(feats, dtype=t.bool, device=device)
-            for idx, emb in self.embed.items():
-                # Note we need to convert tokens to type long here for embedding layer
-                emb_x.append(emb(x[..., int(idx)].long()))  # List of (b, l, emb_dim)
-                mask[int(idx)] = False
-
-            # Now merge the embedding outputs with x (mask has deleted the old tokenized feats)
-            x = t.cat([x[..., mask], *emb_x], dim=-1)  # (b, l, d + embeddings)
-            del emb_x
-
-
-
         x = x.reshape(batch, n_leaves * feats)  # flatten the last two dims
         x = t.nn.functional.pad(
             x, (0, (self.total_n_fsps * feats) - (n_leaves * feats)), mode="constant", value=0
