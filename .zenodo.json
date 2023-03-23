@@ -1,0 +1,11 @@
+{
+    "creators": [
+        {
+            "orcid": "0000-0003-0229-9897",
+            "affiliation": "Karlsruhe Institute of Technology",
+            "name": "Melvin Strobl"
+        }
+    ],
+    "title": "PartiqleDTR",
+    "description": "The PartiqleDTR project tries to tackle the problem of particle decay tree reconstruction using hybrid quantum-classical machine learning approaches."
+}
