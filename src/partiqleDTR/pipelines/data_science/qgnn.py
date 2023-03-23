@@ -15,9 +15,9 @@ import qiskit as q
 from qiskit import transpile, assemble
 from qiskit.visualization import *
 from qiskit_machine_learning.neural_networks import CircuitQNN, TwoLayerQNN, SamplerQNN
-
 from qiskit.primitives import BackendSampler
-from qiskit.providers.aer import QasmSimulator
+
+from dask.distributed import LocalCluster, Client
 
 import logging
 
@@ -114,13 +114,21 @@ class qgnn(nn.Module):
             log.info(f"Using simulator backend {backend}")
             self.backend = q.Aer.get_backend(backend)
             # # self.backend = QasmSimulator()
-            # self.bs = BackendSampler(
-            #     self.backend,
-            #     # options={
-            #     #     "shots": 2048,
-            #     # },
-            #     skip_transpilation=False,
-            # )
+
+            # exc = Client(address=LocalCluster(n_workers=1, processes=True))
+            # # Set executor and max_job_size
+            # # self.backend = q.AerSimulator()
+            # self.backend.set_options(executor=exc)
+            # self.backend.set_options(max_job_size=1)
+
+
+            self.bs = BackendSampler(
+                self.backend,
+                # options={
+                #     "shots": 2048,
+                # },
+                # skip_transpilation=False,
+            )
 
         # self.qi = q.utils.QuantumInstance(
         #     self.backend
@@ -153,6 +161,9 @@ class qgnn(nn.Module):
         )
 
         start = time.time()
+
+        
+
 
         self.qnn = SamplerQNN(
             circuit=self.qc,
@@ -251,6 +262,7 @@ class qgnn(nn.Module):
 
         self.fc_out = nn.Linear(dim_feedforward, self.num_classes)
 
+        # weight initialization for classical linear layers
         self.init_weights()
 
     def init_weights(self):
