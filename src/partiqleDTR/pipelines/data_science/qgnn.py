@@ -393,51 +393,51 @@ class qgnn(nn.Module):
         x = self.node2edge(x, rel_rec, rel_send)  # (b, l*l, 2d)
 
         # All things related to NRI blocks are in here
-        if self.factor:
-            x = self.pre_blocks_mlp(x)  # (b, l*l, d)
+        # if self.factor:
+        x = self.pre_blocks_mlp(x)  # (b, l*l, d)
 
-            # Skip connection to jump over all NRI blocks
-            x_global_skip = x
+        # Skip connection to jump over all NRI blocks
+        x_global_skip = x
 
-            for block in self.blocks:
-                x_skip = x  # (b, l*l, d)
+        for block in self.blocks:
+            x_skip = x  # (b, l*l, d)
 
-                # First MLP sequence
-                x = block[0][0](x)  # (b, l*l, d)
-                if self.block_additional_mlp_layers > 0:
-                    x_first_skip = x  # (b, l*l, d)
-                    x = block[0][1](x)  # (b, l*l, d)
-                    x = x + x_first_skip  # (b, l*l, d)
-                    del x_first_skip
+            # First MLP sequence
+            x = block[0][0](x)  # (b, l*l, d)
+            if self.block_additional_mlp_layers > 0:
+                x_first_skip = x  # (b, l*l, d)
+                x = block[0][1](x)  # (b, l*l, d)
+                x = x + x_first_skip  # (b, l*l, d)
+                del x_first_skip
 
-                # Create nodes from edges
-                x = self.edge2node(x, rel_rec)  # (b, l, d)
+            # Create nodes from edges
+            x = self.edge2node(x, rel_rec)  # (b, l, d)
 
-                # Second MLP sequence
-                x = block[1][0](x)  # (b, l, d)
-                if self.block_additional_mlp_layers > 0:
-                    x_second_skip = x  # (b, l*l, d)
-                    x = block[1][1](x)  # (b, l*l, d)
-                    x = x + x_second_skip  # (b, l*l, d)
-                    del x_second_skip
+            # Second MLP sequence
+            x = block[1][0](x)  # (b, l, d)
+            if self.block_additional_mlp_layers > 0:
+                x_second_skip = x  # (b, l*l, d)
+                x = block[1][1](x)  # (b, l*l, d)
+                x = x + x_second_skip  # (b, l*l, d)
+                del x_second_skip
 
-                # Create edges from nodes
-                x = self.node2edge(x, rel_rec, rel_send)  # (b, l*l, 2d)
+            # Create edges from nodes
+            x = self.node2edge(x, rel_rec, rel_send)  # (b, l*l, 2d)
 
-                if self.skip_block:
-                    # Final MLP in block to reduce dimensions again
-                    x = t.cat((x, x_skip), dim=2)  # Skip connection  # (b, l*l, 3d)
-                x = block[2](x)  # (b, l*l, d)
-                del x_skip
+            if self.skip_block:
+                # Final MLP in block to reduce dimensions again
+                x = t.cat((x, x_skip), dim=2)  # Skip connection  # (b, l*l, 3d)
+            x = block[2](x)  # (b, l*l, d)
+            del x_skip
 
-            if self.skip_global:
-                # Global skip connection
-                x = t.cat(
-                    (x, x_global_skip), dim=2
-                )  # Skip connection  # (b, l*(l-1), 2d)
+        if self.skip_global:
+            # Global skip connection
+            x = t.cat(
+                (x, x_global_skip), dim=2
+            )  # Skip connection  # (b, l*(l-1), 2d)
 
-            # Cleanup
-            del rel_rec, rel_send
+        # Cleanup
+        del rel_rec, rel_send
 
         # Final set of linear layers
         x = self.final_mlp(x)  # Series of 2-layer ELU net per node (b, l, d)
