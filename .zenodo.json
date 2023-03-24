@@ -7,5 +7,5 @@
         }
     ],
     "title": "PartiqleDTR",
-    "description": "The PartiqleDTR project tries to tackle the problem of particle decay tree reconstruction using hybrid quantum-classical machine learning approaches."
+    "description": "The PartiqleDTR project attempts to tackle the problem of particle decay tree reconstruction using hybrid quantum-classical machine learning approaches."
 }
