@@ -21,7 +21,8 @@ def circuit_builder(qc, predefined_iec, predefined_vqc, n_qubits, n_layers, data
 
         qc.barrier()
         pqc_generator(qc, n_qubits, f"var_{i}")
-        qc.barrier()
+
+    return qc
 
         
 class iec_circuits:
