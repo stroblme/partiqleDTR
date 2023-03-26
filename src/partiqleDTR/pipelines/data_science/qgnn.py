@@ -14,8 +14,9 @@ from .nri_blocks import MLP, generate_nri_blocks
 import qiskit as q
 from qiskit import transpile, assemble
 from qiskit.visualization import *
-from qiskit_machine_learning.neural_networks import CircuitQNN, TwoLayerQNN, SamplerQNN
+from qiskit_machine_learning.neural_networks import SamplerQNN
 from qiskit.primitives import BackendSampler
+from qiskit_machine_learning.connectors import TorchConnector
 
 from dask.distributed import LocalCluster, Client
 
@@ -24,7 +25,6 @@ import logging
 qiskit_logger = logging.getLogger("qiskit")
 qiskit_logger.setLevel(logging.WARNING)
 log = logging.getLogger(__name__)
-from qiskit_machine_learning.connectors import TorchConnector
 
 os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
@@ -100,6 +100,40 @@ class qgnn(nn.Module):
         self.predefined_iec = predefined_iec
         self.data_reupload = data_reupload
 
+        
+
+        # self.qi = q.utils.QuantumInstance(
+        #     self.backend
+        # )
+
+
+        self.device = t.device(
+            "cuda" if t.cuda.is_available() and device != "cpu" else "cpu"
+        )
+
+        log.info(
+            f"Building Quantum Circuit with {self.layers} layers and {n_fsps} qubits"
+        )
+
+        self.qc = q.QuantumCircuit(n_fsps)
+        self.qc = circuit_builder(self.qc, self.predefined_iec, self.predefined_vqc, n_fsps, self.layers, data_reupload=self.data_reupload)
+
+        mlflow.log_figure(self.qc.draw(output="mpl"), f"circuit.png")
+
+        self.enc_params = []
+        self.var_params = []
+        for param in self.qc.parameters:
+            if "enc" in param.name:
+                self.enc_params.append(param)
+            else:
+                self.var_params.append(param)
+
+        log.info(
+            f"Encoding Parameters: {len(self.enc_params)}, Variational Parameters: {len(self.var_params)}"
+        )
+
+        start = time.time()
+
         if "simulator" not in backend:
             from .ibmq_access import token, hub, group, project
             log.info(f"Searching for backend {backend} on IBMQ using token {token[:10]}****, hub {hub}, group {group} and project {project}")
@@ -115,14 +149,13 @@ class qgnn(nn.Module):
             self.backend = q.Aer.get_backend(backend)
             # # self.backend = QasmSimulator()
 
-            # exc = Client(address=LocalCluster(n_workers=1, processes=True))
-            # # Set executor and max_job_size
-            # # self.backend = q.AerSimulator()
-            # self.backend.set_options(executor=exc)
-            # self.backend.set_options(max_job_size=1)
+            exc = Client(address=LocalCluster(n_workers=1, processes=True))
+            # Set executor and max_job_size
+            self.backend.set_options(executor=exc)
+            self.backend.set_options(max_job_size=4)
 
 
-            self.bs = BackendSampler(
+            bs = BackendSampler(
                 self.backend,
                 # options={
                 #     "shots": 2048,
@@ -130,44 +163,10 @@ class qgnn(nn.Module):
                 # skip_transpilation=False,
             )
 
-        # self.qi = q.utils.QuantumInstance(
-        #     self.backend
-        # )
 
-        self.enc_params = []
-        self.var_params = []
-
-        self.device = t.device(
-            "cuda" if t.cuda.is_available() and device != "cpu" else "cpu"
-        )
-
-        log.info(
-            f"Building Quantum Circuit with {self.layers} layers and {n_fsps} qubits"
-        )
-
-        self.qc = q.QuantumCircuit(n_fsps)
-        circuit_builder(self.qc, self.predefined_iec, self.predefined_vqc, n_fsps, self.layers, data_reupload=self.data_reupload)
-
-        mlflow.log_figure(self.qc.draw(output="mpl"), f"circuit.png")
-
-        for param in self.qc.parameters:
-            if "enc" in param.name:
-                self.enc_params.append(param)
-            else:
-                self.var_params.append(param)
-
-        log.info(
-            f"Encoding Parameters: {len(self.enc_params)}, Variational Parameters: {len(self.var_params)}"
-        )
-
-        start = time.time()
-
-        
-
-
-        self.qnn = SamplerQNN(
+        qnn = SamplerQNN(
             circuit=self.qc,
-            # sampler=self.bs,
+            sampler=bs,
             input_params=self.enc_params,
             weight_params=self.var_params,
             # quantum_instance=self.qi,
@@ -177,10 +176,10 @@ class qgnn(nn.Module):
             input_gradients=True, #set to true as we are using torch connector
         )
         
-        self.initial_weights = 2 * np.pi * q.utils.algorithm_globals.random.random(self.qnn.num_weights) - np.pi
+        initial_weights = 2 * np.pi * q.utils.algorithm_globals.random.random(qnn.num_weights) - np.pi
         
         self.quantum_layer = TorchConnector(
-            self.qnn, initial_weights=self.initial_weights
+            qnn, initial_weights=initial_weights
         )
 
 
@@ -237,8 +236,6 @@ class qgnn(nn.Module):
 
         
         self.blocks = generate_nri_blocks(dim_feedforward, batchnorm, dropout_rate, n_additional_mlp_layers, block_dim, n_blocks)
-
-        print("Using factor graph MLP encoder.")
 
         # Final linear layers as requested
         # self.final_mlp = nn.Sequential(*[MLP(dim_feedforward, dim_feedforward, dim_feedforward, dropout, batchnorm) for _ in range(final_mlp_layers)])
