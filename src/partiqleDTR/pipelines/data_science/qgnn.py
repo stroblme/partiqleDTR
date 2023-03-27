@@ -19,6 +19,7 @@ from qiskit.primitives import BackendSampler
 from qiskit_machine_learning.connectors import TorchConnector
 
 from dask.distributed import LocalCluster, Client
+from concurrent.futures import ThreadPoolExecutor
 
 import logging
 
@@ -77,6 +78,7 @@ class qgnn(nn.Module):
         predefined_vqc="",
         measurement="entangled",
         backend="aer_simulator_statevector",
+        n_shots=2048,
         **kwargs,
     ):
         super(qgnn, self).__init__()
@@ -87,6 +89,7 @@ class qgnn(nn.Module):
         self.num_classes = n_classes
         self.layers = n_layers_vqc  # dim_feedforward//8
         self.total_n_fsps = n_fsps  # used for padding in forward path
+        self.n_shots = n_shots
         # self.factor = factor
         # self.tokenize = tokenize
         self.symmetrize = symmetrize
@@ -149,17 +152,19 @@ class qgnn(nn.Module):
             self.backend = q.Aer.get_backend(backend)
             # # self.backend = QasmSimulator()
 
-            exc = Client(address=LocalCluster(n_workers=1, processes=True))
-            # Set executor and max_job_size
-            self.backend.set_options(executor=exc)
-            self.backend.set_options(max_job_size=4)
+            # n_workers = 5
+            # exc = Client(address=LocalCluster(n_workers=n_workers, processes=True))
+            # # exc = ThreadPoolExecutor(max_workers=n_workers)
+            # # Set executor and max_job_size
+            # self.backend.set_options(executor=exc)
+            # self.backend.set_options(max_job_size=1) # see doc: https://qiskit.org/documentation/apidoc/parallel.html#usage-of-executor
 
 
             bs = BackendSampler(
                 self.backend,
-                # options={
-                #     "shots": 2048,
-                # },
+                options={
+                    "shots": self.n_shots,
+                },
                 # skip_transpilation=False,
             )
 
