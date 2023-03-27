@@ -2,7 +2,9 @@ import torch as t
 from torch import nn
 import torch.nn.functional as F
 
-from .utils import *
+import numpy as np
+
+from ..utils import *
 
 
 class MLP(nn.Module):
@@ -48,7 +50,7 @@ class MLP(nn.Module):
         return self.batch_norm_layer(x) if self.batchnorm else x  # (b, l, d)
 
 
-class sgnn(nn.Module):
+class dgnn(nn.Module):
     """NRI model built off the official implementation.
 
     Contains adaptations to make it work with our use case, plus options for extra layers to give it some more oomph
@@ -71,14 +73,12 @@ class sgnn(nn.Module):
     def __init__(
         self,
         n_momenta,  # d
-        n_classes,  # c
+        n_classes,  # l
         n_blocks=3,
         dim_feedforward=128,  # ff
         n_layers_mlp=2,
         n_additional_mlp_layers=2,
         n_final_mlp_layers=2,
-        skip_block=False,
-        skip_global=False,
         dropout_rate=0.3,
         factor=True,
         tokenize=-1,
@@ -87,7 +87,7 @@ class sgnn(nn.Module):
         symmetrize=True,
         **kwargs,
     ):
-        super(sgnn, self).__init__()
+        super(dgnn, self).__init__()
 
         assert dim_feedforward % 2 == 0, "dim_feedforward must be an even number"
 
@@ -96,8 +96,6 @@ class sgnn(nn.Module):
         self.tokenize = tokenize
         self.symmetrize = symmetrize
         self.block_additional_mlp_layers = n_additional_mlp_layers
-        self.skip_block = skip_block
-        self.skip_global = skip_global
         # self.max_leaves = max_leaves
 
         # Set up embedding for tokens and adjust input dims
@@ -138,7 +136,13 @@ class sgnn(nn.Module):
         self.initial_mlp = nn.Sequential(*initial_mlp)
 
         # MLP to reduce feature dimensions from first Node2Edge before blocks begin
-        # self.pre_blocks_mlp = MLP(dim_feedforward * 2, dim_feedforward, dim_feedforward, dropout_rate, batchnorm)
+        self.pre_blocks_mlp = MLP(
+            dim_feedforward * 2,
+            dim_feedforward,
+            dim_feedforward,
+            dropout_rate,
+            batchnorm,
+        )
 
         if self.factor:
             # MLPs within NRI blocks
@@ -153,7 +157,7 @@ class sgnn(nn.Module):
                             nn.ModuleList(
                                 [
                                     MLP(
-                                        2 * dim_feedforward,
+                                        dim_feedforward,
                                         dim_feedforward,
                                         dim_feedforward,
                                         dropout_rate,
@@ -201,6 +205,15 @@ class sgnn(nn.Module):
                                     # MLP(dim_feedforward * 2, dim_feedforward, dim_feedforward, dropout, batchnorm) if (block_additional_mlp_layers > 0) else None,
                                 ]
                             ),
+                            # MLP layer after Node2Edge (end of block)
+                            # This is just to reduce feature dim after skip connection was concatenated
+                            MLP(
+                                dim_feedforward * 3,
+                                dim_feedforward,
+                                dim_feedforward,
+                                dropout_rate,
+                                batchnorm,
+                            ),
                         ]
                     )
                     for _ in range(n_blocks)
@@ -228,7 +241,7 @@ class sgnn(nn.Module):
         # self.final_mlp = nn.Sequential(*[MLP(dim_feedforward, dim_feedforward, dim_feedforward, dropout, batchnorm) for _ in range(final_mlp_layers)])
         final_mlp = [
             MLP(
-                2 * dim_feedforward,
+                dim_feedforward * 2,
                 dim_feedforward,
                 dim_feedforward,
                 dropout_rate,
@@ -245,23 +258,12 @@ class sgnn(nn.Module):
                     dropout_rate,
                     batchnorm,
                 )
-                for _ in range(n_final_mlp_layers - 2)
-            ]
-        )
-        final_mlp.extend(
-            [
-                MLP(
-                    dim_feedforward,
-                    dim_feedforward // 2,
-                    dim_feedforward // 8,
-                    dropout_rate,
-                    batchnorm,
-                )
+                for _ in range(n_final_mlp_layers - 1)
             ]
         )
         self.final_mlp = nn.Sequential(*final_mlp)
 
-        self.fc_out = nn.Linear(dim_feedforward // 8, self.num_classes)
+        self.fc_out = nn.Linear(dim_feedforward, self.num_classes)
 
         self.init_weights()
 
@@ -294,6 +296,14 @@ class sgnn(nn.Module):
         edges = t.cat([senders, receivers], dim=2)  # (b, l*l, 2d)
 
         return edges
+
+    def decompose(self, x):
+        classes = int(np.sqrt(x.shape[1]))
+        x_split = []
+        for c in range(classes - 1):
+            x_split.append(x[:, c * c : c * c + classes, :])
+
+        return x_split
 
     def forward(self, inputs):
         """
@@ -362,39 +372,45 @@ class sgnn(nn.Module):
 
         # All things related to NRI blocks are in here
         if self.factor:
-            # x = self.pre_blocks_mlp(x)  # (b, l*l, d)
-
+            x = self.pre_blocks_mlp(x)  # (b, l*l, d)
             # Skip connection to jump over all NRI blocks
             x_global_skip = x
 
-            for block in self.blocks:
-                # First MLP sequence
-                x = block[0][0](x)  # (b, l*l, d)
-                if self.block_additional_mlp_layers > 0:
-                    x_first_skip = x  # (b, l*l, d)
-                    x = block[0][1](x)  # (b, l*l, d)
-                    x = x + x_first_skip  # (b, l*l, d)
-                    del x_first_skip
+            x_decomposed = self.decompose(x)
+            for x in x_decomposed:
 
-                # Create nodes from edges
-                x = self.edge2node(x, rel_rec)  # (b, l, d)
+                for block in self.blocks:
+                    x_skip = x  # (b, l*l, d)
 
-                # Second MLP sequence
-                x = block[1][0](x)  # (b, l, d)
-                if self.block_additional_mlp_layers > 0:
-                    x_second_skip = x  # (b, l*l, d)
-                    x = block[1][1](x)  # (b, l*l, d)
-                    x = x + x_second_skip  # (b, l*l, d)
-                    del x_second_skip
+                    # First MLP sequence
+                    x = block[0][0](x)  # (b, l*l, d)
+                    if self.block_additional_mlp_layers > 0:
+                        x_first_skip = x  # (b, l*l, d)
+                        x = block[0][1](x)  # (b, l*l, d)
+                        x = x + x_first_skip  # (b, l*l, d)
+                        del x_first_skip
 
-                # Create edges from nodes
-                x = self.node2edge(x, rel_rec, rel_send)  # (b, l*l, 2d)
+                    # Create nodes from edges
+                    x = self.edge2node(x, rel_rec)  # (b, l, d)
 
-            if self.skip_global:
-                # Global skip connection
-                x = t.cat(
-                    (x, x_global_skip), dim=2
-                )  # Skip connection  # (b, l*(l-1), 2d)
+                    # Second MLP sequence
+                    x = block[1][0](x)  # (b, l, d)
+                    if self.block_additional_mlp_layers > 0:
+                        x_second_skip = x  # (b, l*l, d)
+                        x = block[1][1](x)  # (b, l*l, d)
+                        x = x + x_second_skip  # (b, l*l, d)
+                        del x_second_skip
+
+                    # Create edges from nodes
+                    x = self.node2edge(x, rel_rec, rel_send)  # (b, l*l, 2d)
+
+                    # Final MLP in block to reduce dimensions again
+                    x = t.cat((x, x_skip), dim=2)  # Skip connection  # (b, l*l, 3d)
+                    x = block[2](x)  # (b, l*l, d)
+                    del x_skip
+
+            # Global skip connection
+            x = t.cat((x, x_global_skip), dim=2)  # Skip connection  # (b, l*(l-1), 2d)
 
             # Cleanup
             del rel_rec, rel_send

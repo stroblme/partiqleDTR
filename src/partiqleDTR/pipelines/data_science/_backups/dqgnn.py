@@ -9,7 +9,7 @@ from torch import nn
 import torch.nn.functional as F
 from torch.autograd import Function
 
-from .utils import *
+from ..utils import *
 
 import qiskit as q
 from qiskit import transpile, assemble

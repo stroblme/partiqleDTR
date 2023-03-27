@@ -4,7 +4,7 @@ import torch.nn.functional as F
 
 import mlflow
 
-from .utils import *
+from ..utils import *
 
 import qiskit as q
 from qiskit import transpile, assemble

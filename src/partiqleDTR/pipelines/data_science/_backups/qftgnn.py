@@ -1,8 +1,221 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+import torch
+from torch.autograd import Function
+from torchvision import datasets, transforms
+import torch.optim as optim
+import torch.nn as nn
+import torch.nn.functional as F
+
 import torch as t
 from torch import nn
 import torch.nn.functional as F
 
-from .utils import *
+from ..utils import *
+
+import qiskit as q
+from qiskit import transpile, assemble
+from qiskit.visualization import *
+
+import logging
+
+log = logging.getLogger(__name__)
+log.setLevel(logging.WARNING)
+
+
+class QuantumCircuit:
+    """
+    This class provides a simple interface for interaction
+    with the quantum circuit
+    """
+
+    def __init__(self, n_qubits, n_layers, backend, shots):
+        # --- Circuit definition ---
+        self.shots = shots
+        self.backend = backend
+        self.n_qubits = n_qubits
+        # parameters = [np.random.uniform(-np.pi, np.pi) for i in range(n_qubits*(n_layers[0]*len(rot_gates_enc)+n_layers[1]*len(rot_gates_pqc)+n_layers[1]*len(ent_gates_pqc)))]
+
+        self.enc_qc = q.QuantumCircuit(n_qubits)
+        for l in range(n_layers[0]):
+            for i in range(n_qubits):
+                self.enc_qc.ry(
+                    q.circuit.Parameter(f"enc_ry_{l}_{i}"), i, f"enc_ry_{l}_{i}"
+                )
+                # self.enc_qc.rz(q.circuit.Parameter(f"enc_rz_{l}_{i}"), i)
+
+        self.qft_qc = q.QuantumCircuit(n_qubits)
+
+        def swap_registers(circuit, n):
+            for qubit in range(n // 2):
+                circuit.swap(qubit, n - qubit - 1)
+            return circuit
+
+        def qft_rotations(circuit, n):
+            """Performs qft on the first n qubits in circuit (without swaps)"""
+            if n == 0:
+                return circuit
+            n -= 1
+            circuit.h(n)
+            for qubit in range(n):
+                circuit.cp(np.pi / 2 ** (n - qubit), qubit, n)
+            # At the end of our function, we call the same function again on
+            # the next qubits (we reduced n by one earlier in the function)
+            qft_rotations(circuit, n)
+
+        def qft(circuit, n):
+            """QFT on the first n qubits in circuit"""
+            qft_rotations(circuit, n)
+            swap_registers(circuit, n)
+            return circuit
+
+        qft(self.qft_qc, 3)  # apply qft on the first 3 (momenta) the last one is energy
+        for i in range(n_qubits - 1):
+            self.qft_qc.cx(i, 3)
+
+        # Let's see how it looks:
+
+        # self.qc = self.enc_qc.compose(self.var_qc)
+        self.qft_qc.measure_all()
+        self.qft_qc_transpiled = q.transpile(
+            self.qft_qc, self.backend, optimization_level=2
+        )
+
+        # self.qc.draw()
+
+    def circuit_parameters(self, data):
+        parameters = {}
+        for i, p in enumerate(self.enc_qc.parameters):
+            parameters[p] = data[i]
+        # for i, p in enumerate(self.var_qc.parameters):
+        #     parameters[p] = variational[i]
+        return parameters
+
+    def bitstring_decode(self, results):
+        shots = sum(results.values())
+
+        average = np.zeros(self.n_qubits)
+        for bitstring, counts in results.items():
+            for i, s in enumerate(bitstring):
+                average[i] += counts if s == "1" else 0
+
+        return average / (shots * self.n_qubits)
+
+    def run(self, nd_data):
+        circuits = []
+        ignore_after = -1
+        for i, data in enumerate(nd_data):
+            if max(data) == 0.0:
+                ignore_after = i
+                break  # shortcut to prevent unnecessary circuit exec.
+            else:
+                scaled_data = np.interp(data, (data.min(), data.max()), (0, 2 * np.pi))
+                enc_qc_param = self.enc_qc.assign_parameters(
+                    self.circuit_parameters(scaled_data.tolist())
+                )  # assign parameters to the encoding circuit
+                circuits.append(
+                    q.transpile(enc_qc_param, self.backend, optimization_level=1)
+                    + self.qft_qc_transpiled
+                )  # combine the encoding and qft circuit and append both to the circuit list
+
+        results = q.execute(circuits, self.backend, shots=self.shots).result()
+        expectations = [self.bitstring_decode(results.get_counts(c)) for c in circuits]
+        expectations = (
+            np.append(
+                expectations, [np.zeros(4)] * (len(nd_data) - ignore_after), axis=0
+            )
+            if ignore_after >= 0
+            else expectations
+        )
+        # counts = np.array(list(results.get_counts().values()))
+        # states = np.array(list(results.get_counts().keys())).astype(float)
+
+        return expectations
+
+
+# simulator = qiskit.Aer.get_backend('aer_simulator')
+
+# circuit = QuantumCircuit(1, simulator, 100)
+# print('Expected value for rotation pi {}'.format(circuit.run([np.pi])[0]))
+# circuit._circuit.draw()
+
+
+class HybridFunction(Function):
+    """Hybrid quantum - classical function definition"""
+
+    @staticmethod
+    def forward(ctx, input, quantum_circuit, shift):
+        """Forward pass computation"""
+        ctx.shift = shift
+        ctx.quantum_circuit = quantum_circuit
+
+        results = []
+        for batch in input:
+            expectation_z = ctx.quantum_circuit.run(batch)
+            results.append(expectation_z)
+
+        results = t.Tensor(results)
+
+        ctx.save_for_backward(input, results)
+
+        return results
+
+    @staticmethod
+    def backward(ctx, grad_output):
+        """Backward pass computation"""
+        input, expectation_z = ctx.saved_tensors
+        input_list = np.array(input.tolist())
+
+        shift_right = input_list + np.ones(input_list.shape) * ctx.shift
+        shift_left = input_list - np.ones(input_list.shape) * ctx.shift
+
+        gradients = []
+        for i in range(len(input_list)):
+            expectation_right = ctx.quantum_circuit.run(shift_right[i])
+            expectation_left = ctx.quantum_circuit.run(shift_left[i])
+
+            gradient = torch.tensor([expectation_right]) - torch.tensor(
+                [expectation_left]
+            )
+            gradients.append(gradient)
+        gradients = np.array([gradients]).T
+        return torch.tensor([gradients]).float() * grad_output.float(), None, None
+
+
+class Hybrid(nn.Module):
+    """Hybrid quantum - classical layer definition"""
+
+    def __init__(self, backend, shots, shift):
+        super(Hybrid, self).__init__()
+        self.quantum_circuit = QuantumCircuit(4, [1, 1], backend, shots)
+        self.shift = shift
+
+    def forward(self, input):
+        return HybridFunction.apply(input, self.quantum_circuit, self.shift)
+
+
+# class Net(nn.Module):
+#     def __init__(self):
+#         super(Net, self).__init__()
+#         self.conv1 = nn.Conv2d(1, 6, kernel_size=5)
+#         self.conv2 = nn.Conv2d(6, 16, kernel_size=5)
+#         self.dropout = nn.Dropout2d()
+#         self.fc1 = nn.Linear(256, 64)
+#         self.fc2 = nn.Linear(64, 1)
+#         self.hybrid = Hybrid(q.Aer.get_backend('aer_simulator'), 100, np.pi / 2)
+
+#     def forward(self, x):
+#         x = F.relu(self.conv1(x))
+#         x = F.max_pool2d(x, 2)
+#         x = F.relu(self.conv2(x))
+#         x = F.max_pool2d(x, 2)
+#         x = self.dropout(x)
+#         x = x.view(1, -1)
+#         x = F.relu(self.fc1(x))
+#         x = self.fc2(x)
+#         x = self.hybrid(x)
+#         return torch.cat((x, 1 - x), -1)
 
 
 class MLP(nn.Module):
@@ -48,7 +261,7 @@ class MLP(nn.Module):
         return self.batch_norm_layer(x) if self.batchnorm else x  # (b, l, d)
 
 
-class gnn(nn.Module):
+class qftgnn(nn.Module):
     """NRI model built off the official implementation.
 
     Contains adaptations to make it work with our use case, plus options for extra layers to give it some more oomph
@@ -77,8 +290,6 @@ class gnn(nn.Module):
         n_layers_mlp=2,
         n_additional_mlp_layers=2,
         n_final_mlp_layers=2,
-        skip_block=True,
-        skip_global=True,
         dropout_rate=0.3,
         factor=True,
         tokenize=-1,
@@ -87,7 +298,7 @@ class gnn(nn.Module):
         symmetrize=True,
         **kwargs,
     ):
-        super(gnn, self).__init__()
+        super(qftgnn, self).__init__()
 
         assert dim_feedforward % 2 == 0, "dim_feedforward must be an even number"
 
@@ -96,8 +307,6 @@ class gnn(nn.Module):
         self.tokenize = tokenize
         self.symmetrize = symmetrize
         self.block_additional_mlp_layers = n_additional_mlp_layers
-        self.skip_block = skip_block
-        self.skip_global = skip_global
         # self.max_leaves = max_leaves
 
         # Set up embedding for tokens and adjust input dims
@@ -136,6 +345,8 @@ class gnn(nn.Module):
             ]
         )
         self.initial_mlp = nn.Sequential(*initial_mlp)
+        self.hybrid = Hybrid(q.Aer.get_backend("aer_simulator"), 100, np.pi / 2)
+        # self.hybrid = Hybrid(q.Aer.get_backend('aer_simulator'), 1, np.pi / 2)
 
         # MLP to reduce feature dimensions from first Node2Edge before blocks begin
         self.pre_blocks_mlp = MLP(
@@ -145,9 +356,6 @@ class gnn(nn.Module):
             dropout_rate,
             batchnorm,
         )
-
-        block_dim = 3 * dim_feedforward if self.skip_block else 2 * dim_feedforward
-        global_dim = 2 * dim_feedforward if self.skip_global else dim_feedforward
 
         if self.factor:
             # MLPs within NRI blocks
@@ -213,7 +421,7 @@ class gnn(nn.Module):
                             # MLP layer after Node2Edge (end of block)
                             # This is just to reduce feature dim after skip connection was concatenated
                             MLP(
-                                block_dim,
+                                dim_feedforward * 3,
                                 dim_feedforward,
                                 dim_feedforward,
                                 dropout_rate,
@@ -245,7 +453,13 @@ class gnn(nn.Module):
         # Final linear layers as requested
         # self.final_mlp = nn.Sequential(*[MLP(dim_feedforward, dim_feedforward, dim_feedforward, dropout, batchnorm) for _ in range(final_mlp_layers)])
         final_mlp = [
-            MLP(global_dim, dim_feedforward, dim_feedforward, dropout_rate, batchnorm)
+            MLP(
+                dim_feedforward * 2,
+                dim_feedforward,
+                dim_feedforward,
+                dropout_rate,
+                batchnorm,
+            )
         ]
         # Add any additional layers as per request
         final_mlp.extend(
@@ -354,6 +568,7 @@ class gnn(nn.Module):
 
         # Initial set of linear layers
         # (b, l, m) -> (b, l, d)
+        x = self.hybrid(x)
         x = self.initial_mlp(
             x
         )  # Series of 2-layer ELU net per node  (b, l, d) optionally includes embeddings
@@ -364,7 +579,6 @@ class gnn(nn.Module):
         # All things related to NRI blocks are in here
         if self.factor:
             x = self.pre_blocks_mlp(x)  # (b, l*l, d)
-
             # Skip connection to jump over all NRI blocks
             x_global_skip = x
 
@@ -393,17 +607,13 @@ class gnn(nn.Module):
                 # Create edges from nodes
                 x = self.node2edge(x, rel_rec, rel_send)  # (b, l*l, 2d)
 
-                if self.skip_block:
-                    # Final MLP in block to reduce dimensions again
-                    x = t.cat((x, x_skip), dim=2)  # Skip connection  # (b, l*l, 3d)
+                # Final MLP in block to reduce dimensions again
+                x = t.cat((x, x_skip), dim=2)  # Skip connection  # (b, l*l, 3d)
                 x = block[2](x)  # (b, l*l, d)
                 del x_skip
 
-            if self.skip_global:
-                # Global skip connection
-                x = t.cat(
-                    (x, x_global_skip), dim=2
-                )  # Skip connection  # (b, l*(l-1), 2d)
+            # Global skip connection
+            x = t.cat((x, x_global_skip), dim=2)  # Skip connection  # (b, l*(l-1), 2d)
 
             # Cleanup
             del rel_rec, rel_send

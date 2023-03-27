@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from enum import Enum
 import time
 
-from .graph_visualization import hierarchy_pos
+from ..graph_visualization import hierarchy_pos
 
 import torch as t
 from torch import nn
@@ -17,7 +17,7 @@ from torch_geometric.utils.convert import to_networkx
 from torch_geometric.utils import add_self_loops, degree
 import mlflow
 
-from .utils import *
+from ..utils import *
 
 import qiskit as q
 from qiskit import transpile, assemble

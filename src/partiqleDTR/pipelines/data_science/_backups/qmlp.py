@@ -11,7 +11,7 @@ from torch.autograd import Function
 
 import mlflow
 
-from .utils import *
+from ..utils import *
 
 import qiskit as q
 from qiskit import transpile, assemble

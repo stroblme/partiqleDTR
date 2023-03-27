@@ -71,9 +71,10 @@
             "request": "launch",
             "console": "integratedTerminal",
             "module": "kedro",
-            "args": ["run", "--pipeline", "debug_training_qgnn_pipeline"]
+            "args": ["run", "--pipeline", "debug_training_qgnn_pipeline"],
             // Any other arguments should be passed as a comma-seperated-list
             // e.g "args": ["run", "--pipeline", "pipeline_name"]
+            "justMyCode": true
         },
         {
             "name": "KR: - resume training",
