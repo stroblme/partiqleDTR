@@ -190,7 +190,7 @@ class gnn(nn.Module):
 
         # Output what will be used for LCA
         x = self.fc_out(x)  # (b, l*l, c)
-        out = x.reshape(batch, n_leaves, n_leaves, self.num_classes)
+        x = x.reshape(batch, n_leaves, n_leaves, self.num_classes)
 
         # Need in the order for cross entropy loss
         x = x.permute(0, 3, 1, 2)  # (b, c, l, l)
