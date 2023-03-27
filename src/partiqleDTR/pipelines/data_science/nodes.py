@@ -11,27 +11,13 @@ import mlflow
 
 from .hyperparam_optimizer import Hyperparam_Optimizer
 from .instructor import Instructor
-from ._backups.gnn import gnn
-from ._backups.qftgnn import qftgnn
 from .qgnn import qgnn
-from ._backups.dqgnn import dqgnn
-from ._backups.dgnn import dgnn
-from ._backups.pqgnn import pqgnn
-from ._backups.sgnn import sgnn
-from ._backups.sqgnn import sqgnn
-from ._backups.qmlp import qmlp
+from .gnn import gnn
 
 # from .dqgnn import dqgnn
 models = {
     "gnn": gnn,
-    "sgnn": sgnn,
     "qgnn": qgnn,
-    "dqgnn": dqgnn,
-    "qftgnn": qftgnn,
-    "sqgnn": sqgnn,
-    "qmlp": qmlp,
-    "dgnn": dgnn,
-    "pqgnn": pqgnn,
 }
 
 from typing import Dict
