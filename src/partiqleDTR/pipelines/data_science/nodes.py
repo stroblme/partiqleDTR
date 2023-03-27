@@ -226,6 +226,7 @@ def create_model(
     predefined_iec: str,
     measurement: str,
     backend: str,
+    n_shots: int,
     pre_trained_model: DataParallel = None,
     **kwargs,
 ) -> DataParallel:
@@ -256,6 +257,7 @@ def create_model(
         predefined_iec=predefined_iec,
         measurement=measurement,
         backend=backend,
+        n_shots=n_shots,
         pre_trained_model=pre_trained_model,
         **kwargs,
     )
