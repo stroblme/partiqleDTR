@@ -302,7 +302,8 @@ class Instructor:
                             loss.backward()
                             self.optimizer.step()
 
-                            if self.log_gradients:
+                            #TODO: logging gradients currently only enabled for qgnn
+                            if self.log_gradients and self.model._get_name() == "qgnn":
                                 # raise Exception("test")
                                 epoch_grad += t.Tensor(
                                     [p.grad for p in self.model.parameters()][0]
