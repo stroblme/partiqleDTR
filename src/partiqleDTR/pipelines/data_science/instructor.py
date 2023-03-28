@@ -20,6 +20,7 @@ import torchinfo
 from .utils import rel_pad_collate_fn
 from .graph_visualization import GraphVisualization
 from .gradients_visualization import heatmap, annotate_heatmap
+from .circuit_gradient_visualization import draw_gradient_circuit
 
 from typing import Dict
 
@@ -470,7 +471,14 @@ class Instructor:
         if self.log_gradients and len(all_grads) > 0:
             g_plt = self.plotGradients(all_grads, figsize=(16, 12))
             mlflow.log_figure(g_plt.gcf(), f"gradients.png")
-            
+
+            gc_plt = self.gradient_pqc_viz(self.model, all_grads)
+            mlflow.log_figure(
+                gc_plt,
+                "circuit_gradients.png",
+            )
+
+
         # In case we didn't even calculated a single sample
         if result == None:
             result = self.model
@@ -524,6 +532,15 @@ class Instructor:
         # texts = annotate_heatmap(im, valfmt="{x:.1f} s")
         fig.tight_layout()
         return plt
+
+    def gradient_pqc_viz(self, model, gradients):
+
+        # gradients = t.stack(gradients)
+        circuit = model.qc
+
+        plotly_figure = draw_gradient_circuit(gradients=gradients, circuit=circuit)
+
+        return plotly_figure
 
     def plotBatchGraphs(self, batch_logits, batch_ref, rows=4, cols=2):
         fig, ax = plt.subplots(
