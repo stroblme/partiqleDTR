@@ -38,9 +38,6 @@ class gnn(nn.Module):
         skip_block=True,
         skip_global=True,
         dropout_rate=0.3,
-        factor=True,
-        tokenize=-1,
-        embedding_dims=-1,
         batchnorm=True,
         symmetrize=True,
         **kwargs,
@@ -50,7 +47,6 @@ class gnn(nn.Module):
         assert dim_feedforward % 2 == 0, "dim_feedforward must be an even number"
 
         self.num_classes = n_classes
-        self.factor = factor
         self.symmetrize = symmetrize
         self.block_additional_mlp_layers = n_additional_mlp_layers
         self.skip_block = skip_block
