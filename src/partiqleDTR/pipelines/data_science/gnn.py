@@ -51,7 +51,6 @@ class gnn(nn.Module):
 
         self.num_classes = n_classes
         self.factor = factor
-        self.tokenize = tokenize
         self.symmetrize = symmetrize
         self.block_additional_mlp_layers = n_additional_mlp_layers
         self.skip_block = skip_block
