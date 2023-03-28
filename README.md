@@ -22,7 +22,8 @@ The PartiqleDTR project attempts to tackle the problem of particle decay tree re
 *The command prefix ```poetry run``` can be omitted if you're using an already activated venv*
 
 - Pipeline Configuration:
-  - Open visualization: ```poetry run kedro viz```
+  - Run kedro visualization: ```poetry run kedro viz```
+  - Open in [browser](http://127.0.0.1:4141/)
   1. Data Generation:
      - Builds decay tree
      - Generates decay events
@@ -37,7 +38,8 @@ The PartiqleDTR project attempts to tackle the problem of particle decay tree re
   - ```conf/base/parameters/data_processing.yml```
   - ```conf/base/parameters/data_science.yml```
 - Runs are being recorded using MLFlow
-  - Open dashboard: ```poetry run mlflow ui```
+  - Run mlflow dashboard: ```poetry run mlflow ui```
+  - Open in [browser](http://127.0.0.1:5000)
 
 
 ## :pray: Acknowledgement
