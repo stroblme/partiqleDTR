@@ -52,6 +52,7 @@ class iec_circuits:
             qc.rz(
                 prz * energy * t.pi,
                 i,
+                f"{identifier}_rz_{i}"
             )
 
         return [energy, prx, pry, prz]
@@ -131,7 +132,9 @@ class pqc_circuits:
                 i,
                 f"{identifier}_rx_0_{i}",
             )
-            qc.rz(q.circuit.Parameter(f"{identifier}_rz_1_{i}"), i)
+            qc.rz(q.circuit.Parameter(f"{identifier}_rz_1_{i}"), i,
+                f"{identifier}_rz_1_{i}",
+            )
 
         for i in range(n_qubits):
             if i == 0:
@@ -165,7 +168,9 @@ class pqc_circuits:
                 i,
                 f"{identifier}_rx_0_{i}",
             )
-            qc.rz(q.circuit.Parameter(f"{identifier}_rz_1_{i}"), i)
+            qc.rz(q.circuit.Parameter(f"{identifier}_rz_1_{i}"), i,
+                f"{identifier}_rz_1_{i}",
+            )
 
         for i in range(n_qubits-1):
             if i == 0:
@@ -200,7 +205,9 @@ class pqc_circuits:
                 i,
                 f"{identifier}_rx_0_{i}",
             )
-            qc.rz(q.circuit.Parameter(f"{identifier}_rz_1_{i}"), i)
+            qc.rz(q.circuit.Parameter(f"{identifier}_rz_1_{i}"), i,
+                f"{identifier}_rz_1_{i}",
+            )
 
         for i in range(n_qubits):
             if i == 0:
@@ -226,7 +233,9 @@ class pqc_circuits:
                 i,
                 f"{identifier}_rx_0_{i}",
             )
-            qc.rz(q.circuit.Parameter(f"{identifier}_rz_1_{i}"), i)
+            qc.rz(q.circuit.Parameter(f"{identifier}_rz_1_{i}"), i,
+                f"{identifier}_rz_1_{i}",
+            )
 
         for i in range(n_qubits):
             if i == 0:
