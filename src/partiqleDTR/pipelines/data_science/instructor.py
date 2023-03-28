@@ -247,6 +247,11 @@ class Instructor:
         if enabled_modes == ["val"]:
             self.epochs = 1
 
+        #TODO: logging gradients currently only enabled for qgnn
+        self.log_gradients = self.log_gradients and self.model._get_name() == "qgnn"
+
+        error_raised = True
+
         try:  # catch things like gradient nan exceptions
             for epoch in range(start_epoch, 1 + self.epochs):
                 logits_for_plotting = []
@@ -302,8 +307,7 @@ class Instructor:
                             loss.backward()
                             self.optimizer.step()
 
-                            #TODO: logging gradients currently only enabled for qgnn
-                            if self.log_gradients and self.model._get_name() == "qgnn":
+                            if self.log_gradients:
                                 # raise Exception("test")
                                 epoch_grad += t.Tensor(
                                     [p.grad for p in self.model.parameters()][0]
@@ -454,6 +458,8 @@ class Instructor:
                     # learning rate scheduling
                     self.scheduler.step()
 
+            error_raised = False
+
         except GradientsNanException as e:
             log.error(f"Gradients became NAN during training\n{traceback.print_exc()}")
         except Exception as e:
@@ -488,6 +494,9 @@ class Instructor:
 
         mlflow.log_dict(model_state_dict, f"model.yml")
         mlflow.log_dict(optimizer_state_dict, f"optimizer.yml")
+
+        if error_raised:
+            raise RuntimeError("Training did not complete successfully. Model and optimizer state dictionaries were saved though.")
 
         return {
             "trained_model": result,
