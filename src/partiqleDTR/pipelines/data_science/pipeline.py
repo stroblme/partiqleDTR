@@ -36,7 +36,7 @@ nd_create_model = node(
             "n_fsps": "n_fsps",
             "device": "params:device",
         },
-        outputs={"nri_model": "nri_model"},
+        outputs={"model": "model"},
         name="create_model",
     )
 
@@ -68,7 +68,7 @@ def create_metadata_nodes(**kwargs) -> Pipeline:
     ]
 
 
-def create_training_qgnn_pipeline(**kwargs) -> Pipeline:
+def create_training_pipeline(**kwargs) -> Pipeline:
     return pipeline(
         [
             *create_metadata_nodes(**kwargs),
@@ -76,7 +76,7 @@ def create_training_qgnn_pipeline(**kwargs) -> Pipeline:
             node(
                 func=create_instructor,
                 inputs={
-                    "model": "nri_model",
+                    "model": "model",
                     "dataset_lca_and_leaves": "dataset_lca_and_leaves",
                     "learning_rate": "params:learning_rate",
                     "learning_rate_decay": "params:learning_rate_decay",
@@ -168,7 +168,7 @@ def create_training_optuna_pipeline(**kwargs) -> Pipeline:
     )
 
 
-def create_resume_training_qgnn_pipeline(**kwargs) -> Pipeline:
+def create_resume_training_pipeline(**kwargs) -> Pipeline:
     return pipeline(
         [
             *create_metadata_nodes(**kwargs),
@@ -189,7 +189,7 @@ def create_resume_training_qgnn_pipeline(**kwargs) -> Pipeline:
             node(
                 func=create_instructor,
                 inputs={
-                    "model": "nri_model",
+                    "model": "model",
                     "dataset_lca_and_leaves": "dataset_lca_and_leaves",
                     "learning_rate": "params:learning_rate",
                     "learning_rate_decay": "params:learning_rate_decay",
@@ -248,7 +248,7 @@ def create_validation_qgnn_pipeline(**kwargs) -> Pipeline:
             node(
                 func=create_instructor,
                 inputs={
-                    "model": "nri_model",
+                    "model": "model",
                     "dataset_lca_and_leaves": "dataset_lca_and_leaves",
                     "learning_rate": "params:learning_rate",
                     "learning_rate_decay": "params:learning_rate_decay",
@@ -286,8 +286,8 @@ def create_validation_qgnn_pipeline(**kwargs) -> Pipeline:
         ]
     )
 # additional pipeline just to add it as an exception in kedro
-def create_debug_training_qgnn_pipeline(**kwargs) -> Pipeline:
-    return create_training_qgnn_pipeline(**kwargs)
+def create_debug_training_pipeline(**kwargs) -> Pipeline:
+    return create_training_pipeline(**kwargs)
 
 
 def create_debug_training_optuna_pipeline(**kwargs) -> Pipeline:
