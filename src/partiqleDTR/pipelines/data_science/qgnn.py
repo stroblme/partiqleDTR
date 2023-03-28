@@ -3,18 +3,16 @@ import time
 
 import torch as t
 from torch import nn
-import torch.nn.functional as F
 
 import mlflow
 
 from .utils import *
-from .circuits import pqc_circuits, iec_circuits, circuit_builder
+from .circuits import circuit_builder
 from .nri_blocks import MLP, generate_nri_blocks
 
 from .gnn import gnn
 
 import qiskit as q
-from qiskit import transpile, assemble
 from qiskit.visualization import *
 from qiskit_machine_learning.neural_networks import SamplerQNN
 from qiskit.primitives import BackendSampler
