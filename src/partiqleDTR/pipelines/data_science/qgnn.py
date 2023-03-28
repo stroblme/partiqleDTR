@@ -11,6 +11,8 @@ from .utils import *
 from .circuits import pqc_circuits, iec_circuits, circuit_builder
 from .nri_blocks import MLP, generate_nri_blocks
 
+from .gnn import gnn
+
 import qiskit as q
 from qiskit import transpile, assemble
 from qiskit.visualization import *
@@ -32,7 +34,7 @@ os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
 
 
-class qgnn(nn.Module):
+class qgnn(gnn, nn.Module):
     """NRI model built off the official implementation.
 
     Contains adaptations to make it work with our use case, plus options for extra layers to give it some more oomph
@@ -65,9 +67,6 @@ class qgnn(nn.Module):
         skip_block=True,
         skip_global=True,
         dropout_rate=0.3,
-        factor=True,
-        tokenize=-1,
-        embedding_dims=-1,
         batchnorm=True,
         symmetrize=True,
         n_fsps: int = -1,
@@ -81,7 +80,9 @@ class qgnn(nn.Module):
         n_shots=2048,
         **kwargs,
     ):
-        super(qgnn, self).__init__()
+        # do not initialize the gnn, as this will yield to a clash with the order of modules in pytorch
+        nn.Module.__init__(self)
+
 
         assert dim_feedforward % 2 == 0, "dim_feedforward must be an even number"
 
@@ -102,13 +103,6 @@ class qgnn(nn.Module):
         self.predefined_vqc = predefined_vqc
         self.predefined_iec = predefined_iec
         self.data_reupload = data_reupload
-
-        
-
-        # self.qi = q.utils.QuantumInstance(
-        #     self.backend
-        # )
-
 
         self.device = t.device(
             "cuda" if t.cuda.is_available() and device != "cpu" else "cpu"
@@ -267,36 +261,6 @@ class qgnn(nn.Module):
         # weight initialization for classical linear layers
         self.init_weights()
 
-    def init_weights(self):
-        for m in self.modules():
-            if isinstance(m, nn.Linear):
-                nn.init.xavier_normal_(m.weight.data)
-                m.bias.data.fill_(0.1)
-
-    def edge2node(self, x, rel_rec):
-        """
-        Input: (b, l*l, d), (b, l*l, l)
-        Output: (b, l, d)
-        """
-        # TODO assumes that batched matrix product just works
-        # TODO these do not have to be members
-        incoming = t.matmul(rel_rec.permute(0, 2, 1), x)  # (b, l, d)
-        denom = rel_rec.sum(1)[:, 1]
-        return incoming / denom.reshape(-1, 1, 1)  # (b, l, d)
-        # return incoming / incoming.size(1)  # (b, l, d)
-
-    def node2edge(self, x, rel_rec, rel_send):
-        """
-        Input: (b, l, d), (b, l*(l-1), l), (b, l*(l-1), l)
-        Output: (b, l*l(l-1), 2d)
-        """
-        # TODO assumes that batched matrix product just works
-        receivers = t.matmul(rel_rec, x)  # (b, l*l, d)
-        senders = t.matmul(rel_send, x)  # (b, l*l, d)
-        edges = t.cat([senders, receivers], dim=2)  # (b, l*l, 2d)
-
-        return edges
-
     def forward(self, inputs):
         """
         Input: (l, b, d)
@@ -382,66 +346,5 @@ class qgnn(nn.Module):
         # Symmetrize
         if self.symmetrize:
             x = t.div(x + t.transpose(x, 2, 3), 2)  # (b, c, l, l)
-
-        return x
-
-    def forward_nri(self, x, rel_rec, rel_send):
-        # Initial set of linear layers
-        # (b, l, 1) -> (b, l, d)
-        x = self.initial_mlp(
-            x
-        )  # Series of 2-layer ELU net per node  (b, l, d) optionally includes embeddings
-        # (b, l, d), (b, l*l, l), (b, l*l, l) -> (b, l, 2*d)
-        x = self.node2edge(x, rel_rec, rel_send)  # (b, l*l, 2d)
-
-        # All things related to NRI blocks are in here
-        # if self.factor:
-        x = self.pre_blocks_mlp(x)  # (b, l*l, d)
-
-        # Skip connection to jump over all NRI blocks
-        x_global_skip = x
-
-        for block in self.blocks:
-            x_skip = x  # (b, l*l, d)
-
-            # First MLP sequence
-            x = block[0][0](x)  # (b, l*l, d)
-            if self.block_additional_mlp_layers > 0:
-                x_first_skip = x  # (b, l*l, d)
-                x = block[0][1](x)  # (b, l*l, d)
-                x = x + x_first_skip  # (b, l*l, d)
-                del x_first_skip
-
-            # Create nodes from edges
-            x = self.edge2node(x, rel_rec)  # (b, l, d)
-
-            # Second MLP sequence
-            x = block[1][0](x)  # (b, l, d)
-            if self.block_additional_mlp_layers > 0:
-                x_second_skip = x  # (b, l*l, d)
-                x = block[1][1](x)  # (b, l*l, d)
-                x = x + x_second_skip  # (b, l*l, d)
-                del x_second_skip
-
-            # Create edges from nodes
-            x = self.node2edge(x, rel_rec, rel_send)  # (b, l*l, 2d)
-
-            if self.skip_block:
-                # Final MLP in block to reduce dimensions again
-                x = t.cat((x, x_skip), dim=2)  # Skip connection  # (b, l*l, 3d)
-            x = block[2](x)  # (b, l*l, d)
-            del x_skip
-
-        if self.skip_global:
-            # Global skip connection
-            x = t.cat(
-                (x, x_global_skip), dim=2
-            )  # Skip connection  # (b, l*(l-1), 2d)
-
-        # Cleanup
-        del rel_rec, rel_send
-
-        # Final set of linear layers
-        x = self.final_mlp(x)  # Series of 2-layer ELU net per node (b, l, d)
 
         return x
