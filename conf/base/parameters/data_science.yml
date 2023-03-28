@@ -39,9 +39,6 @@ n_additional_mlp_layers: 0 # additional layers within a block
 n_additional_mlp_layers_range: [1, 5, "linear"]
 n_final_mlp_layers: 2 # layers after the blocks
 n_final_mlp_layers_range: [1, 5, "linear"]
-factor: True
-tokenize: -1 # currently not supported as findings in baumbauen did not show any advantage
-embedding_dims: -1 # no effect if tokenization not enabled
 symmetrize: True
 
 # Quantum
