@@ -14,6 +14,7 @@ from .instructor import Instructor
 from .qgnn import qgnn
 from .gnn import gnn
 
+
 # from .dqgnn import dqgnn
 models = {
     "gnn": gnn,
@@ -237,14 +238,14 @@ def create_model(
     )
 
     if device == "cpu":
-        nri_model = model.to(t.device(device))
+        model = model.to(t.device(device))
         # os.environ["CUDA_VISIBLE_DEVICES"]=""
     elif t.cuda.is_available():
-        nri_model = DataParallel(model)
+        model = DataParallel(model)
     else:
         raise ValueError(f"Specified device {device} although no cuda support detected")
 
-    return {"nri_model": nri_model}
+    return {"model": model}
 
 
 def create_instructor(
@@ -303,3 +304,9 @@ def train(instructor: Instructor, start_epoch=1, enabled_modes=["train", "val"])
     )  # returns a dict of e.g. the model, checkpoints and the gradients
 
     return result
+
+
+
+
+
+    
