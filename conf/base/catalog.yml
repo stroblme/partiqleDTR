@@ -80,7 +80,7 @@ dataset_lca_and_leaves:
 #     type: pickle.PickleDataSet
 #     filepath: data/04_feature/torch_dataset_lca_and_leaves.pkl
 
-nri_model:
+model:
   type: MemoryDataSet
   copy_mode: assign
 
