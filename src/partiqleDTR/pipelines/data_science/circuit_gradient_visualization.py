@@ -29,7 +29,8 @@ def draw_gradient_circuit(
     if type(gradients) == list:
         gradients = t.stack(gradients)
 
-    gradients_mean = gradients.mean(axis=0)
+    # first mean over epochs, then abs value of gradient
+    gradients_mean = gradients.mean(axis=0).abs()
     
     fig = draw_single_gradient_circuit(
             gradients_mean,
