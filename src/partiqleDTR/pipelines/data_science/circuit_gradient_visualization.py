@@ -25,6 +25,7 @@ def draw_gradient_circuit(
     initial_state=False,
     cregbundle=None,
     wire_order=None,
+    param_indicator='var'
 ):
     if type(gradients) == list:
         gradients = t.stack(gradients)
@@ -47,7 +48,8 @@ def draw_gradient_circuit(
             ax=ax,
             initial_state=initial_state,
             cregbundle=cregbundle,
-            wire_order=wire_order
+            wire_order=wire_order,
+            param_indicator=param_indicator
         )
     
     return fig
@@ -84,6 +86,7 @@ def draw_single_gradient_circuit(
     initial_state=False,
     cregbundle=None,
     wire_order=None,
+    param_indicator='var'
 ):
     qubits, clbits, nodes = _utils._get_layered_instructions(
         circuit,
@@ -123,7 +126,7 @@ def draw_single_gradient_circuit(
             label_map[p.name] = i
             i += 1
 
-    qcd.set_node_significance(label_map, significance)
+    qcd.set_node_significance(label_map, significance, param_indicator)
 
     return qcd.draw(filename)
 
@@ -131,7 +134,7 @@ def draw_single_gradient_circuit(
 class custom_matplotlib(qiskit_matplotlibdrawer):
     nodes_significance = {}
 
-    def set_node_significance(self, label_map, significance):
+    def set_node_significance(self, label_map, significance, param_indicator="var"):
         max_sig = max(significance)
         min_sig = min(significance)
 
