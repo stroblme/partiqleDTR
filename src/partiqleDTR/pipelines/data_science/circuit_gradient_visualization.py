@@ -116,7 +116,14 @@ def draw_single_gradient_circuit(
         circuit=circuit,
     )
 
-    qcd.set_node_significance(significance)
+    label_map = {}
+    i = 0
+    for p in circuit.parameters:
+        if "var" in p.name:
+            label_map[p.name] = i
+            i += 1
+
+    qcd.set_node_significance(label_map, significance)
 
     return qcd.draw(filename)
 
@@ -124,7 +131,7 @@ def draw_single_gradient_circuit(
 class custom_matplotlib(qiskit_matplotlibdrawer):
     nodes_significance = {}
 
-    def set_node_significance(self, significance):
+    def set_node_significance(self, label_map, significance):
         max_sig = max(significance)
         min_sig = min(significance)
 
@@ -132,7 +139,7 @@ class custom_matplotlib(qiskit_matplotlibdrawer):
         for layer in self._nodes:
             for node in layer:
                 if node.op.label is not None and "var" in node.op.label:
-                    self.nodes_significance[node] = ((significance[i] - min_sig) / max_sig).item()
+                    self.nodes_significance[node] = ((significance[label_map[node.op.label]] - min_sig) / max_sig).item()
                     i += 1
 
   
