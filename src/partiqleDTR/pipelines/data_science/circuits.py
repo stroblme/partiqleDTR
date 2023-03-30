@@ -18,9 +18,12 @@ def circuit_builder(qc, predefined_iec, predefined_vqc, n_qubits, n_layers, data
     for i in range(n_layers):
         if data_reupload or i == 0:
             reuse_params = iec_generator(qc, n_qubits, f"enc_{i}", reuse_params)
+            qc.barrier()
 
-        qc.barrier()
         pqc_generator(qc, n_qubits, f"var_{i}")
+        
+        if i < n_layers-1:
+            qc.barrier()
 
     return qc
 
