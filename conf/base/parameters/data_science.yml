@@ -7,7 +7,7 @@ default_modes: ["train", "val"]
 validation_mode: ["val"]
 
 # Classical
-epochs: 20
+epochs: 5
 normalize: "smartone" # one, smartone, zmuv
 normalize_individually: False
 zero_mean: False
@@ -18,7 +18,7 @@ batchnorm: True
 dropout_rate: 0.2
 dropout_rate_range: [0.1, 1.0, "linear"]
 learning_rate: 0.01
-learning_rate_range: [1e-5, 1e-1, "log"]
+learning_rate_range: [0.00001, 0.1, "log"]
 learning_rate_decay: 200
 learning_rate_decay_range: [1, 1000, "log"]
 gamma: 0.5
@@ -49,8 +49,11 @@ add_rot_gates_range: [True, False]
 n_shots: 2048
 n_layers_vqc: 3
 n_layers_vqc_range: [1, 5, "linear"]
+initialization_constant: 2 # this scales the interval [-a pi .. a pi]
+initialization_constant_range: [0.1, 1, "linear"]  # this scales the interval [-a pi .. a pi]
 padding_dropout: False
 predefined_vqc: "circuit_19" # "", "circuit_19_missing", "circuit_19_flipped", "circuit_19", .. tba.
+predefined_vqc_range: ["circuit_19_missing", "circuit_19_flipped", "circuit_19"]
 predefined_iec: "direct_mapping" 
 measurement: "entangled" # mutually_exclusive, all, entangled
 backend: "aer_simulator" # aer_simulator, aer_simulator_statevector, ibm_perth

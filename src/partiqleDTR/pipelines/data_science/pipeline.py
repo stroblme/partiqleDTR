@@ -35,6 +35,7 @@ nd_create_model = node(
             "n_shots": "params:n_shots",
             "n_fsps": "n_fsps",
             "device": "params:device",
+            "initialization_constant": "params:initialization_constant"
         },
         outputs={"model": "model"},
         name="create_model",

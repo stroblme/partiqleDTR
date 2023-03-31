@@ -194,8 +194,6 @@ def create_model(
     dropout_rate: float,
     batchnorm: bool,
     symmetrize: bool,
-    n_fsps: int,
-    device: str,
     data_reupload: bool,
     add_rot_gates: bool,
     n_layers_vqc: bool,
@@ -205,6 +203,9 @@ def create_model(
     measurement: str,
     backend: str,
     n_shots: int,
+    n_fsps: int,
+    device: str,
+    initialization_constant: str,
     pre_trained_model: DataParallel = None,
     **kwargs,
 ) -> DataParallel:
@@ -222,8 +223,6 @@ def create_model(
         dropout_rate=dropout_rate,
         batchnorm=batchnorm,
         symmetrize=symmetrize,
-        n_fsps=n_fsps,
-        device=device,
         data_reupload=data_reupload,
         add_rot_gates=add_rot_gates,
         n_layers_vqc=n_layers_vqc,
@@ -233,7 +232,10 @@ def create_model(
         measurement=measurement,
         backend=backend,
         n_shots=n_shots,
+        n_fsps=n_fsps,
+        device=device,
         pre_trained_model=pre_trained_model,
+        initialization_constant=initialization_constant,
         **kwargs,
     )
 

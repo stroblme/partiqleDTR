@@ -76,6 +76,7 @@ class qgnn(gnn, nn.Module):
         measurement="entangled",
         backend="aer_simulator_statevector",
         n_shots=2048,
+        initialization_constant=np.pi,
         **kwargs,
     ):
         # do not initialize the gnn, as this will yield to a clash with the order of modules in pytorch
@@ -101,6 +102,7 @@ class qgnn(gnn, nn.Module):
         self.predefined_vqc = predefined_vqc
         self.predefined_iec = predefined_iec
         self.data_reupload = data_reupload
+        self.initialization_constant = initialization_constant
 
         self.device = t.device(
             "cuda" if t.cuda.is_available() and device != "cpu" else "cpu"
@@ -173,10 +175,17 @@ class qgnn(gnn, nn.Module):
             input_gradients=True, #set to true as we are using torch connector
         )
         
-        initial_weights = 2 * np.pi * q.utils.algorithm_globals.random.random(qnn.num_weights) - np.pi
+        if type(self.initialization_constant) == str:
+            if self.initialization_constant == "strategy_a":
+                # https://arxiv.org/abs/2302.06858
+                L = self.qc.depth()
+                raise NotImplementedError()
+                
+        self.initial_weights = self.initialization_constant * np.pi * q.utils.algorithm_globals.random.random(qnn.num_weights) - (self.initialization_constant/2) * np.pi
+
         
         self.quantum_layer = TorchConnector(
-            qnn, initial_weights=initial_weights
+            qnn, initial_weights=self.initial_weights
         )
 
 
