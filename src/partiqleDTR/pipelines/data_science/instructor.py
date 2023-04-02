@@ -302,6 +302,8 @@ class Instructor:
                             perfect_lcag = self.perfect_lcag(logits, labels, ignore_index=-1)
 
                             # self.plotBatchGraphs(logits, labels)
+
+                            self.model.quantum_layer.neural_network.set_selected_parameters(self.model.var_params[:10])
                             
                             # do the actual optimization
                             self.optimizer.zero_grad()

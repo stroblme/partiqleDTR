@@ -12,6 +12,8 @@ from .nri_blocks import MLP, generate_nri_blocks
 
 from .gnn import gnn
 
+from .custom_sampler_qnn import CustomSamplerQNN
+
 import qiskit as q
 from qiskit.visualization import *
 from qiskit_machine_learning.neural_networks import SamplerQNN
@@ -163,7 +165,7 @@ class qgnn(gnn, nn.Module):
             )
 
 
-        qnn = SamplerQNN(
+        qnn = CustomSamplerQNN(
             circuit=self.qc,
             sampler=bs,
             input_params=self.enc_params,
@@ -180,7 +182,7 @@ class qgnn(gnn, nn.Module):
                 # https://arxiv.org/abs/2302.06858
                 L = self.qc.depth()
                 raise NotImplementedError()
-                
+
         self.initial_weights = self.initialization_constant * np.pi * q.utils.algorithm_globals.random.random(qnn.num_weights) - (self.initialization_constant/2) * np.pi
 
         
