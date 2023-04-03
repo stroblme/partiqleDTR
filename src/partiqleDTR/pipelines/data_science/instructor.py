@@ -512,11 +512,16 @@ class Instructor:
             "gradients": all_grads.numpy(),
         }
 
-    def plotGradients(self, epoch_gradients, figsize=(16, 12)):
+    def parameter_pruning(self, parameters, gradients:t.Tensor):
+        # gradients should be of shape [epochs, n_weights]
+        return parameters
+
+    def plotGradients(self, epoch_gradients:t.Tensor, figsize=(16, 12)):
+        # gradients should be of shape [epochs, n_weights]
 
         X = [i for i in range(len(epoch_gradients[0]))]
         Y = [i for i in range(len(epoch_gradients))]
-        Z = t.stack(epoch_gradients)
+        Z = epoch_gradients.abs()
 
         fig, ax = plt.subplots(figsize=figsize)
         im, cbar = heatmap(
@@ -533,7 +538,8 @@ class Instructor:
         fig.tight_layout()
         return plt
 
-    def gradient_pqc_viz(self, model, gradients):
+    def gradient_pqc_viz(self, model, gradients:t.Tensor):
+        # gradients should be of shape [epochs, n_weights]
 
         # gradients = t.stack(gradients)
         circuit = model.qc
