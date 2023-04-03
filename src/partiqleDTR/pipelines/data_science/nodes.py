@@ -270,6 +270,7 @@ def create_instructor(
     n_classes: int,
     gradients_clamp: int,
     gradients_spreader: float,
+    gradient_curvature_threshold: float,
     **kwargs: Dict,
 ) -> Instructor:
     instructor = Instructor(
@@ -292,6 +293,7 @@ def create_instructor(
         n_classes=n_classes,
         gradients_clamp=gradients_clamp,
         gradients_spreader=gradients_spreader,
+        gradient_curvature_threshold=gradient_curvature_threshold,
         **kwargs,
     )
 
