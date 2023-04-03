@@ -19,7 +19,7 @@ import torchinfo
 
 from .utils import rel_pad_collate_fn
 from .graph_visualization import GraphVisualization
-from .gradients_visualization import heatmap, annotate_heatmap
+from .gradients_visualization import heatmap_pl, annotate_heatmap
 from .circuit_gradient_visualization import draw_gradient_circuit
 
 from typing import Dict
@@ -478,7 +478,7 @@ class Instructor:
             all_grads = t.stack(all_grads)
     
             g_plt = self.plotGradients(all_grads.mean(dim=1), figsize=(16, 12)) # use mean over batch samples
-            mlflow.log_figure(g_plt.gcf(), f"gradients.png")
+            mlflow.log_figure(g_plt, f"gradients.html")
 
             gc_plt = self.gradient_pqc_viz(self.model, all_grads.mean(dim=1)) # use mean over batch samples
             mlflow.log_figure(
@@ -538,6 +538,7 @@ class Instructor:
 
         return sel_params
 
+
     def plotGradients(self, epoch_gradients:t.Tensor, figsize=(16, 12)):
         # gradients should be of shape [epochs, n_weights]
 
@@ -545,20 +546,40 @@ class Instructor:
         Y = [i for i in range(len(epoch_gradients))]
         Z = epoch_gradients.abs()   # use absolute value of gradients
 
-        fig, ax = plt.subplots(figsize=figsize)
-        im, cbar = heatmap(
+        fig = heatmap_pl(
             Z,
             Y,
             X,
-            ax=ax,
             cmap="magma_r",
             cbarlabel=f"Gradients (Data Mean, Absolute Values)",
             axis_labels=("Parameters", "Epochs"),
             title="Gradient Values over Epochs",
         )
-        # texts = annotate_heatmap(im, valfmt="{x:.1f} s")
-        fig.tight_layout()
-        return plt
+
+        return fig
+
+
+    # def plotGradients(self, epoch_gradients:t.Tensor, figsize=(16, 12)):
+    #     # gradients should be of shape [epochs, n_weights]
+
+    #     X = [i for i in range(len(epoch_gradients[0]))]
+    #     Y = [i for i in range(len(epoch_gradients))]
+    #     Z = epoch_gradients.abs()   # use absolute value of gradients
+
+    #     fig, ax = plt.subplots(figsize=figsize)
+    #     im, cbar = heatmap(
+    #         Z,
+    #         Y,
+    #         X,
+    #         ax=ax,
+    #         cmap="magma_r",
+    #         cbarlabel=f"Gradients (Data Mean, Absolute Values)",
+    #         axis_labels=("Parameters", "Epochs"),
+    #         title="Gradient Values over Epochs",
+    #     )
+    #     # texts = annotate_heatmap(im, valfmt="{x:.1f} s")
+    #     fig.tight_layout()
+    #     return plt
 
     def gradient_pqc_viz(self, model, gradients:t.Tensor):
         # gradients should be of shape [epochs, n_weights]

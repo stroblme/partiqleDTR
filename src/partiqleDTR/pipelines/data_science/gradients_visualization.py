@@ -3,8 +3,30 @@ import matplotlib
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
+from plotly import graph_objects as go
 
-def heatmap(
+def heatmap_pl(
+    data,
+    row_labels,
+    col_labels,
+    cmap,
+    cbarlabel="",
+    axis_labels=("", ""),
+    title="",
+):
+    trace = go.Heatmap(
+        x = row_labels,
+        y = col_labels,
+        z = data,
+        type = 'heatmap',
+        colorscale = cmap
+    )
+    data = [trace]
+    fig = go.Figure(data = data)
+    
+    return fig
+
+def heatmap_mpl(
     data,
     row_labels,
     col_labels,
