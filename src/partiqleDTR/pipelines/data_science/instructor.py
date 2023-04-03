@@ -169,6 +169,7 @@ class Instructor:
         gradients_clamp=1000,
         gradients_spreader=1e-10,
         gradient_curvature_threshold=1e-10,
+        gradient_curvature_history=2,
         model_state_dict=None,
         optimizer_state_dict=None,
     ):
@@ -222,6 +223,7 @@ class Instructor:
         self.optimizer = t.optim.Adam(self.model.parameters(), lr=learning_rate, amsgrad=False)
 
         self.gradient_curvature_threshold = float(gradient_curvature_threshold)
+        self.gradient_curvature_history = int(gradient_curvature_history)
 
         self.n_classes = n_classes
         
@@ -445,10 +447,11 @@ class Instructor:
                     if self.log_gradients and mode == "train":
                         all_grads.append(t.stack(epoch_grad)) # n_epochs, n_batch_samples, n_weights
 
-                        selected_parameters = self.parameter_pruning(self.model.var_params, t.stack(all_grads).mean(dim=1)) # use mean over batch samples
+                        if self.gradient_curvature_history > 0:
+                            selected_parameters = self.parameter_pruning(self.model.var_params, t.stack(all_grads).mean(dim=1)) # use mean over batch samples
 
-                        print(f"Using {len(selected_parameters)} out of {len(self.model.var_params)} parameters from now on")
-                        self.model.quantum_layer.neural_network.set_selected_parameters(selected_parameters)
+                            print(f"Using {len(selected_parameters)} out of {len(self.model.var_params)} parameters from now on")
+                            self.model.quantum_layer.neural_network.set_selected_parameters(selected_parameters)
 
                     mlflow.log_metric(key=f"{mode}_loss", value=epoch_loss, step=epoch)
                     mlflow.log_metric(
@@ -471,7 +474,7 @@ class Instructor:
             log.error(f"Exception occured during training\n{traceback.print_exc()}\n")
             
         # quickly print the gradients..
-        if self.log_gradients:
+        if self.log_gradients and len(all_grads) > 0:
             all_grads = t.stack(all_grads)
     
             g_plt = self.plotGradients(all_grads.mean(dim=1), figsize=(16, 12)) # use mean over batch samples
@@ -524,10 +527,10 @@ class Instructor:
 
         sel_params = []
 
-        if curvature.size(0) == 0:
+        if curvature.size(0) == 0 or curvature.size(0) < self.gradient_curvature_history:
             sel_params = parameters
         else:
-            for param, curv in zip(parameters, curvature[-1]): # we only use the diff between the current and previous epoch
+            for param, curv in zip(parameters, curvature[-self.gradient_curvature_history:]): # we only use the diff between the current and previous epoch
                 # if curvature is greater than a threshold, the parameter seems to be updated frequently -> don't prune it
                 if curv.item() > self.gradient_curvature_threshold:
                     sel_params.append(param)
@@ -548,7 +551,7 @@ class Instructor:
             X,
             ax=ax,
             cmap="magma_r",
-            cbarlabel=f"Gradients Normalized",
+            cbarlabel=f"Gradients (Data Mean, Absolute Values)",
             axis_labels=("Parameters", "Epochs"),
             title="Gradient Values over Epochs",
         )
