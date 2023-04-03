@@ -46,7 +46,7 @@ def register_pipelines() -> Dict[str, Pipeline]:
         "training": training_pipeline,
         "resume_training": resume_training_pipeline,
         "validation": validation_qgnn_pipeline,
-        "debug_traininge": debug_training_pipeline,
-        "debug_training": debug_training_optuna_pipeline,
+        "debug_training": debug_training_pipeline,
+        "debug_training_optuna": debug_training_optuna_pipeline,
         # "split_training_qgnn_pipeline": split_training_qgnn_pipeline,
     }
