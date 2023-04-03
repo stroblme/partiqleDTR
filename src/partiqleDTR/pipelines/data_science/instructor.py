@@ -530,9 +530,9 @@ class Instructor:
         if curvature.size(0) == 0 or curvature.size(0) < self.gradient_curvature_history:
             sel_params = parameters
         else:
-            for param, curv in zip(parameters, curvature[-self.gradient_curvature_history:]): # we only use the diff between the current and previous epoch
+            for param, curv in zip(parameters, curvature[-self.gradient_curvature_history:].mean(dim=0)): # we only use the diff between the current and previous epoch
                 # if curvature is greater than a threshold, the parameter seems to be updated frequently -> don't prune it
-                if curv.item() > self.gradient_curvature_threshold:
+                if curv.mean().item() > self.gradient_curvature_threshold:
                     sel_params.append(param)
 
         return sel_params
