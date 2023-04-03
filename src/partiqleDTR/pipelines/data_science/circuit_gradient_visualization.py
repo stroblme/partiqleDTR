@@ -31,7 +31,7 @@ def draw_gradient_circuit(
         gradients = t.stack(gradients)
 
     # first mean over epochs, then abs value of gradient
-    gradients_mean = gradients.mean(axis=0).abs()
+    gradients_mean = gradients.mean(dim=0).abs()
     
     fig = draw_single_gradient_circuit(
             gradients_mean,
