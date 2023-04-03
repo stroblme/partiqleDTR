@@ -71,7 +71,7 @@
             "request": "launch",
             "console": "integratedTerminal",
             "module": "kedro",
-            "args": ["run", "--pipeline", "debug_training_qgnn_pipeline"],
+            "args": ["run", "--pipeline", "debug_training"],
             // Any other arguments should be passed as a comma-seperated-list
             // e.g "args": ["run", "--pipeline", "pipeline_name"]
             "justMyCode": false
@@ -82,7 +82,7 @@
             "request": "launch",
             "console": "integratedTerminal",
             "module": "kedro",
-            "args": ["run", "--pipeline", "resume_training_qgnn_pipeline"]
+            "args": ["run", "--pipeline", "resume_training"]
             // Any other arguments should be passed as a comma-seperated-list
             // e.g "args": ["run", "--pipeline", "pipeline_name"]
         },
@@ -92,7 +92,7 @@
             "request": "launch",
             "console": "integratedTerminal",
             "module": "kedro",
-            "args": ["run", "--pipeline", "validation_qgnn_pipeline"]
+            "args": ["run", "--pipeline", "validation"]
             // Any other arguments should be passed as a comma-seperated-list
             // e.g "args": ["run", "--pipeline", "pipeline_name"]
         },
@@ -112,10 +112,10 @@
             "request": "launch",
             "console": "integratedTerminal",
             "module": "kedro",
-            "args": ["run", "--pipeline", "split_training_qgnn_pipeline"]
-            // "args": ["run", "--pipeline", "split_training_qgnn_pipeline", "--from-nodes", "train_qgnn"]
-            // "args": ["run", "--pipeline", "split_training_qgnn_pipeline", "--tag", "training"]
-            // "args": ["run", "--pipeline", "split_training_qgnn_pipeline", "--tag", "split_run"]
+            "args": ["run", "--pipeline", "split_training"]
+            // "args": ["run", "--pipeline", "split_training", "--from-nodes", "train_qgnn"]
+            // "args": ["run", "--pipeline", "split_training", "--tag", "training"]
+            // "args": ["run", "--pipeline", "split_training", "--tag", "split_run"]
             // Any other arguments should be passed as a comma-seperated-list
             // e.g "args": ["run", "--pipeline", "pipeline_name"]
         },
