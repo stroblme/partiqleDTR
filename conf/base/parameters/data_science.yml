@@ -7,7 +7,7 @@ default_modes: ["train", "val"]
 validation_mode: ["val"]
 
 # Classical
-epochs: 10 #10
+epochs: 20
 normalize: "smartone" # one, smartone, zmuv
 normalize_individually: False
 zero_mean: False
@@ -54,8 +54,8 @@ gradient_curvature_history: 2  # set to 0 to disable gradient curvature/ paramet
 initialization_constant: 2 # this scales the interval [-a pi .. a pi]
 initialization_constant_range: [0.1, 1, "linear"]  # this scales the interval [-a pi .. a pi]
 padding_dropout: False
-predefined_vqc: "circuit_19" # "", "circuit_19_missing", "circuit_19_flipped", "circuit_19", .. tba.
-predefined_vqc_range: ["circuit_19_missing", "circuit_19_flipped", "circuit_19"]
+predefined_vqc: "circuit_19" # "", "circuit_191", "circuit_192", "circuit_19", .. tba.
+predefined_vqc_range: ["circuit_191", "circuit_192", "circuit_19"]
 predefined_iec: "direct_mapping" 
 measurement: "entangled" # mutually_exclusive, all, entangled
 backend: "aer_simulator" # aer_simulator, aer_simulator_statevector, ibm_perth
