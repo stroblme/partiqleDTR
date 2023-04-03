@@ -168,6 +168,7 @@ class Instructor:
         n_classes=-1,
         gradients_clamp=1000,
         gradients_spreader=1e-10,
+        gradient_curvature_threshold=1e-10,
         model_state_dict=None,
         optimizer_state_dict=None,
     ):
@@ -220,7 +221,7 @@ class Instructor:
         self.batch_size = batch_size
         self.optimizer = t.optim.Adam(self.model.parameters(), lr=learning_rate, amsgrad=False)
 
-        self.gradient_curvature_threshold = 1e-10
+        self.gradient_curvature_threshold = float(gradient_curvature_threshold)
 
         self.n_classes = n_classes
         
