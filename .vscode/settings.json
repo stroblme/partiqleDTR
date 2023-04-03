@@ -1,5 +1,6 @@
 {
     "python.analysis.extraPaths": [
         "./src/partiqlegan/pipelines/data_science"
-    ]
+    ],
+    "python.formatting.provider": "black"
 }
