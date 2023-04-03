@@ -242,7 +242,6 @@ class Instructor:
         log.info(f"Starting loops from epoch {start_epoch} using modes {enabled_modes}.")
         result = None
         best_acc = 0
-        all_grads = []
         checkpoint = None
 
         if enabled_modes == ["val"]:
@@ -251,6 +250,9 @@ class Instructor:
         #TODO: logging gradients currently only enabled for qgnn
         self.log_gradients = self.log_gradients and self.model._get_name() == "qgnn"
 
+        if self.log_gradients:
+            all_grads = []
+        
         error_raised = True
 
         try:  # catch things like gradient nan exceptions
@@ -275,7 +277,7 @@ class Instructor:
                     epoch_perfect_lcag = 0.0
 
                     if self.log_gradients:
-                        epoch_grad = t.zeros(len([p for p in self.model.parameters()][0]))
+                        epoch_grad = []
 
                     # for i in range(10):
                     #     all_grads.append(epoch_grad+i)
@@ -312,16 +314,8 @@ class Instructor:
 
                             if self.log_gradients:
                                 # raise Exception("test")
-                                epoch_grad += t.Tensor(
-                                    [p.grad for p in self.model.parameters()][0]
-                                )  # only log the first layer (vqc)
-                                if t.all(t.isnan(epoch_grad)):
-                                    log.error(
-                                        f"All gradients became nan in epoch {epoch} after iteration {i}.\nInput was\n{states}.\nPredicted was\n{logits}.\nGradients are\n{epoch_grad}"
-                                    )
-                                    raise GradientsNanException
-                                elif t.any(
-                                    t.isnan(epoch_grad)
+                                epoch_grad.append(self.model.quantum_layer.weight.grad)  # n_batch_samples, n_weights
+
                                 ):  # TODO: we are checking for "all" instead of "any" since there were cases where the gradients became nan but training successfully continued (investigate in samples!)
                                     log.error(
                                         f"At least one gradient became nan in epoch {epoch} after iteration {i}.\nInput was\n{states}.\nPredicted was\n{logits}.\nGradients are\n{epoch_grad}"
@@ -446,7 +440,10 @@ class Instructor:
                         }
 
                     if self.log_gradients and mode == "train":
-                        all_grads.append(epoch_grad)
+                        all_grads.append(t.stack(epoch_grad)) # n_epochs, n_batch_samples, n_weights
+
+                        selected_parameters = self.parameter_pruning(self.model.var_params, t.stack(all_grads).mean(dim=1)) # use mean over batch samples
+                        self.model.quantum_layer.neural_network.set_selected_parameters(selected_parameters)
 
                     mlflow.log_metric(key=f"{mode}_loss", value=epoch_loss, step=epoch)
                     mlflow.log_metric(
@@ -468,13 +465,14 @@ class Instructor:
         except Exception as e:
             log.error(f"Exception occured during training\n{traceback.print_exc()}\n")
             
-
         # quickly print the gradients..
-        if self.log_gradients and len(all_grads) > 0:
-            g_plt = self.plotGradients(all_grads, figsize=(16, 12))
+        if self.log_gradients:
+            all_grads = t.stack(all_grads)
+    
+            g_plt = self.plotGradients(all_grads.mean(dim=1), figsize=(16, 12)) # use mean over batch samples
             mlflow.log_figure(g_plt.gcf(), f"gradients.png")
 
-            gc_plt = self.gradient_pqc_viz(self.model, all_grads)
+            gc_plt = self.gradient_pqc_viz(self.model, all_grads.mean(dim=1)) # use mean over batch samples
             mlflow.log_figure(
                 gc_plt,
                 "circuit_gradients.png",
@@ -511,7 +509,7 @@ class Instructor:
         return {
             "trained_model": result,
             "checkpoint": checkpoint,
-            "gradients": all_grads,
+            "gradients": all_grads.numpy(),
         }
 
     def plotGradients(self, epoch_gradients, figsize=(16, 12)):
