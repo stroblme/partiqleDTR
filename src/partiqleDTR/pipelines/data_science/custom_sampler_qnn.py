@@ -394,12 +394,13 @@ class CustomSamplerQNN(NeuralNetwork):
         """Backward pass of the network."""
         # prepare parameters in the required format
         parameter_values, num_samples = self._preprocess_forward(input_data, weights)
+        selected_params =  self._selected_parameters if self._selected_parameters is not None else self._circuit.parameters[self._num_inputs :]
 
         results = None
         if num_samples is not None and np.prod(parameter_values.shape) > 0:
             if self._input_gradients:
                 # TODO: validate that qiskit is not just using index matching here
-                job = self.gradient.run([self._circuit] * num_samples, parameter_values=parameter_values, parameters=[self._circuit.parameters[: self._num_inputs] + self._selected_parameters]*num_samples)
+                job = self.gradient.run([self._circuit] * num_samples, parameter_values=parameter_values, parameters=[self._circuit.parameters[: self._num_inputs] + selected_params]*num_samples)
                 try:
                     results = job.result()
                 except Exception as exc:
@@ -409,7 +410,7 @@ class CustomSamplerQNN(NeuralNetwork):
                     job = self.gradient.run(
                         [self._circuit] * num_samples,
                         parameter_values,
-                        parameters=[self._circuit.parameters[self._num_inputs :]] * num_samples,
+                        parameters=[selected_params] * num_samples,
                     )
                     try:
                         results = job.result()
