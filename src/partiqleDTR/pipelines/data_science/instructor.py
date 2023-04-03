@@ -220,6 +220,8 @@ class Instructor:
         self.batch_size = batch_size
         self.optimizer = t.optim.Adam(self.model.parameters(), lr=learning_rate, amsgrad=False)
 
+        self.gradient_curvature_threshold = 1e-10
+
         self.n_classes = n_classes
         
         # learning rate scheduler, same as in NRI
@@ -443,6 +445,8 @@ class Instructor:
                         all_grads.append(t.stack(epoch_grad)) # n_epochs, n_batch_samples, n_weights
 
                         selected_parameters = self.parameter_pruning(self.model.var_params, t.stack(all_grads).mean(dim=1)) # use mean over batch samples
+
+                        print(f"Using {len(selected_parameters)} out of {len(self.model.var_params)} parameters from now on")
                         self.model.quantum_layer.neural_network.set_selected_parameters(selected_parameters)
 
                     mlflow.log_metric(key=f"{mode}_loss", value=epoch_loss, step=epoch)
@@ -514,7 +518,20 @@ class Instructor:
 
     def parameter_pruning(self, parameters, gradients:t.Tensor):
         # gradients should be of shape [epochs, n_weights]
-        return parameters
+
+        curvature = gradients.diff(dim=0)
+
+        sel_params = []
+
+        if curvature.size(0) == 0:
+            sel_params = parameters
+        else:
+            for param, curv in zip(parameters, curvature[-1]): # we only use the diff between the current and previous epoch
+                # if curvature is greater than a threshold, the parameter seems to be updated frequently -> don't prune it
+                if curv.item() > self.gradient_curvature_threshold:
+                    sel_params.append(param)
+
+        return sel_params
 
     def plotGradients(self, epoch_gradients:t.Tensor, figsize=(16, 12)):
         # gradients should be of shape [epochs, n_weights]
