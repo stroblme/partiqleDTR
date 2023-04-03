@@ -305,30 +305,30 @@ class Instructor:
 
                             # self.plotBatchGraphs(logits, labels)
 
-                            self.model.quantum_layer.neural_network.set_selected_parameters(self.model.var_params[:10])
                             
                             # do the actual optimization
                             self.optimizer.zero_grad()
                             loss.backward()
                             self.optimizer.step()
 
+
+                            
+
+
                             if self.log_gradients:
                                 # raise Exception("test")
                                 epoch_grad.append(self.model.quantum_layer.weight.grad)  # n_batch_samples, n_weights
 
+                                if t.any(
+                                    t.isnan(self.model.quantum_layer.weight.grad)
                                 ):  # TODO: we are checking for "all" instead of "any" since there were cases where the gradients became nan but training successfully continued (investigate in samples!)
                                     log.error(
-                                        f"At least one gradient became nan in epoch {epoch} after iteration {i}.\nInput was\n{states}.\nPredicted was\n{logits}.\nGradients are\n{epoch_grad}"
+                                        f"At least one gradient became nan in epoch {epoch} after iteration {i}.\nInput was\n{states}.\nPredicted was\n{logits}.\nGradients are\n{self.model.quantum_layer.weight.grad}"
                                     )
                                 else:
                                     log.debug(
-                                        f"Gradients in epoch {epoch}, iteration {i}: {epoch_grad}"
+                                        f"Gradients in epoch {epoch}, iteration {i}: {self.model.quantum_layer.weight.grad}"
                                     )
-
-                            # for i in range(self.epochs):
-                            #     all_grads.append(scale * epoch_grad)
-                            # g_plt = self.plotGradients(all_grads, figsize=(16,12))
-                            # mlflow.log_figure(g_plt.gcf(), f"gradients.png")
 
                             labels = labels.cpu()
                             if labels.numpy().min() < -1:
