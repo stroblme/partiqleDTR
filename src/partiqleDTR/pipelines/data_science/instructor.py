@@ -521,7 +521,7 @@ class Instructor:
 
         X = [i for i in range(len(epoch_gradients[0]))]
         Y = [i for i in range(len(epoch_gradients))]
-        Z = epoch_gradients.abs()
+        Z = epoch_gradients.abs()   # use absolute value of gradients
 
         fig, ax = plt.subplots(figsize=figsize)
         im, cbar = heatmap(
