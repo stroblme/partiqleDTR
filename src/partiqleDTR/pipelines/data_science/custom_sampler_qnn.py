@@ -200,9 +200,6 @@ class CustomSamplerQNN(NeuralNetwork):
         the constructor or can not be implicitly derived, then ``None`` is returned."""
         return self._interpret
 
-    def get_selected_parameters(self):
-        return self._selected_parameters
-
     def set_selected_parameters(self, parameters):
         self._selected_parameters = parameters
 
