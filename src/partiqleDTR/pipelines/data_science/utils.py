@@ -167,6 +167,7 @@ def build_binary_permutation_indices(digits):
     assert len(permutations_indices) == digits
     return permutations_indices
 
+
 def build_related_permutation_indices(digits):
     """
     Generate the binary permutation indices.
@@ -179,10 +180,11 @@ def build_related_permutation_indices(digits):
         for i in range(0, 2**digits):
             if bin(i).count("1") == 0:
                 permutations_indices[d].append(i)
-            elif len(bin(i))-2 >= d:
-                if bin(i)[-d-1] == "1":
+            elif len(bin(i)) - 2 >= d:
+                if bin(i)[-d - 1] == "1":
                     permutations_indices[d].append(i)
     return permutations_indices
+
 
 def get_binary_shots(result, permutations_indices, out_shape):
     """
@@ -195,20 +197,18 @@ def get_binary_shots(result, permutations_indices, out_shape):
     lcag = t.zeros(out_shape)
     lcag = lcag.to(result.device)
     for i in range(out_shape[0]):
-        lcag[i] = result[
-            i, permutations_indices
-        ]
+        lcag[i] = result[i, permutations_indices]
     # lcag[:, np.tril_indices_from(lcag[:], k=-1)] = result[:, permutations_indices]
     return lcag
+
 
 def get_all_shots(result, out_shape):
     lcag = t.zeros(out_shape)
     lcag = lcag.to(result.device)
     for i in range(out_shape[0]):
-        lcag[i] = result[
-            i, out_shape[1]-1
-        ]
+        lcag[i] = result[i, out_shape[1] - 1]
     return lcag
+
 
 def get_related_shots(result, permutations_indices, out_shape):
     """
@@ -220,9 +220,9 @@ def get_related_shots(result, permutations_indices, out_shape):
     """
     lcag = t.zeros(out_shape)
     lcag = lcag.to(result.device)
-    for i in range(out_shape[0]): # iterate batches
-        lcag[i] = t.stack([result[
-            i, permutations_indices[j]
-        ] for j in range(out_shape[1])])
+    for i in range(out_shape[0]):  # iterate batches
+        lcag[i] = t.stack(
+            [result[i, permutations_indices[j]] for j in range(out_shape[1])]
+        )
     # lcag[:, np.tril_indices_from(lcag[:], k=-1)] = result[:, permutations_indices]
     return lcag

@@ -1,4 +1,3 @@
-
 from torch import nn
 import torch.nn.functional as F
 
@@ -46,81 +45,88 @@ class MLP(nn.Module):
         return self.batch_norm_layer(x) if self.batchnorm else x  # (b, l, d)
 
 
-def generate_nri_blocks(dim_feedforward, batchnorm, dropout_rate, n_additional_mlp_layers, block_dim, n_blocks):
+def generate_nri_blocks(
+    dim_feedforward,
+    batchnorm,
+    dropout_rate,
+    n_additional_mlp_layers,
+    block_dim,
+    n_blocks,
+):
     # MLPs within NRI blocks
-        # The blocks have minimum 1 MLP layer, and if specified they add more with a skip connection
-        # List of blocks
+    # The blocks have minimum 1 MLP layer, and if specified they add more with a skip connection
+    # List of blocks
 
     blocks = nn.ModuleList(
-            [
-                # List of MLP sequences within each block
-                nn.ModuleList(
-                    [
-                        # MLP layers before Edge2Node (start of block)
-                        nn.ModuleList(
-                            [
-                                MLP(
-                                    dim_feedforward,
-                                    dim_feedforward,
-                                    dim_feedforward,
-                                    dropout_rate,
-                                    batchnorm,
-                                ),
-                                nn.Sequential(
-                                    *[
-                                        MLP(
-                                            dim_feedforward,
-                                            dim_feedforward,
-                                            dim_feedforward,
-                                            dropout_rate,
-                                            batchnorm,
-                                        )
-                                        for _ in range(n_additional_mlp_layers)
-                                    ]
-                                ),
-                                # This is what would be needed for a concat instead of addition of the skip connection
-                                # MLP(dim_feedforward * 2, dim_feedforward, dim_feedforward, dropout, batchnorm) if (block_additional_mlp_layers > 0) else None,
-                            ]
-                        ),
-                        # MLP layers between Edge2Node and Node2Edge (middle of block)
-                        nn.ModuleList(
-                            [
-                                MLP(
-                                    dim_feedforward,
-                                    dim_feedforward,
-                                    dim_feedforward,
-                                    dropout_rate,
-                                    batchnorm,
-                                ),
-                                nn.Sequential(
-                                    *[
-                                        MLP(
-                                            dim_feedforward,
-                                            dim_feedforward,
-                                            dim_feedforward,
-                                            dropout_rate,
-                                            batchnorm,
-                                        )
-                                        for _ in range(n_additional_mlp_layers)
-                                    ]
-                                ),
-                                # This is what would be needed for a concat instead of addition of the skip connection
-                                # MLP(dim_feedforward * 2, dim_feedforward, dim_feedforward, dropout, batchnorm) if (block_additional_mlp_layers > 0) else None,
-                            ]
-                        ),
-                        # MLP layer after Node2Edge (end of block)
-                        # This is just to reduce feature dim after skip connection was concatenated
-                        MLP(
-                            block_dim,
-                            dim_feedforward,
-                            dim_feedforward,
-                            dropout_rate,
-                            batchnorm,
-                        ),
-                    ]
-                )
-                for _ in range(n_blocks)
-            ]
-        )
+        [
+            # List of MLP sequences within each block
+            nn.ModuleList(
+                [
+                    # MLP layers before Edge2Node (start of block)
+                    nn.ModuleList(
+                        [
+                            MLP(
+                                dim_feedforward,
+                                dim_feedforward,
+                                dim_feedforward,
+                                dropout_rate,
+                                batchnorm,
+                            ),
+                            nn.Sequential(
+                                *[
+                                    MLP(
+                                        dim_feedforward,
+                                        dim_feedforward,
+                                        dim_feedforward,
+                                        dropout_rate,
+                                        batchnorm,
+                                    )
+                                    for _ in range(n_additional_mlp_layers)
+                                ]
+                            ),
+                            # This is what would be needed for a concat instead of addition of the skip connection
+                            # MLP(dim_feedforward * 2, dim_feedforward, dim_feedforward, dropout, batchnorm) if (block_additional_mlp_layers > 0) else None,
+                        ]
+                    ),
+                    # MLP layers between Edge2Node and Node2Edge (middle of block)
+                    nn.ModuleList(
+                        [
+                            MLP(
+                                dim_feedforward,
+                                dim_feedforward,
+                                dim_feedforward,
+                                dropout_rate,
+                                batchnorm,
+                            ),
+                            nn.Sequential(
+                                *[
+                                    MLP(
+                                        dim_feedforward,
+                                        dim_feedforward,
+                                        dim_feedforward,
+                                        dropout_rate,
+                                        batchnorm,
+                                    )
+                                    for _ in range(n_additional_mlp_layers)
+                                ]
+                            ),
+                            # This is what would be needed for a concat instead of addition of the skip connection
+                            # MLP(dim_feedforward * 2, dim_feedforward, dim_feedforward, dropout, batchnorm) if (block_additional_mlp_layers > 0) else None,
+                        ]
+                    ),
+                    # MLP layer after Node2Edge (end of block)
+                    # This is just to reduce feature dim after skip connection was concatenated
+                    MLP(
+                        block_dim,
+                        dim_feedforward,
+                        dim_feedforward,
+                        dropout_rate,
+                        batchnorm,
+                    ),
+                ]
+            )
+            for _ in range(n_blocks)
+        ]
+    )
 
     return blocks

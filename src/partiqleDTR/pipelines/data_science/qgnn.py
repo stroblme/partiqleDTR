@@ -32,11 +32,7 @@ log = logging.getLogger(__name__)
 os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
 
-
-
 class qgnn(gnn, nn.Module):
-
-
     def __init__(
         self,
         n_momenta,  # d
@@ -67,10 +63,9 @@ class qgnn(gnn, nn.Module):
         # do not initialize the gnn, as this will yield to a clash with the order of modules in pytorch
         nn.Module.__init__(self)
 
-
         assert dim_feedforward % 2 == 0, "dim_feedforward must be an even number"
 
-        self.start=None
+        self.start = None
         self.num_classes = n_classes
         self.layers = n_layers_vqc  # dim_feedforward//8
         self.total_n_fsps = n_fsps  # used for padding in forward path
@@ -98,7 +93,14 @@ class qgnn(gnn, nn.Module):
         )
 
         self.qc = q.QuantumCircuit(n_fsps)
-        self.qc = circuit_builder(self.qc, self.predefined_iec, self.predefined_vqc, n_fsps, self.layers, data_reupload=self.data_reupload)
+        self.qc = circuit_builder(
+            self.qc,
+            self.predefined_iec,
+            self.predefined_vqc,
+            n_fsps,
+            self.layers,
+            data_reupload=self.data_reupload,
+        )
 
         mlflow.log_figure(self.qc.draw(output="mpl"), f"circuit.png")
 
@@ -118,7 +120,10 @@ class qgnn(gnn, nn.Module):
 
         if "simulator" not in backend:
             from .ibmq_access import token, hub, group, project
-            log.info(f"Searching for backend {backend} on IBMQ using token {token[:10]}****, hub {hub}, group {group} and project {project}")
+
+            log.info(
+                f"Searching for backend {backend} on IBMQ using token {token[:10]}****, hub {hub}, group {group} and project {project}"
+            )
             self.provider = q.IBMQ.enable_account(
                 token=token,
                 hub=hub,
@@ -138,7 +143,6 @@ class qgnn(gnn, nn.Module):
             # self.backend.set_options(executor=exc)
             # self.backend.set_options(max_job_size=1) # see doc: https://qiskit.org/documentation/apidoc/parallel.html#usage-of-executor
 
-
             bs = BackendSampler(
                 self.backend,
                 options={
@@ -146,7 +150,6 @@ class qgnn(gnn, nn.Module):
                 },
                 # skip_transpilation=False,
             )
-
 
         qnn = CustomSamplerQNN(
             circuit=self.qc,
@@ -157,22 +160,23 @@ class qgnn(gnn, nn.Module):
             # interpret=interpreter,
             # output_shape=(n_fsps**2, n_classes),
             # sampling=True,
-            input_gradients=True, #set to true as we are using torch connector
+            input_gradients=True,  # set to true as we are using torch connector
         )
-        
+
         if type(self.initialization_constant) == str:
             if self.initialization_constant == "strategy_a":
                 # https://arxiv.org/abs/2302.06858
                 L = self.qc.depth()
                 raise NotImplementedError()
 
-        self.initial_weights = self.initialization_constant * np.pi * q.utils.algorithm_globals.random.random(qnn.num_weights) - (self.initialization_constant/2) * np.pi
-
-        
-        self.quantum_layer = TorchConnector(
-            qnn, initial_weights=self.initial_weights
+        self.initial_weights = (
+            self.initialization_constant
+            * np.pi
+            * q.utils.algorithm_globals.random.random(qnn.num_weights)
+            - (self.initialization_constant / 2) * np.pi
         )
 
+        self.quantum_layer = TorchConnector(qnn, initial_weights=self.initial_weights)
 
         log.info(f"Transpilation took {time.time() - start}")
         log.info(f"Initialization done")
@@ -187,11 +191,23 @@ class qgnn(gnn, nn.Module):
             ]
         elif self.measurement == "all":
             initial_mlp = [
-                MLP(2**self.total_n_fsps, dim_feedforward, dim_feedforward, dropout_rate, batchnorm)
+                MLP(
+                    2**self.total_n_fsps,
+                    dim_feedforward,
+                    dim_feedforward,
+                    dropout_rate,
+                    batchnorm,
+                )
             ]
         elif self.measurement == "entangled":
             initial_mlp = [
-                MLP(2**(self.total_n_fsps-1)+1, dim_feedforward, dim_feedforward, dropout_rate, batchnorm)
+                MLP(
+                    2 ** (self.total_n_fsps - 1) + 1,
+                    dim_feedforward,
+                    dim_feedforward,
+                    dropout_rate,
+                    batchnorm,
+                )
             ]
         else:
             raise ValueError("Invalid measurement specified")
@@ -220,13 +236,19 @@ class qgnn(gnn, nn.Module):
         )
 
         # calculate the dimensionality after each block and after all blocks
-        # dimensionality increases if we introduce skip connections as one additional 
+        # dimensionality increases if we introduce skip connections as one additional
         # input is involved then
         block_dim = 3 * dim_feedforward if self.skip_block else 2 * dim_feedforward
         global_dim = 2 * dim_feedforward if self.skip_global else dim_feedforward
 
-        
-        self.blocks = generate_nri_blocks(dim_feedforward, batchnorm, dropout_rate, n_additional_mlp_layers, block_dim, n_blocks)
+        self.blocks = generate_nri_blocks(
+            dim_feedforward,
+            batchnorm,
+            dropout_rate,
+            n_additional_mlp_layers,
+            block_dim,
+            n_blocks,
+        )
 
         # Final linear layers as requested
         # self.final_mlp = nn.Sequential(*[MLP(dim_feedforward, dim_feedforward, dim_feedforward, dropout, batchnorm) for _ in range(final_mlp_layers)])
@@ -281,12 +303,15 @@ class qgnn(gnn, nn.Module):
 
         x = x.reshape(batch, n_leaves * feats)  # flatten the last two dims
         x = t.nn.functional.pad(
-            x, (0, (self.total_n_fsps * feats) - (n_leaves * feats)), mode="constant", value=0
+            x,
+            (0, (self.total_n_fsps * feats) - (n_leaves * feats)),
+            mode="constant",
+            value=0,
         )  # pad up to the largest lcag size. subtract the current size to prevent unnecessary padding.
         # note that x.size() is here n_leaves * feats
 
         # set the weights to zero which are either involved in a controlled operation or directly operating on qubits not relevant to the current graph (i.e. where the input was zero padded before)
-        # this is supposed to ensure, that the actual measurement of the circuit is not impacted by any random weights contributing to meaningless 
+        # this is supposed to ensure, that the actual measurement of the circuit is not impacted by any random weights contributing to meaningless
         # print(self.quantum_layer._weights)
         if self.padding_dropout:
             with t.no_grad():
@@ -300,8 +325,6 @@ class qgnn(gnn, nn.Module):
         if self.start is not None:
             print(f"Duration: {time.time()-self.start}")
         self.start = time.time()
-        
-
 
         if self.measurement == "mutually_exclusive":
             x = get_binary_shots(
@@ -310,21 +333,18 @@ class qgnn(gnn, nn.Module):
 
             x = x.reshape(batch, n_leaves, 1)
         elif self.measurement == "all":
-            x = get_all_shots(
-                x, (batch, 2**self.total_n_fsps)
-            )
+            x = get_all_shots(x, (batch, 2**self.total_n_fsps))
 
-            x = x.reshape(batch, 1, 2**self.total_n_fsps).repeat(
-                1, n_leaves, 1
-            )
+            x = x.reshape(batch, 1, 2**self.total_n_fsps).repeat(1, n_leaves, 1)
             # x = x.permute(0, 2, 1)  # (b, c, l, l) -> split the leaves
         elif self.measurement == "entangled":
             x = get_related_shots(
-                x, build_related_permutation_indices(self.total_n_fsps), (batch, n_leaves, 2**(self.total_n_fsps-1)+1)
+                x,
+                build_related_permutation_indices(self.total_n_fsps),
+                (batch, n_leaves, 2 ** (self.total_n_fsps - 1) + 1),
             )
         else:
             raise ValueError("Invalid measurement specified")
-
 
         x = self.forward_nri(x, rel_rec, rel_send)
 

@@ -38,13 +38,15 @@ class DataWrapper(Dataset):
     A wrapper for t.utils.data.Dataset.
     """
 
-    def __init__(self, data, normalize="", normalize_individually=True, zero_mean=False):
+    def __init__(
+        self, data, normalize="", normalize_individually=True, zero_mean=False
+    ):
 
         # normalize_individually = True
         # zero_mean = False
 
         self.data = data
-        if normalize=="one":
+        if normalize == "one":
             dmax = 0
             dmin = 0
             if not normalize_individually:
@@ -58,44 +60,52 @@ class DataWrapper(Dataset):
                     dmin = event.min()
 
                 if zero_mean:
-                    self.data.x[i] = (event - (dmax - dmin)/2) / (dmax - dmin)
+                    self.data.x[i] = (event - (dmax - dmin) / 2) / (dmax - dmin)
                 else:
                     # self.data.x[i] = (event - dmin) / (dmax - dmin)
                     self.data.x[i] = (event) / (dmax - dmin)
-        elif normalize=="smartone":
+        elif normalize == "smartone":
             dmax_p = 0
             dmin_p = 0
             dmax_e = 0
             dmin_e = 0
             if not normalize_individually:
                 for i, event in enumerate(data.x):
-                    dmax_p = event[:,:3].max() if event[:,:3].max() > dmax_p else dmax_p
-                    dmin_p = event[:,:3].min() if event[:,:3].min() < dmin_p else dmin_p
-                    dmax_e = event[:,3].max() if event[:,3].max() > dmax_e else dmax_e
-                    dmin_e = event[:,3].min() if event[:,3].min() < dmin_e else dmin_e
-                    
+                    dmax_p = (
+                        event[:, :3].max() if event[:, :3].max() > dmax_p else dmax_p
+                    )
+                    dmin_p = (
+                        event[:, :3].min() if event[:, :3].min() < dmin_p else dmin_p
+                    )
+                    dmax_e = event[:, 3].max() if event[:, 3].max() > dmax_e else dmax_e
+                    dmin_e = event[:, 3].min() if event[:, 3].min() < dmin_e else dmin_e
+
             for i, event in enumerate(data.x):
                 if normalize_individually:
-                    dmax_p = event[:,:3].max()
-                    dmin_p = event[:,:3].min()
-                    dmax_e = event[:,3].max()
-                    dmin_e = event[:,3].min()
+                    dmax_p = event[:, :3].max()
+                    dmin_p = event[:, :3].min()
+                    dmax_e = event[:, 3].max()
+                    dmin_e = event[:, 3].min()
 
                 if zero_mean:
-                    self.data.x[i][:,:3] = (event[:,:3] - (dmax_p - dmin_p)/2) / (dmax_p - dmin_p)
+                    self.data.x[i][:, :3] = (event[:, :3] - (dmax_p - dmin_p) / 2) / (
+                        dmax_p - dmin_p
+                    )
                     # self.data.x[i][3] = (event[3] - (dmax_e - dmin_e)/2) / (dmax_e - dmin_e)
-                    self.data.x[i][:,3] = (event[:,3]) / (dmax_e - dmin_e) # it does not make sense to shift the energy as this could result in negative energy values
+                    self.data.x[i][:, 3] = (event[:, 3]) / (
+                        dmax_e - dmin_e
+                    )  # it does not make sense to shift the energy as this could result in negative energy values
                 else:
-                    self.data.x[i][:,:3] = (event[:,:3]) / (dmax_p - dmin_p)
-                    self.data.x[i][:,3] = (event[:,3]) / (dmax_e - dmin_e)
+                    self.data.x[i][:, :3] = (event[:, :3]) / (dmax_p - dmin_p)
+                    self.data.x[i][:, 3] = (event[:, 3]) / (dmax_e - dmin_e)
 
-        elif normalize=="zmuv":
+        elif normalize == "zmuv":
             for i, event in enumerate(data.x):
                 # adj_mean = t.repeat_interleave(t.Tensor([data.mean]), event.shape[0], dim=0)
                 # adj_std = t.repeat_interleave(t.Tensor([data.std]), event.shape[0], dim=0)
                 adj_mean = np.repeat([data.mean], event.shape[0], axis=0)
                 adj_std = np.repeat([data.std], event.shape[0], axis=0)
-                self.data.x[i] = (event - adj_mean)/adj_std
+                self.data.x[i] = (event - adj_mean) / adj_std
 
         # fill diagonal with zeros to ignore in loss
         for i, lcag in enumerate(data.y):
@@ -107,8 +117,11 @@ class DataWrapper(Dataset):
     def __getitem__(self, i):
         return self.data[i]
 
-def calculate_class_weights(dataloader, num_classes, num_batches=100, amp_enabled=False):
-    """ Calculates class weights based on num_batches of the dataloader
+
+def calculate_class_weights(
+    dataloader, num_classes, num_batches=100, amp_enabled=False
+):
+    """Calculates class weights based on num_batches of the dataloader
 
     This assumes there exists a -1 padding value that is not part of the class weights.
     Any classes not found will have a weight of one set
@@ -134,13 +147,14 @@ def calculate_class_weights(dataloader, num_classes, num_batches=100, amp_enable
     # The weights need to be the invers, since we scale down the most common classes
     weights = 1 / weights
     # Set inf to 1
-    weights = t.nan_to_num(weights, posinf=float('nan'))
+    weights = t.nan_to_num(weights, posinf=float("nan"))
     # And normalise to sum to 1
     weights = weights / weights.nansum()
     # Finally, assign default value to any that were missing during calculation time
     weights = t.nan_to_num(weights, nan=1)
 
     return weights
+
 
 class Instructor:
     """
@@ -161,7 +175,7 @@ class Instructor:
         zero_mean: bool,
         plot_mode: str = "val",
         plotting_rows: int = 4,
-        log_gradients:bool = False,
+        log_gradients: bool = False,
         detectAnomaly: bool = False,
         device: str = "cpu",
         n_fsps=-1,
@@ -212,7 +226,7 @@ class Instructor:
         mlflow.log_param("Total trainable parameters", self.pytorch_total_params)
 
         self.plot_mode = plot_mode
-        self.plotting_rows = plotting_rows  
+        self.plotting_rows = plotting_rows
         self.log_gradients = log_gradients
         self.data = data
         self.epochs = epochs
@@ -220,13 +234,15 @@ class Instructor:
         self.normalize_individually = normalize_individually
         self.zero_mean = zero_mean
         self.batch_size = batch_size
-        self.optimizer = t.optim.Adam(self.model.parameters(), lr=learning_rate, amsgrad=False)
+        self.optimizer = t.optim.Adam(
+            self.model.parameters(), lr=learning_rate, amsgrad=False
+        )
 
         self.gradient_curvature_threshold = float(gradient_curvature_threshold)
         self.gradient_curvature_history = int(gradient_curvature_history)
 
         self.n_classes = n_classes
-        
+
         # learning rate scheduler, same as in NRI
 
         if model_state_dict is not None:
@@ -244,7 +260,9 @@ class Instructor:
             log.info(f"Anomaly detection enabled")
             t.autograd.set_detect_anomaly(True)
 
-        log.info(f"Starting loops from epoch {start_epoch} using modes {enabled_modes}.")
+        log.info(
+            f"Starting loops from epoch {start_epoch} using modes {enabled_modes}."
+        )
         result = None
         best_acc = 0
         checkpoint = None
@@ -252,12 +270,12 @@ class Instructor:
         if enabled_modes == ["val"]:
             self.epochs = 1
 
-        #TODO: logging gradients currently only enabled for qgnn
+        # TODO: logging gradients currently only enabled for qgnn
         self.log_gradients = self.log_gradients and self.model._get_name() == "qgnn"
 
         if self.log_gradients:
             all_grads = []
-        
+
         error_raised = True
 
         try:  # catch things like gradient nan exceptions
@@ -266,14 +284,21 @@ class Instructor:
                 labels_for_plotting = []
                 for mode in enabled_modes:
                     data_batch = DataLoader(
-                        DataWrapper(self.data[mode], normalize=self.normalize, normalize_individually=self.normalize_individually, zero_mean=self.zero_mean),
+                        DataWrapper(
+                            self.data[mode],
+                            normalize=self.normalize,
+                            normalize_individually=self.normalize_individually,
+                            zero_mean=self.zero_mean,
+                        ),
                         batch_size=self.batch_size,
                         shuffle=True,
                         collate_fn=rel_pad_collate_fn,
                     )  # to handle varying input size
 
                     # might seem better to be put in data processing or sth.
-                    weights = calculate_class_weights(data_batch, self.n_classes, len(data_batch), False)
+                    weights = calculate_class_weights(
+                        data_batch, self.n_classes, len(data_batch), False
+                    )
                     weights = weights.to(self.device)
 
                     epoch_loss = 0.0
@@ -303,26 +328,29 @@ class Instructor:
                             self.model.train()  # set the module in training mode
 
                             logits = self.model(states)
-                            loss = cross_entropy(logits, labels, weight=weights, ignore_index=-1)
+                            loss = cross_entropy(
+                                logits, labels, weight=weights, ignore_index=-1
+                            )
                             acc = self.edge_accuracy(logits, labels, ignore_index=-1)
-                            logic_acc = self.logic_accuracy(logits, labels, ignore_index=-1)
-                            perfect_lcag = self.perfect_lcag(logits, labels, ignore_index=-1)
+                            logic_acc = self.logic_accuracy(
+                                logits, labels, ignore_index=-1
+                            )
+                            perfect_lcag = self.perfect_lcag(
+                                logits, labels, ignore_index=-1
+                            )
 
                             # self.plotBatchGraphs(logits, labels)
 
-                            
                             # do the actual optimization
                             self.optimizer.zero_grad()
                             loss.backward()
                             self.optimizer.step()
 
-
-                            
-
-
                             if self.log_gradients:
                                 # raise Exception("test")
-                                epoch_grad.append(self.model.quantum_layer.weight.grad)  # n_batch_samples, n_weights
+                                epoch_grad.append(
+                                    self.model.quantum_layer.weight.grad
+                                )  # n_batch_samples, n_weights
 
                                 if t.any(
                                     t.isnan(self.model.quantum_layer.weight.grad)
@@ -346,27 +374,49 @@ class Instructor:
 
                                 logits = self.model(states)
 
-                                loss = cross_entropy(logits, labels, weight=weights, ignore_index=-1)
-                                acc = self.edge_accuracy(logits, labels, ignore_index=-1)
-                                logic_acc = self.logic_accuracy(logits, labels, ignore_index=-1)
-                                perfect_lcag = self.perfect_lcag(logits, labels, ignore_index=-1)
+                                loss = cross_entropy(
+                                    logits, labels, weight=weights, ignore_index=-1
+                                )
+                                acc = self.edge_accuracy(
+                                    logits, labels, ignore_index=-1
+                                )
+                                logic_acc = self.logic_accuracy(
+                                    logits, labels, ignore_index=-1
+                                )
+                                perfect_lcag = self.perfect_lcag(
+                                    logits, labels, ignore_index=-1
+                                )
                         elif mode == "test":
                             self.model.eval()  # trigger evaluation forward mode
                             with t.no_grad():  # disable autograd in tensors
 
                                 logits = self.model(states)
 
-                                loss = cross_entropy(logits, labels, weight=weights, ignore_index=-1)
-                                acc = self.edge_accuracy(logits, labels, ignore_index=-1)
-                                logic_acc = self.logic_accuracy(logits, labels, ignore_index=-1)
-                                perfect_lcag = self.perfect_lcag(logits, labels, ignore_index=-1)
+                                loss = cross_entropy(
+                                    logits, labels, weight=weights, ignore_index=-1
+                                )
+                                acc = self.edge_accuracy(
+                                    logits, labels, ignore_index=-1
+                                )
+                                logic_acc = self.logic_accuracy(
+                                    logits, labels, ignore_index=-1
+                                )
+                                perfect_lcag = self.perfect_lcag(
+                                    logits, labels, ignore_index=-1
+                                )
                         else:
                             log.error("Unknown mode")
 
-                        epoch_loss += (1 / self.n_classes) * loss.item() # access via .item() to get a float value instead of a tensor obj
-                        epoch_acc += acc.item() # access via .item() to get a float value instead of a tensor obj
-                        epoch_logic_acc += logic_acc.item() # access via .item() to get a float value instead of a tensor obj
-                        epoch_perfect_lcag += perfect_lcag # don't scale accuracy and perfect_lcag as they are not class dependent
+                        epoch_loss += (
+                            1 / self.n_classes
+                        ) * loss.item()  # access via .item() to get a float value instead of a tensor obj
+                        epoch_acc += (
+                            acc.item()
+                        )  # access via .item() to get a float value instead of a tensor obj
+                        epoch_logic_acc += (
+                            logic_acc.item()
+                        )  # access via .item() to get a float value instead of a tensor obj
+                        epoch_perfect_lcag += perfect_lcag  # don't scale accuracy and perfect_lcag as they are not class dependent
 
                         if mode == "train":
                             log.debug(
@@ -405,19 +455,28 @@ class Instructor:
                         result = self.model
                         try:
                             assert len(logits_for_plotting) == len(labels_for_plotting)
-                            plotting_indices = [random.choice(range(len(logits_for_plotting))) for i in range(self.plotting_rows)]
+                            plotting_indices = [
+                                random.choice(range(len(logits_for_plotting)))
+                                for i in range(self.plotting_rows)
+                            ]
 
-                            
                             selected_logits = [
                                 logits_for_plotting[i].cpu().detach()
                                 for i in plotting_indices
                             ]
                             selected_labels = [
-                                labels_for_plotting[i]
-                                for i in plotting_indices
+                                labels_for_plotting[i] for i in plotting_indices
                             ]
-                            logits_string = '\n\n\n'.join('\n'.join('\t'.join(f"{x}" for x in y) for y in a_b.max(0)[1]) for a_b in selected_logits)
-                            labels_string = '\n\n\n'.join('\n'.join('\t'.join(f"{x}" for x in y) for y in a_b) for a_b in selected_labels)
+                            logits_string = "\n\n\n".join(
+                                "\n".join(
+                                    "\t".join(f"{x}" for x in y) for y in a_b.max(0)[1]
+                                )
+                                for a_b in selected_logits
+                            )
+                            labels_string = "\n\n\n".join(
+                                "\n".join("\t".join(f"{x}" for x in y) for y in a_b)
+                                for a_b in selected_labels
+                            )
 
                             c_plt = self.plotBatchGraphs(
                                 selected_logits,
@@ -428,8 +487,12 @@ class Instructor:
                             mlflow.log_figure(
                                 c_plt.gcf(), f"{mode}_e{epoch}_sample_graph.png"
                             )
-                            mlflow.log_text(logits_string, f"{mode}_e{epoch}_logits.txt")
-                            mlflow.log_text(labels_string, f"{mode}_e{epoch}_labels.txt")
+                            mlflow.log_text(
+                                logits_string, f"{mode}_e{epoch}_logits.txt"
+                            )
+                            mlflow.log_text(
+                                labels_string, f"{mode}_e{epoch}_labels.txt"
+                            )
 
                         except Exception as e:
                             log.error(
@@ -445,13 +508,21 @@ class Instructor:
                         }
 
                     if self.log_gradients and mode == "train":
-                        all_grads.append(t.stack(epoch_grad)) # n_epochs, n_batch_samples, n_weights
+                        all_grads.append(
+                            t.stack(epoch_grad)
+                        )  # n_epochs, n_batch_samples, n_weights
 
                         if self.gradient_curvature_history > 0:
-                            selected_parameters = self.parameter_pruning(self.model.var_params, t.stack(all_grads).mean(dim=1)) # use mean over batch samples
+                            selected_parameters = self.parameter_pruning(
+                                self.model.var_params, t.stack(all_grads).mean(dim=1)
+                            )  # use mean over batch samples
 
-                            print(f"Using {len(selected_parameters)} out of {len(self.model.var_params)} parameters from now on")
-                            self.model.quantum_layer.neural_network.set_selected_parameters(selected_parameters)
+                            print(
+                                f"Using {len(selected_parameters)} out of {len(self.model.var_params)} parameters from now on"
+                            )
+                            self.model.quantum_layer.neural_network.set_selected_parameters(
+                                selected_parameters
+                            )
 
                     mlflow.log_metric(key=f"{mode}_loss", value=epoch_loss, step=epoch)
                     mlflow.log_metric(
@@ -472,20 +543,23 @@ class Instructor:
             log.error(f"Gradients became NAN during training\n{traceback.print_exc()}")
         except Exception as e:
             log.error(f"Exception occured during training\n{traceback.print_exc()}\n")
-            
+
         # quickly print the gradients..
         if self.log_gradients and len(all_grads) > 0:
             all_grads = t.stack(all_grads)
-    
-            g_plt = self.plotGradients(all_grads.mean(dim=1), figsize=(16, 12)) # use mean over batch samples
+
+            g_plt = self.plotGradients(
+                all_grads.mean(dim=1), figsize=(16, 12)
+            )  # use mean over batch samples
             mlflow.log_figure(g_plt, f"gradients.html")
 
-            gc_plt = self.gradient_pqc_viz(self.model, all_grads.mean(dim=1)) # use mean over batch samples
+            gc_plt = self.gradient_pqc_viz(
+                self.model, all_grads.mean(dim=1)
+            )  # use mean over batch samples
             mlflow.log_figure(
                 gc_plt,
                 "circuit_gradients.png",
             )
-
 
         # In case we didn't even calculated a single sample
         if result == None:
@@ -512,7 +586,9 @@ class Instructor:
         mlflow.log_dict(optimizer_state_dict, f"optimizer.yml")
 
         if error_raised:
-            raise RuntimeError("Training did not complete successfully. Model and optimizer state dictionaries were saved though.")
+            raise RuntimeError(
+                "Training did not complete successfully. Model and optimizer state dictionaries were saved though."
+            )
 
         return {
             "trained_model": result,
@@ -520,31 +596,35 @@ class Instructor:
             "gradients": all_grads.numpy(),
         }
 
-    def parameter_pruning(self, parameters, gradients:t.Tensor):
+    def parameter_pruning(self, parameters, gradients: t.Tensor):
         # gradients should be of shape [epochs, n_weights]
 
         curvature = gradients.diff(dim=0)
 
         sel_params = []
 
-        if curvature.size(0) == 0 or curvature.size(0) < self.gradient_curvature_history:
+        if (
+            curvature.size(0) == 0
+            or curvature.size(0) < self.gradient_curvature_history
+        ):
             sel_params = parameters
         else:
-            #TODO: verify that this still works if history is 1
-            for param, curv in zip(parameters, curvature[-self.gradient_curvature_history:].mean(dim=0)): # we only use the diff between the current and previous epoch
+            # TODO: verify that this still works if history is 1
+            for param, curv in zip(
+                parameters, curvature[-self.gradient_curvature_history :].mean(dim=0)
+            ):  # we only use the diff between the current and previous epoch
                 # if curvature is greater than a threshold, the parameter seems to be updated frequently -> don't prune it
                 if curv.mean().item() > self.gradient_curvature_threshold:
                     sel_params.append(param)
 
         return sel_params
 
-
-    def plotGradients(self, epoch_gradients:t.Tensor, figsize=(16, 12)):
+    def plotGradients(self, epoch_gradients: t.Tensor, figsize=(16, 12)):
         # gradients should be of shape [epochs, n_weights]
 
         X = [i for i in range(len(epoch_gradients[0]))]
         Y = [i for i in range(len(epoch_gradients))]
-        Z = epoch_gradients.abs()   # use absolute value of gradients
+        Z = epoch_gradients.abs()  # use absolute value of gradients
 
         fig = heatmap_pl(
             Z,
@@ -557,7 +637,6 @@ class Instructor:
         )
 
         return fig
-
 
     # def plotGradients(self, epoch_gradients:t.Tensor, figsize=(16, 12)):
     #     # gradients should be of shape [epochs, n_weights]
@@ -581,7 +660,7 @@ class Instructor:
     #     fig.tight_layout()
     #     return plt
 
-    def gradient_pqc_viz(self, model, gradients:t.Tensor):
+    def gradient_pqc_viz(self, model, gradients: t.Tensor):
         # gradients should be of shape [epochs, n_weights]
 
         # gradients = t.stack(gradients)
@@ -598,11 +677,11 @@ class Instructor:
         fig.tight_layout()
 
         for it, (logits, lcag_ref) in enumerate(zip(batch_logits, batch_ref)):
-            probs = logits.softmax(0) # TODO: verify this is correct
+            probs = logits.softmax(0)  # TODO: verify this is correct
             lcag = probs.max(0)[1]
             assert lcag_ref.shape == lcag.shape
 
-            lcag = t.where(lcag_ref==-1, lcag_ref, lcag)
+            lcag = t.where(lcag_ref == -1, lcag_ref, lcag)
 
             graph = GraphVisualization()
 
@@ -617,33 +696,31 @@ class Instructor:
             plt.sca(ax[it][1])
             graph_ref.visualize(opt="max", ax=ax[it][1])
 
-
             # if it >= rows:
             #     break
 
-
         return plt
 
-
-    def logic_accuracy(self, logits: t.Tensor, labels: t.Tensor, ignore_index: int=None) -> float:
-        
+    def logic_accuracy(
+        self, logits: t.Tensor, labels: t.Tensor, ignore_index: int = None
+    ) -> float:
         def two_child_fix(lcag):
             max_c = lcag.max().int()
 
             def convToPair(pair: t.Tensor):
                 return (int(pair[0]), int(pair[1]))
-            
+
             working_lcag = copy.deepcopy(lcag)
-            while(working_lcag.max() > 0):
+            while working_lcag.max() > 0:
                 next_c = 0
-                for c in range(1, max_c+1):
+                for c in range(1, max_c + 1):
                     directPairs = list((working_lcag == c).nonzero())
                     directPairs.sort(key=lambda dp: sum(dp))
 
                     if len(directPairs) > 0:
                         next_c = c
                         break
-                    
+
                 if next_c == 1:
                     working_lcag -= 1
                     continue
@@ -651,21 +728,22 @@ class Instructor:
                 for pair in directPairs:
                     index = convToPair(pair)
                     lcag[index] -= 1
-                
+
                 working_lcag = copy.deepcopy(lcag)
 
             return lcag
-
 
         correct = 0.0
         for label, logit in zip(labels, logits):
             # logits: [Batch, Classes, LCA_0, LCA_1]
             probs = logit.softmax(0)  # get softmax for probabilities
-            prediction = probs.max(0)[1]  # find maximum across the classes (batches are on 0)
+            prediction = probs.max(0)[
+                1
+            ]  # find maximum across the classes (batches are on 0)
 
             if ignore_index is not None:
                 # set everything to -1 which is not relevant for grading
-                prediction = t.where(label==ignore_index, label, prediction)
+                prediction = t.where(label == ignore_index, label, prediction)
 
             # test_lcag_a = t.Tensor([    [-1,  1,  2,  2],
             #                             [ 1, -1,  2,  1],
@@ -690,70 +768,78 @@ class Instructor:
             # test_lcag_d = two_child_fix(test_lcag_d)
             prediction = two_child_fix(prediction)
 
-        
             # which are the correct predictions
-            a = (label == prediction)
+            a = label == prediction
 
             if ignore_index is not None:
                 # create a mask hiding the irrelevant entries
-                b = (label != t.ones(label.shape)*ignore_index)
+                b = label != t.ones(label.shape) * ignore_index
             else:
-                b = (label == label)    # simply create an "True"-matrix to hide the mask
+                b = label == label  # simply create an "True"-matrix to hide the mask
 
-            correct += (a == b).float().sum()/b.sum() # divide by the size of the matrix
+            correct += (
+                a == b
+            ).float().sum() / b.sum()  # divide by the size of the matrix
 
+        return correct / labels.size(0)  # divide by the batch size
 
-        return correct / labels.size(0) # divide by the batch size
-
-    def edge_accuracy(self, logits: t.Tensor, labels: t.Tensor, ignore_index: int=None) -> float:
-        
-        correct = 0.0
-        for label, logit in zip(labels, logits):
-            # logits: [Batch, Classes, LCA_0, LCA_1]
-            probs = logit.softmax(0)  # get softmax for probabilities
-            prediction = probs.max(0)[1]  # find maximum across the classes (batches are on 0)
-            if ignore_index is not None:
-                # set everything to -1 which is not relevant for grading
-                prediction = t.where(label==ignore_index, label, prediction)
-        
-            # which are the correct predictions
-            a = (label == prediction)
-
-            if ignore_index is not None:
-                # create a mask hiding the irrelevant entries
-                b = (label != t.ones(label.shape)*ignore_index)
-            else:
-                b = (label == label)    # simply create an "True"-matrix to hide the mask
-
-            correct += (a == b).float().sum()/b.sum() # divide by the size of the matrix
-
-
-        return correct / labels.size(0) # divide by the batch size
-
-    def perfect_lcag(self, logits: t.Tensor, labels: t.Tensor, ignore_index: int=None) -> float:
+    def edge_accuracy(
+        self, logits: t.Tensor, labels: t.Tensor, ignore_index: int = None
+    ) -> float:
 
         correct = 0.0
         for label, logit in zip(labels, logits):
             # logits: [Batch, Classes, LCA_0, LCA_1]
             probs = logit.softmax(0)  # get softmax for probabilities
-            prediction = probs.max(0)[1]  # find maximum across the classes (batches are on 0)
-            
+            prediction = probs.max(0)[
+                1
+            ]  # find maximum across the classes (batches are on 0)
             if ignore_index is not None:
                 # set everything to -1 which is not relevant for grading
-                prediction = t.where(label==ignore_index, label, prediction)
-        
+                prediction = t.where(label == ignore_index, label, prediction)
+
             # which are the correct predictions
-            a = (label == prediction)
+            a = label == prediction
 
             if ignore_index is not None:
                 # create a mask hiding the irrelevant entries
-                b = (label != t.ones(label.shape)*ignore_index)
+                b = label != t.ones(label.shape) * ignore_index
             else:
-                b = (label == label)    # simply create an "True"-matrix to hide the mask
+                b = label == label  # simply create an "True"-matrix to hide the mask
 
-            if (a == b).float().sum()/b.sum() == 1:
+            correct += (
+                a == b
+            ).float().sum() / b.sum()  # divide by the size of the matrix
+
+        return correct / labels.size(0)  # divide by the batch size
+
+    def perfect_lcag(
+        self, logits: t.Tensor, labels: t.Tensor, ignore_index: int = None
+    ) -> float:
+
+        correct = 0.0
+        for label, logit in zip(labels, logits):
+            # logits: [Batch, Classes, LCA_0, LCA_1]
+            probs = logit.softmax(0)  # get softmax for probabilities
+            prediction = probs.max(0)[
+                1
+            ]  # find maximum across the classes (batches are on 0)
+
+            if ignore_index is not None:
+                # set everything to -1 which is not relevant for grading
+                prediction = t.where(label == ignore_index, label, prediction)
+
+            # which are the correct predictions
+            a = label == prediction
+
+            if ignore_index is not None:
+                # create a mask hiding the irrelevant entries
+                b = label != t.ones(label.shape) * ignore_index
+            else:
+                b = label == label  # simply create an "True"-matrix to hide the mask
+
+            if (a == b).float().sum() / b.sum() == 1:
                 correct += 1
             # log.info(f"Perfect lcag candidate was {(a == b).float().sum()/b.sum()}")
 
-
-        return correct / labels.size(0) # divide by the batch size
+        return correct / labels.size(0)  # divide by the batch size

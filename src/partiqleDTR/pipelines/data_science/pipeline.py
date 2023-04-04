@@ -9,37 +9,38 @@ from .nodes import *
 
 
 nd_create_model = node(
-        func=create_model,
-        inputs={
-            "n_classes": "n_classes",
-            "n_momenta": "params:n_momenta",
-            "model_sel": "params:model_sel",
-            "n_blocks": "params:n_blocks",
-            "dim_feedforward": "params:dim_feedforward",
-            "n_layers_mlp": "params:n_layers_mlp",
-            "n_additional_mlp_layers": "params:n_additional_mlp_layers",
-            "n_final_mlp_layers": "params:n_final_mlp_layers",
-            "skip_block": "params:skip_block",
-            "skip_global": "params:skip_global",
-            "dropout_rate": "params:dropout_rate",
-            "batchnorm": "params:batchnorm",
-            "symmetrize": "params:symmetrize",
-            "data_reupload": "params:data_reupload",
-            "add_rot_gates": "params:add_rot_gates",
-            "n_layers_vqc": "params:n_layers_vqc",
-            "padding_dropout": "params:padding_dropout",
-            "predefined_vqc": "params:predefined_vqc",
-            "predefined_iec": "params:predefined_iec",
-            "measurement": "params:measurement",
-            "backend": "params:backend",
-            "n_shots": "params:n_shots",
-            "n_fsps": "n_fsps",
-            "device": "params:device",
-            "initialization_constant": "params:initialization_constant"
-        },
-        outputs={"model": "model"},
-        name="create_model",
-    )
+    func=create_model,
+    inputs={
+        "n_classes": "n_classes",
+        "n_momenta": "params:n_momenta",
+        "model_sel": "params:model_sel",
+        "n_blocks": "params:n_blocks",
+        "dim_feedforward": "params:dim_feedforward",
+        "n_layers_mlp": "params:n_layers_mlp",
+        "n_additional_mlp_layers": "params:n_additional_mlp_layers",
+        "n_final_mlp_layers": "params:n_final_mlp_layers",
+        "skip_block": "params:skip_block",
+        "skip_global": "params:skip_global",
+        "dropout_rate": "params:dropout_rate",
+        "batchnorm": "params:batchnorm",
+        "symmetrize": "params:symmetrize",
+        "data_reupload": "params:data_reupload",
+        "add_rot_gates": "params:add_rot_gates",
+        "n_layers_vqc": "params:n_layers_vqc",
+        "padding_dropout": "params:padding_dropout",
+        "predefined_vqc": "params:predefined_vqc",
+        "predefined_iec": "params:predefined_iec",
+        "measurement": "params:measurement",
+        "backend": "params:backend",
+        "n_shots": "params:n_shots",
+        "n_fsps": "n_fsps",
+        "device": "params:device",
+        "initialization_constant": "params:initialization_constant",
+    },
+    outputs={"model": "model"},
+    name="create_model",
+)
+
 
 def create_metadata_nodes(**kwargs) -> Pipeline:
     return [
@@ -104,7 +105,10 @@ def create_training_pipeline(**kwargs) -> Pipeline:
             ),
             node(
                 func=train,
-                inputs={"instructor": "instructor", "enabled_modes":"params:default_modes"},
+                inputs={
+                    "instructor": "instructor",
+                    "enabled_modes": "params:default_modes",
+                },
                 outputs={
                     "trained_model": "trained_quantum_model",
                     "checkpoint": "checkpoint",
@@ -221,7 +225,11 @@ def create_resume_training_pipeline(**kwargs) -> Pipeline:
             ),
             node(
                 func=train,
-                inputs={"instructor": "instructor", "start_epoch": "start_epoch", "enabled_modes":"params:default_modes"},
+                inputs={
+                    "instructor": "instructor",
+                    "start_epoch": "start_epoch",
+                    "enabled_modes": "params:default_modes",
+                },
                 outputs={
                     "trained_model": "trained_quantum_model",
                     "checkpoint": "checkpoint_out",
@@ -231,6 +239,7 @@ def create_resume_training_pipeline(**kwargs) -> Pipeline:
             ),
         ]
     )
+
 
 def create_validation_qgnn_pipeline(**kwargs) -> Pipeline:
     return pipeline(
@@ -249,7 +258,6 @@ def create_validation_qgnn_pipeline(**kwargs) -> Pipeline:
                 name="unpack_checkpoint",
                 tags="split_run",
             ),
-            
             node(
                 func=create_instructor,
                 inputs={
@@ -282,7 +290,10 @@ def create_validation_qgnn_pipeline(**kwargs) -> Pipeline:
             ),
             node(
                 func=train,
-                inputs={"instructor": "instructor", "enabled_modes":"params:validation_mode"},
+                inputs={
+                    "instructor": "instructor",
+                    "enabled_modes": "params:validation_mode",
+                },
                 outputs={
                     "trained_model": "trained_quantum_model",
                     "checkpoint": "checkpoint_out",
@@ -292,6 +303,8 @@ def create_validation_qgnn_pipeline(**kwargs) -> Pipeline:
             ),
         ]
     )
+
+
 # additional pipeline just to add it as an exception in kedro
 def create_debug_training_pipeline(**kwargs) -> Pipeline:
     return create_training_pipeline(**kwargs)
@@ -299,4 +312,3 @@ def create_debug_training_pipeline(**kwargs) -> Pipeline:
 
 def create_debug_training_optuna_pipeline(**kwargs) -> Pipeline:
     return create_training_optuna_pipeline(**kwargs)
-

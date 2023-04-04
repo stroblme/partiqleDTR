@@ -188,11 +188,9 @@ class GraphVisualization:
         self, G, root=None, width=1.0, vert_gap=0.2, vert_loc=0, xcenter=0.5
     ):
         return hierarchy_pos(G, root, width, vert_gap, vert_loc)
-        
 
-def hierarchy_pos(
-    G, root=None, width=1.0, vert_gap=0.2, vert_loc=0, xcenter=0.5
-):
+
+def hierarchy_pos(G, root=None, width=1.0, vert_gap=0.2, vert_loc=0, xcenter=0.5):
     """
     From Joel's answer at https://stackoverflow.com/a/29597209/2966723.
     Licensed under Creative Commons Attribution-Share Alike

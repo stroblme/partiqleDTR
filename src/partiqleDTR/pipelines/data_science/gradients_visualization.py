@@ -5,6 +5,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 from plotly import graph_objects as go
 
+
 def heatmap_pl(
     data,
     row_labels,
@@ -14,35 +15,27 @@ def heatmap_pl(
     axis_labels=("", ""),
     title="",
 ):
-    fig = go.Figure([
-        go.Heatmap(
-        x = row_labels,
-        y = col_labels,
-        z = data,
-        type = 'heatmap',
-        colorscale = cmap,
-        colorbar=dict(
-            title=dict(
-                text=cbarlabel,
-                side="right"
+    fig = go.Figure(
+        [
+            go.Heatmap(
+                x=row_labels,
+                y=col_labels,
+                z=data,
+                type="heatmap",
+                colorscale=cmap,
+                colorbar=dict(title=dict(text=cbarlabel, side="right")),
             )
-        )
-    )])
+        ]
+    )
 
     fig.update_layout(
-        title=dict(
-            text=title
-        ),
-        
-        xaxis=dict(
-            title="Parameter Index"
-        ),
-        yaxis=dict(
-            title="Epoch"
-        )
+        title=dict(text=title),
+        xaxis=dict(title="Parameter Index"),
+        yaxis=dict(title="Epoch"),
     )
-    
+
     return fig
+
 
 def heatmap_mpl(
     data,

@@ -1,12 +1,15 @@
-from qiskit.visualization.circuit.matplotlib import MatplotlibDrawer as qiskit_matplotlibdrawer
+from qiskit.visualization.circuit.matplotlib import (
+    MatplotlibDrawer as qiskit_matplotlibdrawer,
+)
 from qiskit.visualization.circuit.circuit_visualization import _utils
 from qiskit.dagcircuit.dagnode import DAGOpNode
 
 import torch as t
 import plotly
 
+
 def rgb_to_hex(r, g, b):
-    return '#{:02x}{:02x}{:02x}'.format(r, g, b).upper()
+    return "#{:02x}{:02x}{:02x}".format(r, g, b).upper()
 
 
 def draw_gradient_circuit(
@@ -25,35 +28,34 @@ def draw_gradient_circuit(
     initial_state=False,
     cregbundle=None,
     wire_order=None,
-    param_indicator='var'
+    param_indicator="var",
 ):
     if type(gradients) == list:
         gradients = t.stack(gradients)
 
     # first mean over epochs, then abs value of gradient
     gradients_mean = gradients.mean(dim=0).abs()
-    
-    fig = draw_single_gradient_circuit(
-            gradients_mean,
-            circuit,
-            scale=scale,
-            filename=filename,
-            style=style,
-            plot_barriers=plot_barriers,
-            reverse_bits=reverse_bits,
-            justify=justify,
-            idle_wires=idle_wires,
-            with_layout=with_layout,
-            fold=fold,
-            ax=ax,
-            initial_state=initial_state,
-            cregbundle=cregbundle,
-            wire_order=wire_order,
-            param_indicator=param_indicator
-        )
-    
-    return fig
 
+    fig = draw_single_gradient_circuit(
+        gradients_mean,
+        circuit,
+        scale=scale,
+        filename=filename,
+        style=style,
+        plot_barriers=plot_barriers,
+        reverse_bits=reverse_bits,
+        justify=justify,
+        idle_wires=idle_wires,
+        with_layout=with_layout,
+        fold=fold,
+        ax=ax,
+        initial_state=initial_state,
+        cregbundle=cregbundle,
+        wire_order=wire_order,
+        param_indicator=param_indicator,
+    )
+
+    return fig
 
 
 # class DAGOpNode(DAGOpNode):
@@ -86,7 +88,7 @@ def draw_single_gradient_circuit(
     initial_state=False,
     cregbundle=None,
     wire_order=None,
-    param_indicator='var'
+    param_indicator="var",
 ):
     qubits, clbits, nodes = _utils._get_layered_instructions(
         circuit,
@@ -97,7 +99,7 @@ def draw_single_gradient_circuit(
     )
     if fold is None:
         fold = 25
-        
+
     qcd = custom_matplotlib(
         qubits,
         clbits,
@@ -142,11 +144,11 @@ class custom_matplotlib(qiskit_matplotlibdrawer):
         for layer in self._nodes:
             for node in layer:
                 if node.op.label is not None and "var" in node.op.label:
-                    self.nodes_significance[node] = ((significance[label_map[node.op.label]] - min_sig) / max_sig).item()
+                    self.nodes_significance[node] = (
+                        (significance[label_map[node.op.label]] - min_sig) / max_sig
+                    ).item()
                     i += 1
 
-  
-   
     def _get_colors(self, node):
         """Get all the colors needed for drawing the circuit"""
         op = node.op
@@ -158,9 +160,22 @@ class custom_matplotlib(qiskit_matplotlibdrawer):
             color = self._style["dispcol"][op.name]
 
         if node in self.nodes_significance:
-            c = plotly.colors.sample_colorscale(plotly.colors.sequential.Bluered, samplepoints=self.nodes_significance[node], colortype='tuple')
+            c = plotly.colors.sample_colorscale(
+                plotly.colors.sequential.Bluered,
+                samplepoints=self.nodes_significance[node],
+                colortype="tuple",
+            )
 
-            color = (rgb_to_hex(r=int(c[0][0]*255), g=int(c[0][1]*255), b=int(c[0][2]*255)), rgb_to_hex(r=int(255-c[0][0]*255), g=int(255-c[0][1]*255), b=int(255-c[0][2]*255)))
+            color = (
+                rgb_to_hex(
+                    r=int(c[0][0] * 255), g=int(c[0][1] * 255), b=int(c[0][2] * 255)
+                ),
+                rgb_to_hex(
+                    r=int(255 - c[0][0] * 255),
+                    g=int(255 - c[0][1] * 255),
+                    b=int(255 - c[0][2] * 255),
+                ),
+            )
 
         if color is not None:
             # Backward compatibility for style dict using 'displaycolor' with
@@ -173,7 +188,11 @@ class custom_matplotlib(qiskit_matplotlibdrawer):
                 gt = color[1]
         # Treat special case of classical gates in iqx style by making all
         # controlled gates of x, dcx, and swap the classical gate color
-        elif self._style["name"] in ["iqx", "iqx-dark"] and base_name in ["x", "dcx", "swap"]:
+        elif self._style["name"] in ["iqx", "iqx-dark"] and base_name in [
+            "x",
+            "dcx",
+            "swap",
+        ]:
             color = self._style["dispcol"][base_name]
             if isinstance(color, str):
                 fc = color

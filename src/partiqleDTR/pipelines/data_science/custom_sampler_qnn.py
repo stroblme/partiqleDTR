@@ -206,7 +206,6 @@ class CustomSamplerQNN(NeuralNetwork):
     def set_selected_parameters(self, parameters):
         self._selected_parameters = parameters
 
-
     def set_interpret(
         self,
         interpret: Callable[[int], int | tuple[int, ...]] | None = None,
@@ -257,7 +256,9 @@ class CustomSamplerQNN(NeuralNetwork):
 
         return output_shape_
 
-    def _postprocess(self, num_samples: int, result: SamplerResult) -> np.ndarray | SparseArray:
+    def _postprocess(
+        self, num_samples: int, result: SamplerResult
+    ) -> np.ndarray | SparseArray:
         """
         Post-processing during forward pass of the network.
         """
@@ -311,8 +312,9 @@ class CustomSamplerQNN(NeuralNetwork):
                 if self._input_gradients
                 else None
             )
-            weights_grad = np.zeros((num_samples, *self._output_shape, self._num_weights))
-
+            weights_grad = np.zeros(
+                (num_samples, *self._output_shape, self._num_weights)
+            )
 
         if self._selected_parameters is not None:
             cur_num_weights = len(self._selected_parameters)
@@ -332,7 +334,9 @@ class CustomSamplerQNN(NeuralNetwork):
                     if self._input_gradients:
                         grad_index = i if i < self._num_inputs else i - self._num_inputs
                     elif self._selected_parameters is not None:
-                        grad_index = self._weight_params.index(self._selected_parameters[i])
+                        grad_index = self._weight_params.index(
+                            self._selected_parameters[i]
+                        )
                     else:
                         grad_index = i
 
@@ -374,7 +378,9 @@ class CustomSamplerQNN(NeuralNetwork):
 
         if num_samples is not None and np.prod(parameter_values.shape) > 0:
             # sampler allows batching
-            job = self.sampler.run([self._circuit] * num_samples, parameter_values=parameter_values)
+            job = self.sampler.run(
+                [self._circuit] * num_samples, parameter_values=parameter_values
+            )
             try:
                 results = job.result()
             except Exception as exc:
@@ -394,13 +400,24 @@ class CustomSamplerQNN(NeuralNetwork):
         """Backward pass of the network."""
         # prepare parameters in the required format
         parameter_values, num_samples = self._preprocess_forward(input_data, weights)
-        selected_params =  self._selected_parameters if self._selected_parameters is not None else self._circuit.parameters[self._num_inputs :]
+        selected_params = (
+            self._selected_parameters
+            if self._selected_parameters is not None
+            else self._circuit.parameters[self._num_inputs :]
+        )
 
         results = None
         if num_samples is not None and np.prod(parameter_values.shape) > 0:
             if self._input_gradients:
                 # TODO: validate that qiskit is not just using index matching here
-                job = self.gradient.run([self._circuit] * num_samples, parameter_values=parameter_values, parameters=[self._circuit.parameters[: self._num_inputs] + selected_params]*num_samples)
+                job = self.gradient.run(
+                    [self._circuit] * num_samples,
+                    parameter_values=parameter_values,
+                    parameters=[
+                        self._circuit.parameters[: self._num_inputs] + selected_params
+                    ]
+                    * num_samples,
+                )
                 try:
                     results = job.result()
                 except Exception as exc:
@@ -421,4 +438,7 @@ class CustomSamplerQNN(NeuralNetwork):
             return None, None
 
         input_grad, weights_grad = self._postprocess_gradient(num_samples, results)
-        return input_grad, weights_grad  # `None` for gradients wrt input data, see TorchConnector
+        return (
+            input_grad,
+            weights_grad,
+        )  # `None` for gradients wrt input data, see TorchConnector

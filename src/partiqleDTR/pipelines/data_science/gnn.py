@@ -84,7 +84,14 @@ class gnn(nn.Module):
         block_dim = 3 * dim_feedforward if self.skip_block else 2 * dim_feedforward
         global_dim = 2 * dim_feedforward if self.skip_global else dim_feedforward
 
-        self.blocks = generate_nri_blocks(dim_feedforward, batchnorm, dropout_rate, n_additional_mlp_layers, block_dim, n_blocks)
+        self.blocks = generate_nri_blocks(
+            dim_feedforward,
+            batchnorm,
+            dropout_rate,
+            n_additional_mlp_layers,
+            block_dim,
+            n_blocks,
+        )
 
         # Final linear layers as requested
         # self.final_mlp = nn.Sequential(*[MLP(dim_feedforward, dim_feedforward, dim_feedforward, dropout, batchnorm) for _ in range(final_mlp_layers)])
@@ -245,9 +252,7 @@ class gnn(nn.Module):
 
         if self.skip_global:
             # Global skip connection
-            x = t.cat(
-                (x, x_global_skip), dim=2
-            )  # Skip connection  # (b, l*(l-1), 2d)
+            x = t.cat((x, x_global_skip), dim=2)  # Skip connection  # (b, l*(l-1), 2d)
 
         # Cleanup
         del rel_rec, rel_send
