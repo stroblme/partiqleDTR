@@ -163,7 +163,7 @@ class CustomSamplerQNN(NeuralNetwork):
             weight_params = []
         self._weight_params = list(weight_params)
 
-        self._selected_parameters = None
+        self._selected_parameters = self._weight_params
 
         if sparse:
             _optionals.HAS_SPARSE.require_now("DOK")
