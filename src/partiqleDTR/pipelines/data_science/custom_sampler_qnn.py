@@ -322,16 +322,20 @@ class CustomSamplerQNN(NeuralNetwork):
             num_grad_vars = cur_num_weights
 
         for sample in range(num_samples):
-            for i in range(num_grad_vars):
+            for i in range(num_grad_vars):  # num_grad_vars also contains the input gradients
                 grad = results.gradients[sample][i]
                 for k, val in grad.items():
                     # get index for input or weights gradients
+                    # this is super sketchy as it is just a case decision if we are looking at input or weight gradients
+                    # later we will use that to index either input_grad or weights_grad and thus need to limit i as it normally would iterate over the combined lenght of both
                     if self._input_gradients:
-                        grad_index = i if i < self._num_inputs else i - self._num_inputs
-                    elif self._selected_parameters is not None:
-                        grad_index = self._weight_params.index(
-                            self._selected_parameters[i]
-                        )
+                        if i < self._num_inputs:
+                            grad_index = i
+                        else: 
+                            # re-index grad_index in case that we are using selected parameters, as it is not necessarily in numerical order
+                            grad_index = self._weight_params.index(
+                                self._selected_parameters[i - self._num_inputs]
+                            )
                     else:
                         grad_index = i
 
