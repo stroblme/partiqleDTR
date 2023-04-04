@@ -35,24 +35,7 @@ os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
 
 class qgnn(gnn, nn.Module):
-    """NRI model built off the official implementation.
 
-    Contains adaptations to make it work with our use case, plus options for extra layers to give it some more oomph
-
-    Args:
-        infeatures (int): Number of input features
-        num_classes (int): Number of classes in ouput prediction
-        nblocks (int): Number of NRI blocks in the model
-        dim_feedforward (int): Width of feedforward layers
-        initial_mlp_layers (int): Number of MLP (2 feedforward, 1 batchnorm (optional)) before NRI blocks
-        block_additional_mlp_layers (int): Number of additional MLP (2 feedforward, 1 batchnorm (optional)) within NRI blocks, when 0 the total number is one.
-        final_mlp_layers (int): Number of MLP (2 feedforward, 1 batchnorm (optional)) after NRI blocks
-        dropout (float): Dropout rate
-        factor (bool): Whether to use NRI blocks at all (useful for benchmarking)
-        tokenize ({int: int}): Dictionary of tokenized features to embed {index_of_feature: num_tokens}
-        embedding_dims (int): Number of embedding dimensions to use for tokenized features
-        batchnorm (bool): Whether to use batchnorm in MLP layers
-    """
 
     def __init__(
         self,
