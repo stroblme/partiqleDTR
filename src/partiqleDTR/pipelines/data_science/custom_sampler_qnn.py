@@ -313,10 +313,8 @@ class CustomSamplerQNN(NeuralNetwork):
                 (num_samples, *self._output_shape, self._num_weights)
             )
 
-        if self._selected_parameters is not None:
-            cur_num_weights = len(self._selected_parameters)
-        else:
-            cur_num_weights = self._num_weights
+        # weights_grad can differ from the actual number of gradients we want to compute
+        cur_num_weights = len(self._selected_parameters)
 
         if self._input_gradients:
             num_grad_vars = self._num_inputs + cur_num_weights
