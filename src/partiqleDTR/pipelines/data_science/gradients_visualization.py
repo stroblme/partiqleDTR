@@ -5,6 +5,29 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 from plotly import graph_objects as go
 
+def scatter_line(
+    data,
+    x_labels,
+    title="",
+    x_axis_title="",
+    y_axis_title="",
+):
+    fig = go.Figure(
+        [
+            go.Line(
+                x = x_labels,
+                y = data
+            )
+        ]
+    )
+
+    fig.update_layout(
+        title=dict(text=title),
+        xaxis=dict(title="Epoch"),
+        yaxis=dict(title="Num. of Selected Parameters"),
+    )
+
+    return fig
 
 def heatmap(
     data,

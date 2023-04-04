@@ -19,7 +19,7 @@ import torchinfo
 
 from .utils import rel_pad_collate_fn
 from .graph_visualization import GraphVisualization
-from .gradients_visualization import heatmap, heatmap_3d
+from .gradients_visualization import heatmap, heatmap_3d, scatter_line
 from .circuit_gradient_visualization import draw_gradient_circuit
 
 from typing import Dict
@@ -275,6 +275,7 @@ class Instructor:
 
         if self.log_gradients:
             all_grads = []
+            num_selected_params = []
 
         error_raised = True
 
@@ -517,9 +518,8 @@ class Instructor:
                                 self.model.var_params, t.stack(all_grads).mean(dim=1)
                             )  # use mean over batch samples
 
-                            print(
-                                f"Using {len(selected_parameters)} out of {len(self.model.var_params)} parameters from now on"
-                            )
+                            num_selected_params.append(len(selected_parameters))
+
                             self.model.quantum_layer.neural_network.set_selected_parameters(
                                 selected_parameters
                             )
@@ -549,10 +549,17 @@ class Instructor:
             all_grads = t.stack(all_grads)
 
             g_plt, g3d_plt = self.plotGradients(
-                all_grads.mean(dim=1), figsize=(16, 12)
+                all_grads.mean(dim=1)
             )  # use mean over batch samples
             mlflow.log_figure(g_plt, f"gradients.html")
             mlflow.log_figure(g3d_plt, f"gradients_3d.html")
+
+            p_plt = self.plotSelectedParams(
+                num_selected_params
+            )
+
+            mlflow.log_figure(p_plt, f"sel_params.html")
+
 
             gc_plt = self.gradient_pqc_viz(
                 self.model, all_grads.mean(dim=1)
@@ -620,7 +627,7 @@ class Instructor:
 
         return sel_params
 
-    def plotGradients(self, epoch_gradients: t.Tensor, figsize=(16, 12)):
+    def plotGradients(self, epoch_gradients: t.Tensor):
         # gradients should be of shape [epochs, n_weights]
 
         X = [i for i in range(len(epoch_gradients[0]))]
@@ -648,6 +655,14 @@ class Instructor:
         )
 
         return fig, fig3d
+
+    def plotSelectedParams(self, num_selected_params):
+        X = [i for i in range(len(num_selected_params))]
+        Y = num_selected_params
+
+        fig = scatter_line(Y, X, "Selected Parameters")
+
+        return fig
 
     # def plotGradients(self, epoch_gradients:t.Tensor, figsize=(16, 12)):
     #     # gradients should be of shape [epochs, n_weights]
