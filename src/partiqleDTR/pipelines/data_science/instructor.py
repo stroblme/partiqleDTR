@@ -19,7 +19,7 @@ import torchinfo
 
 from .utils import rel_pad_collate_fn
 from .graph_visualization import GraphVisualization
-from .gradients_visualization import heatmap_pl, annotate_heatmap
+from .gradients_visualization import heatmap, heatmap_3d
 from .circuit_gradient_visualization import draw_gradient_circuit
 
 from typing import Dict
@@ -548,10 +548,11 @@ class Instructor:
         if self.log_gradients and len(all_grads) > 0:
             all_grads = t.stack(all_grads)
 
-            g_plt = self.plotGradients(
+            g_plt, g3d_plt = self.plotGradients(
                 all_grads.mean(dim=1), figsize=(16, 12)
             )  # use mean over batch samples
             mlflow.log_figure(g_plt, f"gradients.html")
+            mlflow.log_figure(g3d_plt, f"gradients_3d.html")
 
             gc_plt = self.gradient_pqc_viz(
                 self.model, all_grads.mean(dim=1)
@@ -626,7 +627,7 @@ class Instructor:
         Y = [i for i in range(len(epoch_gradients))]
         Z = epoch_gradients.abs()  # use absolute value of gradients
 
-        fig = heatmap_pl(
+        fig = heatmap(
             Z,
             Y,
             X,
@@ -636,7 +637,17 @@ class Instructor:
             title="Gradient Values over Epochs",
         )
 
-        return fig
+        fig3d = heatmap_3d(
+            Z,
+            Y,
+            X,
+            cmap="magma_r",
+            cbarlabel=f"Gradients (Data Mean, Absolute Values)",
+            axis_labels=("Parameters", "Epochs"),
+            title="Gradient Values over Epochs",
+        )
+
+        return fig, fig3d
 
     # def plotGradients(self, epoch_gradients:t.Tensor, figsize=(16, 12)):
     #     # gradients should be of shape [epochs, n_weights]
