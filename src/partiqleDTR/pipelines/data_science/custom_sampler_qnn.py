@@ -337,7 +337,9 @@ class CustomSamplerQNN(NeuralNetwork):
                                 self._selected_parameters[i - self._num_inputs]
                             )
                     else:
-                        grad_index = i
+                        grad_index = self._weight_params.index(
+                                self._selected_parameters[]
+                            )
 
                     # interpret integer and construct key
                     key = self._interpret(k)
