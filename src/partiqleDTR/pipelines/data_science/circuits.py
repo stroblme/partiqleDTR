@@ -37,12 +37,17 @@ def circuit_builder(
 
 class iec_circuits:
     def direct_mapping(qc, n_qubits, identifier, reuse_params=None):
+        energy_params = []
+        prx_params = []
+        pry_params = []
+        prz_params = []
+
         for i in range(n_qubits):
             if reuse_params is not None:
-                energy = reuse_params[0]
-                prx = reuse_params[1]
-                pry = reuse_params[2]
-                prz = reuse_params[3]
+                energy = reuse_params[0][i]
+                prx = reuse_params[1][i]
+                pry = reuse_params[2][i]
+                prz = reuse_params[3][i]
             else:
                 energy = q.circuit.Parameter(f"{identifier}_{i}_0")
                 prx = q.circuit.Parameter(f"{identifier}_{i}_1")
@@ -53,7 +58,12 @@ class iec_circuits:
             qc.ry(pry * energy * t.pi, i, f"{identifier}_ry_{i}")
             qc.rz(prz * energy * t.pi, i, f"{identifier}_rz_{i}")
 
-        return [energy, prx, pry, prz]
+            energy_params.append(energy)
+            prx_params.append(prx)
+            pry_params.append(pry)
+            prz_params.append(prz)
+
+        return [energy_params, prx_params, pry_params, prz_params]
 
 
 class pqc_circuits:
