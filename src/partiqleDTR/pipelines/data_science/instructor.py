@@ -542,7 +542,7 @@ class Instructor:
                                 self.model.var_params, t.stack(all_grads).mean(dim=1)
                             )  # use mean over batch samples
 
-                            num_selected_params.append(len(selected_parameters))
+                            mlflow.log_metric(key=f"num_selected_params", value=len(selected_parameters), step=epoch)
 
                             self.model.quantum_layer.neural_network.set_selected_parameters(
                                 selected_parameters
