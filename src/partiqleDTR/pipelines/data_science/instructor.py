@@ -253,8 +253,13 @@ class Instructor:
         self.normalize_individually = normalize_individually
         self.zero_mean = zero_mean
         self.batch_size = batch_size
-        self.optimizer = t.optim.Adam(
-            self.model.parameters(), lr=learning_rate, amsgrad=False
+        self.optimizer = SplitOptimizer(
+            t.optim.Adam(
+                self.model.quantum_layer.parameters(), lr=learning_rate, amsgrad=False
+            ),
+            t.optim.Adam(
+                self.model.gnn.parameters(), lr=learning_rate, amsgrad=False
+            )
         )
 
         self.gradient_curvature_threshold = float(gradient_curvature_threshold)
