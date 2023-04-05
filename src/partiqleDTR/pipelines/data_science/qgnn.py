@@ -32,7 +32,7 @@ log = logging.getLogger(__name__)
 os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
 
-class qgnn(gnn, nn.Module):
+class qgnn(nn.Module):
     def __init__(
         self,
         n_momenta,  # d
@@ -188,94 +188,114 @@ class qgnn(gnn, nn.Module):
         #     MLP(n_momenta, dim_feedforward, dim_feedforward, dropout_rate, batchnorm)
         # ]
         if self.measurement == "mutually_exclusive":
-            initial_mlp = [
-                MLP(1, dim_feedforward, dim_feedforward, dropout_rate, batchnorm)
-            ]
+            n_input = 1
+            # initial_mlp = [
+            #     MLP(1, dim_feedforward, dim_feedforward, dropout_rate, batchnorm)
+            # ]
         elif self.measurement == "all":
-            initial_mlp = [
-                MLP(
-                    2**self.total_n_fsps,
-                    dim_feedforward,
-                    dim_feedforward,
-                    dropout_rate,
-                    batchnorm,
-                )
-            ]
+            n_input = 2**self.total_n_fsps
+            # initial_mlp = [
+            #     MLP(
+            #         2**self.total_n_fsps,
+            #         dim_feedforward,
+            #         dim_feedforward,
+            #         dropout_rate,
+            #         batchnorm,
+            #     )
+            # ]
         elif self.measurement == "entangled":
-            initial_mlp = [
-                MLP(
-                    2 ** (self.total_n_fsps - 1) + 1,
-                    dim_feedforward,
-                    dim_feedforward,
-                    dropout_rate,
-                    batchnorm,
-                )
-            ]
+            n_input = 2 ** (self.total_n_fsps - 1) + 1
+            # initial_mlp = [
+            #     MLP(
+            #         2 ** (self.total_n_fsps - 1) + 1,
+            #         dim_feedforward,
+            #         dim_feedforward,
+            #         dropout_rate,
+            #         batchnorm,
+            #     )
+            # ]
         else:
             raise ValueError("Invalid measurement specified")
-        # Add any additional layers as per request
-        initial_mlp.extend(
-            [
-                MLP(
-                    dim_feedforward,
-                    dim_feedforward,
-                    dim_feedforward,
-                    dropout_rate,
-                    batchnorm,
-                )
-                for _ in range(n_layers_mlp - 1)
-            ]
-        )
-        self.initial_mlp = nn.Sequential(*initial_mlp)
 
-        # MLP to reduce feature dimensions from first Node2Edge before blocks begin
-        self.pre_blocks_mlp = MLP(
-            dim_feedforward * 2,
-            dim_feedforward,
-            dim_feedforward,
-            dropout_rate,
-            batchnorm,
+
+        self.gnn = gnn(
+                        n_input,  # d
+                        n_classes,  # l
+                        n_blocks,
+                        dim_feedforward,  # ff
+                        n_layers_mlp,
+                        n_additional_mlp_layers,
+                        n_final_mlp_layers,
+                        skip_block,
+                        skip_global,
+                        dropout_rate,
+                        batchnorm,
+                        symmetrize,
         )
 
-        # calculate the dimensionality after each block and after all blocks
-        # dimensionality increases if we introduce skip connections as one additional
-        # input is involved then
-        block_dim = 3 * dim_feedforward if self.skip_block else 2 * dim_feedforward
-        global_dim = 2 * dim_feedforward if self.skip_global else dim_feedforward
+        # # Add any additional layers as per request
+        # initial_mlp.extend(
+        #     [
+        #         MLP(
+        #             dim_feedforward,
+        #             dim_feedforward,
+        #             dim_feedforward,
+        #             dropout_rate,
+        #             batchnorm,
+        #         )
+        #         for _ in range(n_layers_mlp - 1)
+        #     ]
+        # )
+        # self.initial_mlp = nn.Sequential(*initial_mlp)
 
-        self.blocks = generate_nri_blocks(
-            dim_feedforward,
-            batchnorm,
-            dropout_rate,
-            n_additional_mlp_layers,
-            block_dim,
-            n_blocks,
-        )
+        # # MLP to reduce feature dimensions from first Node2Edge before blocks begin
+        # self.pre_blocks_mlp = MLP(
+        #     dim_feedforward * 2,
+        #     dim_feedforward,
+        #     dim_feedforward,
+        #     dropout_rate,
+        #     batchnorm,
+        # )
 
-        # Final linear layers as requested
-        # self.final_mlp = nn.Sequential(*[MLP(dim_feedforward, dim_feedforward, dim_feedforward, dropout, batchnorm) for _ in range(final_mlp_layers)])
-        final_mlp = [
-            MLP(global_dim, dim_feedforward, dim_feedforward, dropout_rate, batchnorm)
-        ]
-        # Add any additional layers as per request
-        final_mlp.extend(
-            [
-                MLP(
-                    dim_feedforward,
-                    dim_feedforward,
-                    dim_feedforward,
-                    dropout_rate,
-                    batchnorm,
-                )
-                for _ in range(n_final_mlp_layers - 1)
-            ]
-        )
-        self.final_mlp = nn.Sequential(*final_mlp)
+        # # calculate the dimensionality after each block and after all blocks
+        # # dimensionality increases if we introduce skip connections as one additional
+        # # input is involved then
+        # block_dim = 3 * dim_feedforward if self.skip_block else 2 * dim_feedforward
+        # global_dim = 2 * dim_feedforward if self.skip_global else dim_feedforward
 
-        self.fc_out = nn.Linear(dim_feedforward, self.num_classes)
+        # self.blocks = generate_nri_blocks(
+        #     dim_feedforward,
+        #     batchnorm,
+        #     dropout_rate,
+        #     n_additional_mlp_layers,
+        #     block_dim,
+        #     n_blocks,
+        # )
 
-        # weight initialization for classical linear layers
-        self.init_weights()
+        # # Final linear layers as requested
+        # # self.final_mlp = nn.Sequential(*[MLP(dim_feedforward, dim_feedforward, dim_feedforward, dropout, batchnorm) for _ in range(final_mlp_layers)])
+        # final_mlp = [
+        #     MLP(global_dim, dim_feedforward, dim_feedforward, dropout_rate, batchnorm)
+        # ]
+        # # Add any additional layers as per request
+        # final_mlp.extend(
+        #     [
+        #         MLP(
+        #             dim_feedforward,
+        #             dim_feedforward,
+        #             dim_feedforward,
+        #             dropout_rate,
+        #             batchnorm,
+        #         )
+        #         for _ in range(n_final_mlp_layers - 1)
+        #     ]
+        # )
+        # self.final_mlp = nn.Sequential(*final_mlp)
+
+        # self.fc_out = nn.Linear(dim_feedforward, self.num_classes)
+
+        # # weight initialization for classical linear layers
+        # self.init_weights()
 
     def forward(self, inputs):
         """
@@ -348,10 +368,10 @@ class qgnn(gnn, nn.Module):
         else:
             raise ValueError("Invalid measurement specified")
 
-        x = self.forward_nri(x, rel_rec, rel_send)
+        x = self.gnn.forward_nri(x, rel_rec, rel_send)
 
         # Output what will be used for LCA
-        x = self.fc_out(x)  # (b, l*l, c)
+        x = self.gnn.fc_out(x)  # (b, l*l, c)
         x = x.reshape(batch, n_leaves, n_leaves, self.num_classes)
 
         # Need in the order for cross entropy loss
