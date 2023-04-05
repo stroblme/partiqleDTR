@@ -174,6 +174,9 @@ class SplitOptimizer(object):
 
         return combined_state_dict
 
+    def load_state_dict(self, combined_state_dict):
+        raise NotImplementedError("Loading state dict into multiple optimizers not supported yet.")
+
 
 class Instructor:
     """
@@ -201,6 +204,7 @@ class Instructor:
         n_classes=-1,
         gradients_clamp=1000,
         gradients_spreader=1e-10,
+        torch_seed=1111,
         gradient_curvature_threshold=1e-10,
         gradient_curvature_history=2,
         model_state_dict=None,
@@ -213,6 +217,8 @@ class Instructor:
             es: edge list
             cmd: command line parameters
         """
+
+        t.manual_seed(torch_seed)
 
         self.device = t.device(
             "cuda" if t.cuda.is_available() and device != "cpu" else "cpu"
@@ -280,9 +286,7 @@ class Instructor:
         self.detectAnomaly = detectAnomaly  # TODO: introduce as parameter if helpful
 
     def train(self, start_epoch=1, enabled_modes=["train", "val"]):
-        if self.detectAnomaly:
-            log.info(f"Anomaly detection enabled")
-            t.autograd.set_detect_anomaly(True)
+        t.autograd.set_detect_anomaly(self.detectAnomaly)
 
         log.info(
             f"Starting loops from epoch {start_epoch} using modes {enabled_modes}."
