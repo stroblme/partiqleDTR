@@ -58,6 +58,7 @@ class qgnn(gnn, nn.Module):
         backend="aer_simulator_statevector",
         n_shots=2048,
         initialization_constant=np.pi,
+        parameter_seed=1111,
         **kwargs,
     ):
         # do not initialize the gnn, as this will yield to a clash with the order of modules in pytorch
@@ -83,6 +84,7 @@ class qgnn(gnn, nn.Module):
         self.predefined_iec = predefined_iec
         self.data_reupload = data_reupload
         self.initialization_constant = initialization_constant
+        self.param_rng = np.random.default_rng(seed=parameter_seed)
 
         self.device = t.device(
             "cuda" if t.cuda.is_available() and device != "cpu" else "cpu"
@@ -172,7 +174,7 @@ class qgnn(gnn, nn.Module):
         self.initial_weights = (
             self.initialization_constant
             * np.pi
-            * q.utils.algorithm_globals.random.random(qnn.num_weights)
+            * self.param_rng.random(qnn.num_weights)
             - (self.initialization_constant / 2) * np.pi
         )
 

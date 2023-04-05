@@ -51,8 +51,9 @@ n_layers_vqc: 3
 n_layers_vqc_range: [1, 5, "linear"]
 gradient_curvature_threshold: 1e-10
 gradient_curvature_history: 2  # set to 0 to disable gradient curvature/ parameter pruning
-initialization_constant: 2 # this scales the interval [-a pi .. a pi]
+initialization_constant: 3 # this scales the interval [-a pi .. a pi]
 initialization_constant_range: [0.1, 1, "linear"]  # this scales the interval [-a pi .. a pi]
+parameter_seed: 1111
 padding_dropout: False
 predefined_vqc: "circuit_19" # "", "circuit_191", "circuit_192", "circuit_19", .. tba.
 predefined_vqc_range: ["circuit_191", "circuit_192", "circuit_19"]
