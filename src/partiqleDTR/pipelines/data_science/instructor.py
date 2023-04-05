@@ -299,7 +299,6 @@ class Instructor:
 
         if self.log_gradients:
             all_grads = []
-            num_selected_params = []
 
         error_raised = True
 
@@ -577,13 +576,6 @@ class Instructor:
             )  # use mean over batch samples
             mlflow.log_figure(g_plt, f"gradients.html")
             mlflow.log_figure(g3d_plt, f"gradients_3d.html")
-
-            p_plt = self.plotSelectedParams(
-                num_selected_params
-            )
-
-            mlflow.log_figure(p_plt, f"sel_params.html")
-
 
             gc_plt = self.gradient_pqc_viz(
                 self.model, all_grads.mean(dim=1)
