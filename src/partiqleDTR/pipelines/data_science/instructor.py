@@ -155,6 +155,25 @@ def calculate_class_weights(
 
     return weights
 
+class SplitOptimizer(object):
+    def __init__(self, *op):
+        self.optimizers = op
+
+    def zero_grad(self):
+        for op in self.optimizers:
+            op.zero_grad()
+
+    def step(self):
+        for op in self.optimizers:
+            op.step()
+
+    def state_dict(self):
+        combined_state_dict = {}
+        for op in self.optimizers:
+            combined_state_dict |= op.state_dict()
+
+        return combined_state_dict
+
 
 class Instructor:
     """
