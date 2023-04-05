@@ -275,8 +275,8 @@ class Instructor:
             self.optimizer.load_state_dict(optimizer_state_dict)
 
         self.scheduler = StepLR(
-            self.optimizer, step_size=learning_rate_decay, gamma=gamma
-        )
+            self.optimizer.optimizers[1], step_size=learning_rate_decay, gamma=gamma
+        ) # use secheduling only for the classical optim
         self.detectAnomaly = detectAnomaly  # TODO: introduce as parameter if helpful
 
     def train(self, start_epoch=1, enabled_modes=["train", "val"]):
