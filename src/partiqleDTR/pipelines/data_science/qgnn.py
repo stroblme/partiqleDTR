@@ -66,7 +66,7 @@ class qgnn(nn.Module):
 
         assert dim_feedforward % 2 == 0, "dim_feedforward must be an even number"
 
-        self.start = None
+        self.evaluation_timestamp = None
         self.num_classes = n_classes
         self.layers = n_layers_vqc  # dim_feedforward//8
         self.total_n_fsps = n_fsps  # used for padding in forward path
@@ -260,9 +260,9 @@ class qgnn(nn.Module):
 
         x = self.quantum_layer(x)
 
-        if self.start is not None:
-            print(f"Duration: {time.time()-self.start}")
-        self.start = time.time()
+        if self.evaluation_timestamp is not None:
+            print(f"Duration: {time.time()-self.evaluation_timestamp}")
+        self.evaluation_timestamp = time.time()
 
         if self.measurement == "mutually_exclusive":
             x = get_binary_shots(
