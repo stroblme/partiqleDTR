@@ -22,7 +22,6 @@ def create_artificial_pipeline(**kwargs) -> Pipeline:
                     "isp_weight": "params:isp_weight",
                     "iso_retries": "params:iso_retries",
                     "seed": "params:seed",
-                    "generate_unknown": "params:generate_unknown",
                 },
                 outputs={"decay_tree_structure": "decay_tree_structure"},
                 name="gen_structure_from_parameters",
