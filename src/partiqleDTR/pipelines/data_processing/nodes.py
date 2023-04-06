@@ -180,7 +180,6 @@ def lca_and_leaves_sort_into_modes(
     train_events_per_top: int,
     val_events_per_top: int,
     test_events_per_top: int,
-    generate_unknown: bool,
     all_lca: List,
     all_names: List,
     decay_tree_events: Tuple[List, List],
