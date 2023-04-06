@@ -218,6 +218,7 @@ class Instructor:
             cmd: command line parameters
         """
 
+        t.use_deterministic_algorithms(True)
         t.manual_seed(torch_seed)
 
         self.device = t.device(
