@@ -321,13 +321,13 @@ def gen_events_from_structure(
         for j, mode in enumerate(modes):
             num_events = events_per_top[mode]
             # l_rd = np.random.default_rng(rd.integers(n_seeds * 1000))
-            l_seed = rd.integers(np.iinfo(np.int32).max)
+            # l_seed = rd.integers(np.iinfo(np.int32).max)
 
             # random.seed(l_seed)
             # np.random.seed(l_seed)
             # tf.random.set_seed(l_seed)
-            weights, events = root_node.generate(num_events, seed=l_seed)
-            actual_seeds.append(l_seed)
+            weights, events = root_node.generate(num_events, seed=seed) #was l_seed before
+            # actual_seeds.append(l_seed)
 
             all_weights[mode].append(weights)
             all_events[mode].append(events)
