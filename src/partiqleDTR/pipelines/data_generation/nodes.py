@@ -85,7 +85,6 @@ def gen_structure_from_parameters(
     isp_weight: int,
     iso_retries: int,
     seed: int,
-    # generate_unknown: bool,
 ) -> Dict[str, np.ndarray]:
 
     # particles = dict()
