@@ -155,12 +155,12 @@ def gen_structure_from_parameters(
     decay_tree_structure = list()
 
     rd = np.random.default_rng(seed)  # rd.choice #TODO: check that
-    n_seeds = total_topologies * max(
-        1, iso_retries
-    )  # TODO: this is chosen on gut feeling..
-    seeds = [rd.integers(n_seeds * 1000) for i in range(n_seeds)]
+    # n_seeds = total_topologies * max(
+    #     1, iso_retries
+    # )  # TODO: this is chosen on gut feeling..
 
     for i in range(total_topologies):
+        t_rd = np.random.default_rng(rd.integers(1000*total_topologies))
         # NOTE generate tree for a topology
         for j in range(max(1, iso_retries)):
             queue = []
@@ -168,7 +168,7 @@ def gen_structure_from_parameters(
             queue.append((root_node, 1))
             name = 1
             next_level = 1
-            l_rd = np.random.default_rng(seeds[i * max(1, iso_retries) + j])
+            l_rd = np.random.default_rng(t_rd.integers(1000*max_children))
             while len(queue) > 0:
                 node, level = queue.pop(0)
                 if next_level <= level:
@@ -186,11 +186,8 @@ def gen_structure_from_parameters(
                         "Any ISP mass given has to be larger than two times the smallest FSP mass."
                     )
 
-                c_seeds = [
-                    l_rd.integers(num_children * 1000) for nc in range(num_children)
-                ]
+                c_rd = np.random.default_rng(l_rd.integers(num_children))
                 for k in range(num_children):
-                    c_rd = np.random.default_rng(c_seeds[k])
                     # Only want to select children from mass/energy available
                     avail_mass -= total_child_mass
 
@@ -293,8 +290,8 @@ def gen_events_from_structure(
     all_events = {mode: list() for mode in modes_names}
 
     rd = np.random.default_rng(seed)  # rd.choice #TODO: check that
-    n_seeds = len(decay_tree_structure) * len(modes_names)
-    seeds = [rd.integers(n_seeds * 1000) for i in range(n_seeds)]
+    # n_seeds = len(decay_tree_structure) * len(modes_names)
+    # seeds = [rd.integers(n_seeds * 1000) for i in range(n_seeds)]
 
     actual_seeds = []
     # iterate topologies
@@ -323,12 +320,12 @@ def gen_events_from_structure(
 
         for j, mode in enumerate(modes):
             num_events = events_per_top[mode]
-            l_rd = np.random.default_rng(seeds[i * len(modes) + j])
-            l_seed = l_rd.integers(np.iinfo(np.int32).max)
+            # l_rd = np.random.default_rng(rd.integers(n_seeds * 1000))
+            l_seed = rd.integers(np.iinfo(np.int32).max)
 
-            random.seed(l_seed)
-            np.random.seed(l_seed)
-            tf.random.set_seed(l_seed)
+            # random.seed(l_seed)
+            # np.random.seed(l_seed)
+            # tf.random.set_seed(l_seed)
             weights, events = root_node.generate(num_events, seed=l_seed)
             actual_seeds.append(l_seed)
 
