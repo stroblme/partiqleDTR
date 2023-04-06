@@ -287,7 +287,7 @@ def gen_events_from_structure(
     all_weights = {mode: list() for mode in modes_names}
     all_events = {mode: list() for mode in modes_names}
 
-    # rd = np.random.default_rng(seed)  # rd.choice #TODO: check that
+    rd = np.random.default_rng(seed)  # rd.choice #TODO: check that
     # n_seeds = len(decay_tree_structure) * len(modes_names)
     # seeds = [rd.integers(n_seeds * 1000) for i in range(n_seeds)]
 
@@ -316,16 +316,15 @@ def gen_events_from_structure(
         if i >= n_topologies:
             break
 
-        for j, mode in enumerate(modes):
+        for mode in modes:
             num_events = events_per_top[mode]
-            # l_rd = np.random.default_rng(rd.integers(n_seeds * 1000))
-            # l_seed = rd.integers(np.iinfo(np.int32).max)
-
+            l_seed = rd.integers(1000*len(decay_tree_structure))
+            tf_rng = tf.random.Generator.from_seed(l_seed)
             # random.seed(l_seed)
             # np.random.seed(l_seed)
             # tf.random.set_seed(l_seed)
-            weights, events = root_node.generate(num_events, seed=seed) #was l_seed before
-            # actual_seeds.append(l_seed)
+            weights, events = root_node.generate(num_events, seed=tf_rng)
+            actual_seeds.append(l_seed)
 
             all_weights[mode].append(weights)
             all_events[mode].append(events)
