@@ -34,7 +34,6 @@ def create_artificial_pipeline(**kwargs) -> Pipeline:
                     "train_events_per_top": "params:train_events_per_top",
                     "val_events_per_top": "params:val_events_per_top",
                     "test_events_per_top": "params:test_events_per_top",
-                    "generate_unknown": "params:generate_unknown",
                     "seed": "params:seed",
                     "decay_tree_structure": "decay_tree_structure",
                 },

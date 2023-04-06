@@ -267,7 +267,6 @@ def gen_events_from_structure(
     train_events_per_top: int,
     val_events_per_top: int,
     test_events_per_top: int,
-    generate_unknown: bool,
     seed: int,
     decay_tree_structure: Dict[str, np.ndarray],
 ):
@@ -288,7 +287,7 @@ def gen_events_from_structure(
     all_weights = {mode: list() for mode in modes_names}
     all_events = {mode: list() for mode in modes_names}
 
-    rd = np.random.default_rng(seed)  # rd.choice #TODO: check that
+    # rd = np.random.default_rng(seed)  # rd.choice #TODO: check that
     # n_seeds = len(decay_tree_structure) * len(modes_names)
     # seeds = [rd.integers(n_seeds * 1000) for i in range(n_seeds)]
 
