@@ -13,4 +13,3 @@ test_events_per_top: 1 #10
 seed: 1111
 iso_retries: 0
 pad_to: -1
-generate_unknown: True

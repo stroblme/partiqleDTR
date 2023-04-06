@@ -85,7 +85,7 @@ def gen_structure_from_parameters(
     isp_weight: int,
     iso_retries: int,
     seed: int,
-    generate_unknown: bool,
+    # generate_unknown: bool,
 ) -> Dict[str, np.ndarray]:
 
     # particles = dict()
@@ -149,8 +149,8 @@ def gen_structure_from_parameters(
     topology_isomorphism_invariates = []
 
     total_topologies = n_topologies
-    if generate_unknown:
-        total_topologies = 3 * n_topologies
+    # if generate_unknown:
+    #     total_topologies = 3 * n_topologies
 
     decay_tree_structure = list()
 
