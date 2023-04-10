@@ -7,8 +7,7 @@ from torch import nn
 import mlflow
 
 from .utils import *
-from .circuits import circuit_builder
-from .nri_blocks import MLP, generate_nri_blocks
+from .circuits import circuit_builder, QuantumCircuit
 
 from .gnn import gnn
 
@@ -16,7 +15,6 @@ from .custom_sampler_qnn import CustomSamplerQNN
 
 import qiskit as q
 from qiskit.visualization import *
-from qiskit_machine_learning.neural_networks import SamplerQNN
 from qiskit.primitives import BackendSampler
 from qiskit_machine_learning.connectors import TorchConnector
 
@@ -94,7 +92,7 @@ class qgnn(nn.Module):
             f"Building Quantum Circuit with {self.layers} layers and {n_fsps} qubits"
         )
 
-        self.qc = q.QuantumCircuit(n_fsps)
+        self.qc = QuantumCircuit(n_fsps)
         self.qc = circuit_builder(
             self.qc,
             self.predefined_iec,
