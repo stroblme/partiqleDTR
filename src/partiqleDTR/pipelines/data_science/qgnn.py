@@ -59,7 +59,6 @@ class qgnn(nn.Module):
         parameter_seed=1111,
         **kwargs,
     ):
-        # do not initialize the gnn, as this will yield to a clash with the order of modules in pytorch
         nn.Module.__init__(self)
 
         assert dim_feedforward % 2 == 0, "dim_feedforward must be an even number"
