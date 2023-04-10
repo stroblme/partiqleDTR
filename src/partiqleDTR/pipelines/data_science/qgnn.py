@@ -63,19 +63,17 @@ class qgnn(nn.Module):
         nn.Module.__init__(self)
 
         assert dim_feedforward % 2 == 0, "dim_feedforward must be an even number"
+        assert n_momenta == 4, "only supporting 4 momenta"
 
         self.evaluation_timestamp = None
         self.num_classes = n_classes
         self.layers = n_layers_vqc  # dim_feedforward//8
         self.total_n_fsps = n_fsps  # used for padding in forward path
         self.n_shots = n_shots
-        # self.factor = factor
-        # self.tokenize = tokenize
         self.symmetrize = symmetrize
         self.block_additional_mlp_layers = n_additional_mlp_layers
         self.skip_block = skip_block
         self.skip_global = skip_global
-        # self.max_leaves = max_leaves
         self.padding_dropout = padding_dropout
         self.measurement = measurement
         self.predefined_vqc = predefined_vqc
@@ -159,7 +157,6 @@ class qgnn(nn.Module):
             # quantum_instance=self.qi,
             # interpret=interpreter,
             # output_shape=(n_fsps**2, n_classes),
-            # sampling=True,
             input_gradients=True,  # set to true as we are using torch connector
         )
 
@@ -282,13 +279,14 @@ class qgnn(nn.Module):
         else:
             raise ValueError("Invalid measurement specified")
 
+        # The whole rest of the architecture
         x = self.gnn.forward_nri(x, rel_rec, rel_send)
 
         # Output what will be used for LCA
         x = self.gnn.fc_out(x)  # (b, l*l, c)
         x = x.reshape(batch, n_leaves, n_leaves, self.num_classes)
 
-        # Need in the order for cross entropy loss
+        # Required for cross entropy loss
         x = x.permute(0, 3, 1, 2)  # (b, c, l, l)
 
         # Symmetrize
