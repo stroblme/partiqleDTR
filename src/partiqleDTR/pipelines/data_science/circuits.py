@@ -1,6 +1,22 @@
 import qiskit as q
 import torch as t
 
+class QuantumCircuit(q.QuantumCircuit):
+    def rz(self, phi, qubit, label):
+        """Apply :class:`~qiskit.circuit.library.RZGate`.
+
+        For the full matrix form of this gate, see the underlying gate documentation.
+
+        Args:
+            phi: The rotation angle of the gate.
+            qubit: The qubit(s) to apply the gate to.
+
+        Returns:
+            A handle to the instructions created.
+        """
+        from qiskit.circuit.library.standard_gates.rz import RZGate
+
+        return self.append(RZGate(phi, label), [qubit], [])
 
 def circuit_builder(
     qc, predefined_iec, predefined_vqc, n_qubits, n_layers, data_reupload=False
