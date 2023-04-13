@@ -161,7 +161,7 @@ def gen_structure_from_parameters(
     # )  # TODO: this is chosen on gut feeling..
 
     for i in range(total_topologies):
-        t_rd = np.random.default_rng(rd.integers(1000*total_topologies))
+        # t_rd = np.random.default_rng(rd.integers(1000*total_topologies))
         # NOTE generate tree for a topology
         for j in range(max(1, iso_retries)):
             queue = []
@@ -169,12 +169,12 @@ def gen_structure_from_parameters(
             queue.append((root_node, 1))
             name = 1
             next_level = 1
-            l_rd = np.random.default_rng(t_rd.integers(1000*max_children))
+            # l_rd = np.random.default_rng(t_rd.integers(1000*max_children))
             while len(queue) > 0:
                 node, level = queue.pop(0)
                 if next_level <= level:
                     next_level = level + 1
-                num_children = l_rd.integers(min_children, max_children + 1)
+                num_children = rd.integers(min_children, max_children + 1)
 
                 total_child_mass = 0
                 children = []
@@ -187,7 +187,7 @@ def gen_structure_from_parameters(
                         "Any ISP mass given has to be larger than two times the smallest FSP mass."
                     )
 
-                c_rd = np.random.default_rng(l_rd.integers(num_children))
+                # c_rd = np.random.default_rng(rd.integers(num_children))
                 for k in range(num_children):
                     # Only want to select children from mass/energy available
                     avail_mass -= total_child_mass
@@ -200,15 +200,15 @@ def gen_structure_from_parameters(
                     if (
                         next_level == max_depth
                         or avail_mass <= min(masses)
-                        or np.random.random()
+                        or rd.random()
                         < (1.0 * len(fsp_masses))
                         / ((1.0 * len(fsp_masses)) + (isp_weight * len(masses)))
                     ):
-                        child_mass = c_rd.choice(
+                        child_mass = rd.choice(
                             [n for n in fsp_masses if (n < avail_mass)]
                         )
                     else:
-                        child_mass = c_rd.choice(
+                        child_mass = rd.choice(
                             [n for n in masses if (n < avail_mass)]
                         )
                     total_child_mass += child_mass
