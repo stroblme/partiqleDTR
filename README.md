@@ -57,6 +57,9 @@ The following table shows some seeds that you can use to generate a dataset with
 
 Note that entries with $0$ mean, that there were no seeds found within the range of tested seeds between $1110$ and $2110$.
 
+The seed is also being used for generating decay events, so it might be usefull to evaluate different seeds despite they result in the same number of FSPs.
+That's why multiple seeds are provided in the table above, as e.g. seed $1110$ and $1111$ will **not** yield the same dataset.
+
 
 ## :pray: Acknowledgement
 
