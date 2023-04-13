@@ -47,7 +47,7 @@ data_reupload: True
 data_reupload_range: [True, False]
 add_rot_gates: True
 add_rot_gates_range: [True, False]
-n_shots: 4096
+n_shots: 
 n_layers_vqc: 3
 n_layers_vqc_range: [1, 5, "linear"]
 gradient_curvature_threshold: 1e-10
@@ -56,7 +56,7 @@ initialization_constant: 1 # this scales the interval [-a pi .. a pi]
 initialization_constant_range: [0.1, 1, "linear"]  # this scales the interval [-a pi .. a pi]
 parameter_seed: 1111
 padding_dropout: False
-predefined_vqc: "circuit_19" # "", "circuit_191", "circuit_192", "circuit_19", .. tba.
+predefined_vqc: "circuit_191" # "", "circuit_191", "circuit_192", "circuit_19", .. tba.
 predefined_vqc_range: ["circuit_191", "circuit_192", "circuit_19"]
 predefined_iec: "direct_mapping" 
 measurement: "entangled" # mutually_exclusive, all, entangled
