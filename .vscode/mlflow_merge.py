@@ -21,8 +21,8 @@ for r in runs:
 
         artifact_uri = content["artifact_uri"]
 
-        if "local/scratch/mstrobl/partiqleDTR" in artifact_uri:
-            content["artifact_uri"] = artifact_uri.replace("local/scratch/mstrobl/partiqleDTR", "home/lc3267/Documents/CodeWorkspace/PartiqleGAN")
+        if "/home/mstrobl/ssd_storage/partiqleDTR" in artifact_uri:
+            content["artifact_uri"] = artifact_uri.replace("/home/mstrobl/ssd_storage/partiqleDTR", "/home/lc3267/Documents/CodeWorkspace/PartiqleGAN")
             mark_for_update = True
 
     if mark_for_update:
