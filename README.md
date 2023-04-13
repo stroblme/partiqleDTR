@@ -41,6 +41,22 @@ The PartiqleDTR project attempts to tackle the problem of particle decay tree re
   - Run mlflow dashboard: ```poetry run mlflow ui```
   - Open in [browser](http://127.0.0.1:5000)
 
+### Choosing a `proper` seed
+
+The following table shows some seeds that you can use to generate a dataset with a specific number of FSPs:
+
+|7|5|4|6|8|9|3|
+|---|---|---|---|---|---|---|
+|1110|1112|1113|1114|1146|1262|1633|
+|1111|1117|1118|1116|1150|1547|1708|
+|1115|1119|1122|1126|1171|1672|0|
+|1120|1121|1127|1128|1175|1685|0|
+|1138|1123|1130|1131|1199|1926|0|
+|1145|1124|1152|1135|1216|2017|0|
+|1147|1125|1161|1136|1281|2035|0|
+
+Note that entries with $0$ mean, that there were no seeds found within the range of tested seeds between $1110$ and $2110$.
+
 
 ## :pray: Acknowledgement
 
