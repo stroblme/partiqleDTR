@@ -49,6 +49,10 @@ decay_events_seeds:
   filepath: data/02_intermediate/decay_events_seeds.pkl
   # filepath: data/02_intermediate/decay_tree_events.pkl
 
+seeds_fsp_dict:
+  type: pandas.CSVDataSet
+  filepath: data/02_intermediate/seeds_fsp_dict.csv
+
 # --------------------------------
 
 all_lca:

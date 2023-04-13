@@ -71,6 +71,17 @@
             "request": "launch",
             "console": "integratedTerminal",
             "module": "kedro",
+            "args": ["run", "--pipeline", "training"],
+            // Any other arguments should be passed as a comma-seperated-list
+            // e.g "args": ["run", "--pipeline", "pipeline_name"]
+            "justMyCode": false
+        },
+        {
+            "name": "KR: - debug training",
+            "type": "python",
+            "request": "launch",
+            "console": "integratedTerminal",
+            "module": "kedro",
             "args": ["run", "--pipeline", "debug_training"],
             // Any other arguments should be passed as a comma-seperated-list
             // e.g "args": ["run", "--pipeline", "pipeline_name"]
@@ -126,6 +137,17 @@
             "console": "integratedTerminal",
             "module": "kedro",
             "args": ["run"],
+            // "justMyCode": false
+            // Any other arguments should be passed as a comma-seperated-list
+            // e.g "args": ["run", "--pipeline", "pipeline_name"]
+        }
+        {
+            "name": "Evaluate Seeds",
+            "type": "python",
+            "request": "launch",
+            "console": "integratedTerminal",
+            "module": "kedro",
+            "args": ["run", "--pipeline", "evaluate_seeds"],
             // "justMyCode": false
             // Any other arguments should be passed as a comma-seperated-list
             // e.g "args": ["run", "--pipeline", "pipeline_name"]

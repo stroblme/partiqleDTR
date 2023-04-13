@@ -46,6 +46,28 @@ def create_artificial_pipeline(**kwargs) -> Pipeline:
         ]
     )
 
+def create_eval_seeds_pipeline(**kwargs) -> Pipeline:
+    return pipeline(
+        [
+            node(
+                func=evaluate_seeds_fsps,
+                inputs={
+                    "masses": "params:masses",
+                    "fsp_masses": "params:fsp_masses",
+                    "n_topologies": "params:n_topologies",
+                    "max_depth": "params:max_depth",
+                    "max_children": "params:max_children",
+                    "min_children": "params:min_children",
+                    "isp_weight": "params:isp_weight",
+                    "iso_retries": "params:iso_retries",
+                    "seed": "params:seed",
+                    "n_tries": "params:n_tries"
+                },
+                outputs={"seeds_fsp_dict":"seeds_fsp_dict"},
+                name="evaluate_seeds_fsps",
+            ),
+        ]
+    )
 
 # def create_belleII_pipeline(**kwargs) -> Pipeline:
 #     return pipeline([

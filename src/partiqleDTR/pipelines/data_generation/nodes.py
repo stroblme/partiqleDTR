@@ -7,8 +7,10 @@ from typing import Dict, Tuple, Any, List
 from phasespace import GenParticle, nbody_decay
 from phasespace.fromdecay import GenMultiDecay
 from decaylanguage import DecFileParser, DecayChainViewer
-import random
 import tensorflow as tf
+import pandas as pd
+
+from ..data_processing.nodes import _conv_decay_to_lca
 
 
 def gen_decay_from_file(decaylanguage: Dict[str, Any]) -> Dict[Dict, Tuple[List, List]]:
@@ -333,3 +335,50 @@ def gen_events_from_structure(
         "decay_tree_events": (all_weights, all_events),
         "decay_events_seeds": actual_seeds,
     }
+
+def evaluate_seeds_fsps(
+    masses: List[int],
+    fsp_masses: List[int],
+    n_topologies: int,
+    max_depth: int,
+    max_children: int,
+    min_children: int,
+    isp_weight: int,
+    iso_retries: int,
+    seed: int,
+    n_tries: int,
+):
+    seeds_fsp_dict = {}
+
+    for i in range(n_tries):
+        cur_seed = seed + i
+
+        result = gen_structure_from_parameters(
+                masses,
+                fsp_masses,
+                n_topologies,
+                max_depth,
+                max_children,
+                min_children,
+                isp_weight,
+                iso_retries,
+                cur_seed,
+        )
+
+        structures = result["decay_tree_structure"]
+
+        all_fsps = []
+        for structure in structures: 
+            lca, name = _conv_decay_to_lca(structure)
+            all_fsps.append(lca.shape[0])
+
+        max_fsps = max(all_fsps)
+
+        print(f"| {cur_seed} | {max_fsps} |")
+
+        if max_fsps not in seeds_fsp_dict:
+            seeds_fsp_dict[max_fsps] = []
+        seeds_fsp_dict[max_fsps].append(cur_seed)
+
+    return {"seeds_fsp_dict":pd.DataFrame(dict([ (k,pd.Series(v)) for k,v in seeds_fsp_dict.items() ])).fillna(0.0).astype(int)} #from https://stackoverflow.com/questions/19736080/creating-dataframe-from-a-dictionary-where-entries-have-different-lengths
+    

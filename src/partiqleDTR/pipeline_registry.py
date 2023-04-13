@@ -16,6 +16,7 @@ def register_pipelines() -> Dict[str, Pipeline]:
     """
 
     data_generation_pipeline = dg.create_artificial_pipeline()
+    data_generation_eval_pipeline = dg.create_eval_seeds_pipeline()
     # data_generation_belleII_pipeline = dg.create_belleII_pipeline()
     data_processing_pipeline = dp.create_artificial_pipeline()
     # data_processing_artificial_pipeline_no_shuffle = dp.create_artificial_pipeline_no_shuffle()
@@ -48,5 +49,6 @@ def register_pipelines() -> Dict[str, Pipeline]:
         "validation": validation_qgnn_pipeline,
         "debug_training": debug_training_pipeline,
         "debug_training_optuna": debug_training_optuna_pipeline,
+        "evaluate_seeds": data_generation_eval_pipeline
         # "split_training_qgnn_pipeline": split_training_qgnn_pipeline,
     }

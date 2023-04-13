@@ -13,3 +13,4 @@ test_events_per_top: 10
 seed: 1111
 iso_retries: 0
 pad_to: -1
+n_tries: 1000 # only used for seeds_fsp calculation
