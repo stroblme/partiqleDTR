@@ -275,6 +275,8 @@ def create_instructor(
     torch_seed: int,
     gradient_curvature_threshold: float,
     gradient_curvature_history: float,
+    quantum_optimizer: str,
+    classical_optimizer: str,
     **kwargs: Dict,
 ) -> Instructor:
     instructor = Instructor(
@@ -300,6 +302,8 @@ def create_instructor(
         torch_seed=torch_seed,
         gradient_curvature_threshold=gradient_curvature_threshold,
         gradient_curvature_history=gradient_curvature_history,
+        quantum_optimizer=quantum_optimizer,
+        classical_optimizer=classical_optimizer,
         **kwargs,
     )
 

@@ -207,6 +207,8 @@ class Instructor:
         torch_seed=1111,
         gradient_curvature_threshold=1e-10,
         gradient_curvature_history=2,
+        quantum_optimizer="Adam",
+        classical_optimizer=None,
         model_state_dict=None,
         optimizer_state_dict=None,
     ):
@@ -260,14 +262,41 @@ class Instructor:
         self.normalize_individually = normalize_individually
         self.zero_mean = zero_mean
         self.batch_size = batch_size
-        self.optimizer = SplitOptimizer(
-            t.optim.Adam(
-                self.model.quantum_layer.parameters(), lr=learning_rate, amsgrad=False
-            ),
-            t.optim.Adam(
-                self.model.gnn.parameters(), lr=learning_rate, amsgrad=False
+
+        if quantum_optimizer and classical_optimizer:
+            try:
+                sel_q_optim = getattr(t.optim, quantum_optimizer)
+            except AttributeError:
+                raise AttributeError(f"Did not found {quantum_optimizer}")
+            try:
+                sel_c_optim = getattr(t.optim, classical_optimizer)
+            except AttributeError:
+                raise AttributeError(f"Did not found {quantum_optimizer}")
+        
+            self.optimizer = SplitOptimizer(
+                sel_q_optim(
+                    self.model.quantum_layer.parameters(), lr=learning_rate, amsgrad=False
+                ),
+                sel_c_optim(
+                    self.model.gnn.parameters(), lr=learning_rate, amsgrad=False
+                )
             )
-        )
+            self.scheduler = StepLR(
+                self.optimizer.optimizers[1], step_size=learning_rate_decay, gamma=gamma
+            ) # use secheduling only for the classical optim
+        else:
+            try:
+                sel_optim = getattr(t.optim, quantum_optimizer or classical_optimizer)
+            except AttributeError:
+                raise AttributeError(f"Did not found {quantum_optimizer}")
+
+            self.optimizer = sel_optim(
+                self.model.parameters(), lr=learning_rate, amsgrad=False
+            )
+            self.scheduler = StepLR(
+                self.optimizer, step_size=learning_rate_decay, gamma=gamma
+            ) # use secheduling only for the classical optim
+
 
         self.gradient_curvature_threshold = float(gradient_curvature_threshold)
         self.gradient_curvature_history = int(gradient_curvature_history)
@@ -281,9 +310,6 @@ class Instructor:
         if optimizer_state_dict is not None:
             self.optimizer.load_state_dict(optimizer_state_dict)
 
-        self.scheduler = StepLR(
-            self.optimizer.optimizers[1], step_size=learning_rate_decay, gamma=gamma
-        ) # use secheduling only for the classical optim
         self.detectAnomaly = detectAnomaly  # TODO: introduce as parameter if helpful
 
     def train(self, start_epoch=1, enabled_modes=["train", "val"]):
