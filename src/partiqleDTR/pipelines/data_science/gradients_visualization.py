@@ -82,8 +82,9 @@ def heatmap_3d(
 
     fig.update_layout(
         title=dict(text=title),
-        yaxis=dict(title="Parameter Index"),
-        xaxis=dict(title="Epoch"),
+        yaxis_title="Parameter Index",
+        xaxis_title="Epoch",
+        zaxis_title="Gradient"
     )
 
     return fig
