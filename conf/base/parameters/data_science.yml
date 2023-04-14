@@ -26,7 +26,6 @@ batch_size: 8
 batch_size_range: [1, 64, "log"]
 gradients_clamp: 1000
 gradients_spreader: 1e-10
-torch_seed: 1111
 classical_optimizer: "Adam"
 
 # GNN
@@ -72,6 +71,7 @@ redis_password: ""
 # PyTorch
 detect_anomaly: False # enables torch' anomaly detector
 device: 'cpu' # anything but 'cpu' to use cuda devices instead
+torch_seed: 1111
 
 # MLFLOW
 plot_mode: "val"
