@@ -5,6 +5,9 @@ import shutil
 
 mlflow_path = "./mlruns/1"
 
+merge_from = ["/storage/mstrobl/PartiqleGAN", "/home/mstrobl/ssd_storage/partiqleDTR", "/local/scratch/mstrobl/partiqleDTR"]
+replace_with = "/home/lc3267/Documents/CodeWorkspace/PartiqleGAN"
+
 runs = glob.glob(os.path.join(mlflow_path, "*"))
 
 for r in runs:
@@ -21,9 +24,10 @@ for r in runs:
 
         artifact_uri = content["artifact_uri"]
 
-        if "/home/mstrobl/ssd_storage/partiqleDTR" in artifact_uri:
-            content["artifact_uri"] = artifact_uri.replace("/home/mstrobl/ssd_storage/partiqleDTR", "/home/lc3267/Documents/CodeWorkspace/PartiqleGAN")
-            mark_for_update = True
+        for path in merge_from:
+            if path in artifact_uri:
+                content["artifact_uri"] = artifact_uri.replace(path, replace_with)
+                mark_for_update = True
 
     if mark_for_update:
         with open(os.path.join(r, "meta.yaml"), "w") as f:
