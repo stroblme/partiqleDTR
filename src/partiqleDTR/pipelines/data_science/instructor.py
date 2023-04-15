@@ -220,8 +220,9 @@ class Instructor:
             cmd: command line parameters
         """
 
-        t.use_deterministic_algorithms(True)
-        t.manual_seed(torch_seed)
+        if torch_seed is not None:
+            t.use_deterministic_algorithms(True)
+            t.manual_seed(torch_seed)
 
         self.device = t.device(
             "cuda" if t.cuda.is_available() and device != "cpu" else "cpu"
@@ -302,8 +303,6 @@ class Instructor:
         self.gradient_curvature_history = int(gradient_curvature_history)
 
         self.n_classes = n_classes
-
-        # learning rate scheduler, same as in NRI
 
         if model_state_dict is not None:
             self.model.load_state_dict(model_state_dict)
@@ -615,6 +614,8 @@ class Instructor:
                 gc_plt,
                 "circuit_gradients.png",
             )
+        else:
+            all_grads = t.zeros(1)
 
         # In case we didn't even calculated a single sample
         if result == None:
