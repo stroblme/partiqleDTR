@@ -256,7 +256,8 @@ def lca_and_leaves_sort_into_modes(
 
 
 def shuffle_lca_and_leaves_in_mode(
-    modes_names: List[str], all_lca_mode_sorted: List, all_leaves_mode_sorted: List
+    modes_names: List[str], all_lca_mode_sorted: List, all_leaves_mode_sorted: List,
+    seed:int
 ):
 
     # modes_names = decay_parameters["MODES_NAMES"] if "MODES_NAMES" in decay_parameters else None
@@ -264,13 +265,15 @@ def shuffle_lca_and_leaves_in_mode(
     all_lca_shuffled = {mode: list() for mode in modes_names}
     all_leaves_shuffled = {mode: list() for mode in modes_names}
 
+    rd = np.random.default_rng(seed)
+
     for mode in modes_names:
 
         for (lca, leaves) in zip(
             all_lca_mode_sorted[mode], all_leaves_mode_sorted[mode]
         ):
             # NOTE shuffle leaves for each sample
-            leaves_shuffled, lca_shuffled = _shuffle_lca_and_leaves(leaves, lca)
+            leaves_shuffled, lca_shuffled = _shuffle_lca_and_leaves(leaves, lca, rd)
 
             all_lca_shuffled[mode].append(lca_shuffled)
             all_leaves_shuffled[mode].append(leaves_shuffled)
@@ -406,7 +409,7 @@ def _conv_decay_to_lca(root, pad_to=-1):
     return lca_mat, names
 
 
-def _shuffle_lca_and_leaves(leaves, lca):
+def _shuffle_lca_and_leaves(leaves, lca, rd):
     """
     leaves (torch.Tensor): tensor containing leaves of shape (num_samples. num_leaves, num_features)
     lca torch.Tensor): tensor containing lca matrix of simulated decay of shape (num_leaves, num_leaves)
@@ -419,7 +422,7 @@ def _shuffle_lca_and_leaves(leaves, lca):
     shuff_lca = np.zeros((leaves.shape[0], *(lca.shape)))
 
     for idx in np.arange(leaves.shape[0]):
-        perms = np.random.permutation(d)
+        perms = rd.permutation(d)
         shuff_leaves[idx] = leaves[idx, perms]
         shuff_lca[idx] = lca[perms][:, perms]
 

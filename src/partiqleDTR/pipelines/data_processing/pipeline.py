@@ -95,6 +95,7 @@ def create_artificial_pipeline(**kwargs) -> Pipeline:
                     "modes_names": "params:modes_names",
                     "all_lca_mode_sorted": "all_lca_mode_sorted",
                     "all_leaves_mode_sorted": "all_leaves_mode_sorted",
+                    "seed":"params:shuffling_seed"
                 },
                 outputs={
                     "all_lca_shuffled": "all_lca_shuffled",
