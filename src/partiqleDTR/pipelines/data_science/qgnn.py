@@ -168,7 +168,7 @@ class qgnn(nn.Module):
 
         self.initial_weights = (
             self.initialization_constant
-            * np.pi
+            * 2 * np.pi #times 2 so that we don't end up with [-a/2 *pi..a/2 *pi]
             * self.param_rng.random(qnn.num_weights)
             - (self.initialization_constant / 2) * np.pi
             + initialization_offset
