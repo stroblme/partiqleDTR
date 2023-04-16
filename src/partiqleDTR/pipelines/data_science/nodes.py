@@ -206,6 +206,7 @@ def create_model(
     n_fsps: int,
     device: str,
     initialization_constant: str,
+    initialization_offset: int,
     parameter_seed:int,
     pre_trained_model: DataParallel = None,
     **kwargs,
@@ -237,6 +238,7 @@ def create_model(
         device=device,
         pre_trained_model=pre_trained_model,
         initialization_constant=initialization_constant,
+        initialization_offset=initialization_offset,
         parameter_seed=parameter_seed,
         **kwargs,
     )

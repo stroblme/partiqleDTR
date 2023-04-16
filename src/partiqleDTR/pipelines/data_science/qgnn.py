@@ -56,6 +56,7 @@ class qgnn(nn.Module):
         backend="aer_simulator_statevector",
         n_shots=2048,
         initialization_constant=1,
+        initialization_offset=0,
         parameter_seed=1111,
         **kwargs,
     ):
@@ -170,7 +171,8 @@ class qgnn(nn.Module):
             * np.pi
             * self.param_rng.random(qnn.num_weights)
             - (self.initialization_constant / 2) * np.pi
-        )
+            + initialization_offset
+        ) # [-(a*pi + b) .. (a*pi + b)]
 
         self.quantum_layer = TorchConnector(qnn, initial_weights=self.initial_weights)
 

@@ -54,6 +54,7 @@ gradient_curvature_threshold: 1e-10
 gradient_curvature_history: 0  # set to 0 to disable gradient curvature/ parameter pruning
 initialization_constant: 1 # this scales the interval [-a pi .. a pi]
 initialization_constant_range: [0.1, 1, "linear"]  # this scales the interval [-a pi .. a pi]
+initialization_offset: 0 # this offsets the with a factor pi
 parameter_seed: 1111
 padding_dropout: False
 predefined_vqc: "circuit_191" # "", "circuit_191", "circuit_192", "circuit_19", .. tba.
