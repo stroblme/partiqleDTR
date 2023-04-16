@@ -171,7 +171,7 @@ class qgnn(nn.Module):
             * 2 * np.pi #times 2 so that we don't end up with [-a/2 *pi..a/2 *pi]
             * self.param_rng.random(qnn.num_weights)
             - (self.initialization_constant / 2) * np.pi
-            + initialization_offset
+            + initialization_offset * np.pi
         ) # [-(a*pi + b) .. (a*pi + b)]
 
         self.quantum_layer = TorchConnector(qnn, initial_weights=self.initial_weights)
