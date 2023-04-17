@@ -66,10 +66,9 @@ backend: "aer_simulator" # aer_simulator, aer_simulator_statevector, ibm_perth
 quantum_optimizer:
 
 #TODO specify when available
-redis_host: "localhost"
-redis_port: 6379
-redis_path: "studies/partiqledtr.db"
-redis_password: ""
+n_trials: "localhost"
+timeout: 3600
+optuna_path: "studies/partiqledtr.db"
 
 # PyTorch
 detect_anomaly: False # enables torch' anomaly detector

@@ -130,19 +130,17 @@ def create_hyperparam_optimizer(
     quantum_optimizer: str,
     classical_optimizer: str,
     detectAnomaly: bool,
-    redis_host: str,
-    redis_port: int,
-    redis_path: str,
-    redis_password: str,
+    n_trials: str,
+    timeout: int,
+    optuna_path: str,
 ) -> Hyperparam_Optimizer:
 
     hyperparam_optimizer = Hyperparam_Optimizer(
         name="hyperparam_optimizer",
         id=0,
-        host=redis_host,
-        port=redis_port,
-        path=redis_path,
-        password=redis_password,
+        n_trials=n_trials,
+        timeout=timeout,
+        path=optuna_path,
     )
 
     hyperparam_optimizer.set_variable_parameters(

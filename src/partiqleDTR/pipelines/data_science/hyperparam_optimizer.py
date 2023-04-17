@@ -6,7 +6,7 @@ import mlflow
 
 class Hyperparam_Optimizer:
     def __init__(
-        self, name: str, id: int, host: str, port: int, path: str, password: str
+        self, name: str, id: int, path:str, n_trials: int, timeout: int
     ):
         # storage = self.initialize_storage(host, port, path, password)
 
@@ -15,7 +15,8 @@ class Hyperparam_Optimizer:
 
         sampler = o.samplers.TPESampler(seed=id, multivariate=True)
 
-        self.duration=60*60*60
+        self.n_trials = n_trials
+        self.timeout = timeout
 
         self.study = o.create_study(
             pruner=pruner,
