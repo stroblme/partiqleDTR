@@ -1,6 +1,7 @@
 import optuna as o
 from typing import List, Dict
 import time
+import mlflow
 
 
 class Hyperparam_Optimizer:
@@ -19,7 +20,7 @@ class Hyperparam_Optimizer:
         self.study = o.create_study(
             pruner=pruner,
             sampler=sampler,
-            direction="minimize",
+            directions=["maximize", "minimize", "maximize"],
             load_if_exists=True,
             study_name=name,
             storage=f"sqlite:///{path}",
@@ -65,10 +66,14 @@ class Hyperparam_Optimizer:
         # TODO: Implement early stopping
         return False
 
-    def get_artifacts(self):
-        parameters = self.study.best_params
+    def log_study(self):
+        for trial in self.study.best_trials:
+            mlflow.log_params({f"trial_{trial.number}_{k}":v for k, v in trial.params.items()})
 
-        return parameters
+            mlflow.log_metric(f"trial_{trial.number}_accuracy", trial.values[0])
+            mlflow.log_metric(f"trial_{trial.number}_loss", trial.values[1])
+            mlflow.log_metric(f"trial_{trial.number}_perfect_lcag", trial.values[2])
+
 
     def update_variable_parameters(self, trial, parameters):
         updated_variable_parameters = dict()
@@ -125,7 +130,7 @@ class Hyperparam_Optimizer:
         # while (time.time() - startTime) < self.duration:
         #     self.run_trial()
 
-        self.study.optimize(self.run_trial, n_trials=10)
+        self.study.optimize(self.run_trial, n_trials=2)
 
     def run_trial(self, trial=None):
         if trial is None:
@@ -155,4 +160,4 @@ class Hyperparam_Optimizer:
 
         metrics = self.objective(instructor)["metrics"]
 
-        return metrics["accuracy"]
+        return [metrics["accuracy"], metrics["loss"], metrics["perfect_lcag"]]

@@ -22,7 +22,7 @@ from .graph_visualization import GraphVisualization
 from .gradients_visualization import heatmap, heatmap_3d, scatter_line
 from .circuit_gradient_visualization import draw_gradient_circuit
 
-from typing import Dict
+from typing import Dict, List
 
 import logging
 
@@ -154,6 +154,25 @@ def calculate_class_weights(
     weights = t.nan_to_num(weights, nan=1)
 
     return weights
+
+def get_mlflow_metric(key, return_type: type, formatting: str = None):
+    metric = mlflow.tracking.MlflowClient().get_metric_history(
+        mlflow.active_run().info.run_id, key
+    )
+
+    if return_type == List:
+        result = []
+        for log in metric:
+            if not formatting:
+                result.append(log.value)
+            else:
+                result.append(f"{log.value:.3f}")
+
+    else:
+        result = metric
+
+    return result
+
 
 class SplitOptimizer(object):
     def __init__(self, *op):
@@ -327,7 +346,9 @@ class Instructor:
                 f"Starting loops from epoch {start_epoch} using modes {enabled_modes}."
             )
         result = None
-        best_acc = 0
+        best_accuracy = 0
+        best_loss = 1
+        best_perfect_lcag = 0
         checkpoint = None
 
         if enabled_modes == ["val"]:
@@ -514,9 +535,9 @@ class Instructor:
                         data_batch
                     )  # to the already scaled perfect_lcag, apply the number of all iterations (no. of mini batches)
 
-                    if epoch_acc > best_acc and mode == self.plot_mode:
+                    if epoch_acc > best_accuracy and mode == self.plot_mode:
                         # update the current best model when approaching a higher accuray
-                        best_acc = epoch_acc
+                        best_accuracy = epoch_acc
                         result = self.model
                         try:
                             assert len(logits_for_plotting) == len(labels_for_plotting)
@@ -573,6 +594,12 @@ class Instructor:
                             "model_state_dict": model_state_dict,
                             "optimizer_state_dict": optimizer_state_dict,
                         }
+
+                    if epoch_loss < best_loss and mode == self.plot_mode:
+                        best_loss = epoch_loss
+
+                    if epoch_perfect_lcag > best_perfect_lcag and mode == self.plot_mode:
+                        best_perfect_lcag = epoch_perfect_lcag
 
                     if self.log_gradients and mode == "train":
                         all_grads.append(
@@ -671,7 +698,9 @@ class Instructor:
             "checkpoint": checkpoint,
             "gradients": all_grads.numpy(),
             "metrics": {
-                "accuracy":best_acc
+                "accuracy":best_accuracy,
+                "loss":best_loss,
+                "perfect_lcag":best_perfect_lcag
             }
         }
 

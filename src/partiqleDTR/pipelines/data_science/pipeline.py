@@ -192,7 +192,6 @@ def create_training_optuna_pipeline(**kwargs) -> Pipeline:
                 func=train_optuna,
                 inputs={"hyperparam_optimizer": "hyperparam_optimizer"},
                 outputs={
-                    "parameters": "optimized_parameters",
                 },
                 name="train_optuna",
             ),

@@ -137,6 +137,6 @@ checkpoint:
   type: pickle.PickleDataSet
   filepath: data/08_reporting/checkpoint.pickle
 
-optimized_parameters:
+hyper_optim_artifacts:
   type: yaml.YAMLDataSet
-  filepath: data/08_reporting/model_parameters.yml
+  filepath: data/08_reporting/hyper_optim_artifacts.yml

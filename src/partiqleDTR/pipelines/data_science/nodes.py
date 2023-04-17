@@ -222,11 +222,10 @@ def train_optuna(hyperparam_optimizer: Hyperparam_Optimizer):
 
     hyperparam_optimizer.minimize()
 
-    parameters = hyperparam_optimizer.get_artifacts()
-    mlflow.log_params(parameters)
-    
-    return {"parameters": parameters}
+    artifacts = hyperparam_optimizer.log_study()
 
+    return {}
+    
 
 def create_model(
     n_classes,
