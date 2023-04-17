@@ -7,7 +7,7 @@ default_modes: ["train", "val"]
 validation_mode: ["val"]
 
 # Classical
-epochs: 1
+epochs: 10
 normalize: "smartone" # one, smartone, zmuv
 normalize_individually: False
 zero_mean: False
