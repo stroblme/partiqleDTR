@@ -40,7 +40,7 @@ class gnn(nn.Module):
         dropout_rate=0.3,
         batchnorm=True,
         symmetrize=True,
-        **kwargs,
+        **kwargs
     ):
         super(gnn, self).__init__()
 

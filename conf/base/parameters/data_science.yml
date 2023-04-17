@@ -1,18 +1,18 @@
 ---
 # General
-model_sel: "qgnn" # qmlp, qftgnn, qgnn
+model_sel: "gnn" # qmlp, qftgnn, qgnn
 post_model_sel: "pqgnn" # only for split training
 n_momenta: 4
 default_modes: ["train", "val"]
 validation_mode: ["val"]
 
 # Classical
-epochs: 10
+epochs: 1
 normalize: "smartone" # one, smartone, zmuv
 normalize_individually: False
 zero_mean: False
 dim_feedforward: 32
-dim_feedforward_range: [4, 2048, "log"]
+dim_feedforward_range: [8, 16, 32, 64, 128] # must be an even number
 batchnorm: True
 
 dropout_rate: 0.2
@@ -52,8 +52,9 @@ n_layers_vqc: 3
 n_layers_vqc_range: [1, 5, "linear"]
 gradient_curvature_threshold: 1e-10
 gradient_curvature_history: 0  # set to 0 to disable gradient curvature/ parameter pruning
+gradient_curvature_history_range: [1, 5, "linear"]  # set to 0 to disable gradient curvature/ parameter pruning
 initialization_constant: 1 # this scales the interval [-a pi .. a pi]
-initialization_constant_range: [0.1, 1, "linear"]  # this scales the interval [-a pi .. a pi]
+initialization_constant_range: [0.1, 1.0, "linear"]  # this scales the interval [-a pi .. a pi]
 initialization_offset: 0 # this offsets the with a factor pi
 parameter_seed: 1111
 padding_dropout: False
@@ -63,10 +64,11 @@ predefined_iec: "direct_mapping"
 measurement: "entangled" # mutually_exclusive, all, entangled
 backend: "aer_simulator" # aer_simulator, aer_simulator_statevector, ibm_perth
 quantum_optimizer:
+
 #TODO specify when available
 redis_host: "localhost"
 redis_port: 6379
-redis_path: "partiqlegan"
+redis_path: "studies/partiqledtr.db"
 redis_password: ""
 
 # PyTorch

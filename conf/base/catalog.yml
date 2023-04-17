@@ -125,6 +125,10 @@ trained_classical_model:
 #     type: partiqlegan.pipelines.data_science.utils.HybridTorchModelDataset
 #     filepath: data/06_models/trained_quantum_model.pkl
 
+metrics:
+  type: pickle.PickleDataSet
+  filepath: data/08_reporting/metrics.pickle
+
 gradients:
   type: pickle.PickleDataSet
   filepath: data/08_reporting/gradients.pickle
@@ -132,3 +136,7 @@ gradients:
 checkpoint:
   type: pickle.PickleDataSet
   filepath: data/08_reporting/checkpoint.pickle
+
+optimized_parameters:
+  type: yaml.YAMLDataSet
+  filepath: data/08_reporting/model_parameters.yml

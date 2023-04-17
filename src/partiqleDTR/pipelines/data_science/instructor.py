@@ -211,6 +211,9 @@ class Instructor:
         classical_optimizer=None,
         model_state_dict=None,
         optimizer_state_dict=None,
+        report_callback=None,
+        early_stop_callback=None,
+        logging=True,
     ):
         """
         Args:
@@ -228,17 +231,21 @@ class Instructor:
             "cuda" if t.cuda.is_available() and device != "cpu" else "cpu"
         )
 
+        self.logging=logging
+
         self.model = model
         # self.model.to(self.device)
-        log.info(f"Testing model..")
-        mlflow.log_text(
-            str(
-                torchinfo.summary(
-                    model, input_size=(n_fsps, batch_size, 4), device=self.device
-                )
-            ),
-            "model_printout.txt",
-        )
+
+        if self.logging:
+            log.info(f"Testing model..")
+            mlflow.log_text(
+                str(
+                    torchinfo.summary(
+                        model, input_size=(n_fsps, batch_size, 4), device=self.device
+                    )
+                ),
+                "model_printout.txt",
+            )
         for p in self.model.parameters():
             p.register_hook(
                 lambda grad: t.clamp(grad, -gradients_clamp, gradients_clamp)
@@ -252,7 +259,8 @@ class Instructor:
             )
 
         self.pytorch_total_params = sum(p.numel() for p in model.parameters())
-        mlflow.log_param("Total trainable parameters", self.pytorch_total_params)
+        if self.logging:
+            mlflow.log_param("Total trainable parameters", self.pytorch_total_params)
 
         self.plot_mode = plot_mode
         self.plotting_rows = plotting_rows
@@ -314,9 +322,10 @@ class Instructor:
     def train(self, start_epoch=1, enabled_modes=["train", "val"]):
         t.autograd.set_detect_anomaly(self.detectAnomaly)
 
-        log.info(
-            f"Starting loops from epoch {start_epoch} using modes {enabled_modes}."
-        )
+        if self.logging:
+            log.info(
+                f"Starting loops from epoch {start_epoch} using modes {enabled_modes}."
+            )
         result = None
         best_acc = 0
         checkpoint = None
@@ -325,7 +334,7 @@ class Instructor:
             self.epochs = 1
 
         # TODO: logging gradients currently only enabled for qgnn
-        self.log_gradients = self.log_gradients and self.model._get_name() == "qgnn"
+        self.log_gradients = self.log_gradients and self.model._get_name() == "qgnn" and self.logging
 
         if self.log_gradients:
             all_grads = []
@@ -367,9 +376,10 @@ class Instructor:
                     #     all_grads.append(epoch_grad+i)
                     # g_plt=self.plotGradients(all_grads)
                     # mlflow.log_figure(g_plt.gcf(), f"gradients.png")
-                    log.info(
-                        f"Running epoch {epoch} in mode {mode} over {len(data_batch)*self.batch_size} samples"
-                    )
+                    if self.logging:
+                        log.info(
+                            f"Running epoch {epoch} in mode {mode} over {len(data_batch)*self.batch_size} samples"
+                        )
                     for i, (states, labels) in enumerate(data_batch):
                         sample_start = time.time()
                         states = [s.to(self.device) for s in states]
@@ -473,9 +483,10 @@ class Instructor:
                         epoch_perfect_lcag += perfect_lcag  # don't scale accuracy and perfect_lcag as they are not class dependent
 
                         if mode == "train":
-                            log.debug(
-                                f"Sample evaluation in epoch {epoch}, iteration {i} took {time.time() - sample_start} seconds. Loss was {(1 / self.n_classes)*loss.item()}"
-                            )
+                            if self.logging:
+                                log.debug(
+                                    f"Sample evaluation in epoch {epoch}, iteration {i} took {time.time() - sample_start} seconds. Loss was {(1 / self.n_classes)*loss.item()}"
+                                )
 
                         if mode == self.plot_mode:
                             logits_for_plotting.extend(
@@ -532,21 +543,23 @@ class Instructor:
                                 for a_b in selected_labels
                             )
 
-                            c_plt = self.plotBatchGraphs(
-                                selected_logits,
-                                selected_labels,
-                                rows=self.plotting_rows,
-                                cols=2,
-                            )
-                            mlflow.log_figure(
-                                c_plt.gcf(), f"{mode}_e{epoch}_sample_graph.png"
-                            )
-                            mlflow.log_text(
-                                logits_string, f"{mode}_e{epoch}_logits.txt"
-                            )
-                            mlflow.log_text(
-                                labels_string, f"{mode}_e{epoch}_labels.txt"
-                            )
+
+                            if self.logging:
+                                c_plt = self.plotBatchGraphs(
+                                    selected_logits,
+                                    selected_labels,
+                                    rows=self.plotting_rows,
+                                    cols=2,
+                                )
+                                mlflow.log_figure(
+                                    c_plt.gcf(), f"{mode}_e{epoch}_sample_graph.png"
+                                )
+                                mlflow.log_text(
+                                    logits_string, f"{mode}_e{epoch}_logits.txt"
+                                )
+                                mlflow.log_text(
+                                    labels_string, f"{mode}_e{epoch}_labels.txt"
+                                )
 
                         except Exception as e:
                             log.error(
@@ -571,22 +584,24 @@ class Instructor:
                                 self.model.var_params, t.stack(all_grads).mean(dim=1)
                             )  # use mean over batch samples
 
-                            mlflow.log_metric(key=f"num_selected_params", value=len(selected_parameters), step=epoch)
+                            if self.logging:
+                                mlflow.log_metric(key=f"num_selected_params", value=len(selected_parameters), step=epoch)
 
                             self.model.quantum_layer.neural_network.set_selected_parameters(
                                 selected_parameters
                             )
 
-                    mlflow.log_metric(key=f"{mode}_loss", value=epoch_loss, step=epoch)
-                    mlflow.log_metric(
-                        key=f"{mode}_accuracy", value=epoch_acc, step=epoch
-                    )
-                    mlflow.log_metric(
-                        key=f"{mode}_logic_accuracy", value=epoch_logic_acc, step=epoch
-                    )
-                    mlflow.log_metric(
-                        key=f"{mode}_perfect_lcag", value=epoch_perfect_lcag, step=epoch
-                    )
+                    if self.logging:
+                        mlflow.log_metric(key=f"{mode}_loss", value=epoch_loss, step=epoch)
+                        mlflow.log_metric(
+                            key=f"{mode}_accuracy", value=epoch_acc, step=epoch
+                        )
+                        mlflow.log_metric(
+                            key=f"{mode}_logic_accuracy", value=epoch_logic_acc, step=epoch
+                        )
+                        mlflow.log_metric(
+                            key=f"{mode}_perfect_lcag", value=epoch_perfect_lcag, step=epoch
+                        )
                     # learning rate scheduling
                     self.scheduler.step()
 
@@ -604,16 +619,20 @@ class Instructor:
             g_plt, g3d_plt = self.plotGradients(
                 all_grads.mean(dim=1)
             )  # use mean over batch samples
-            mlflow.log_figure(g_plt, f"gradients.html")
-            mlflow.log_figure(g3d_plt, f"gradients_3d.html")
+
+            if self.logging:
+                mlflow.log_figure(g_plt, f"gradients.html")
+                mlflow.log_figure(g3d_plt, f"gradients_3d.html")
 
             gc_plt = self.gradient_pqc_viz(
                 self.model, all_grads.mean(dim=1)
             )  # use mean over batch samples
-            mlflow.log_figure(
-                gc_plt,
-                "circuit_gradients.png",
-            )
+
+            if self.logging:
+                mlflow.log_figure(
+                    gc_plt,
+                    "circuit_gradients.png",
+                )
         else:
             all_grads = t.zeros(1)
 
@@ -621,7 +640,8 @@ class Instructor:
         if result == None:
             result = self.model
 
-        log.info("Saving model and optimizer data")
+        if self.logging:
+            log.info("Saving model and optimizer data")
         if checkpoint is None:
             try:
                 model_state_dict = self.model.state_dict()
@@ -638,8 +658,8 @@ class Instructor:
                 "optimizer_state_dict": optimizer_state_dict,
             }
 
-        mlflow.log_dict(model_state_dict, f"model.yml")
-        mlflow.log_dict(optimizer_state_dict, f"optimizer.yml")
+        # mlflow.log_dict(model_state_dict, f"model.yml")
+        # mlflow.log_dict(optimizer_state_dict, f"optimizer.yml")
 
         if error_raised:
             raise RuntimeError(
@@ -650,6 +670,9 @@ class Instructor:
             "trained_model": result,
             "checkpoint": checkpoint,
             "gradients": all_grads.numpy(),
+            "metrics": {
+                "accuracy":best_acc
+            }
         }
 
     def parameter_pruning(self, parameters, gradients: t.Tensor):
