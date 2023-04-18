@@ -27,15 +27,6 @@ class Hyperparam_Optimizer:
             storage=f"sqlite:///{path}",
         )
 
-    def initialize_storage(self, host: str, port: int, path: str, password: str):
-        """
-        Storage intialization
-        """
-        storage = o.storages.RDBStorage(
-            # url=f"redis://{password}@{host}:{port}/{path}",
-            url=f"sqlite:////{path}",
-        )
-        return storage
 
     def set_variable_parameters(self, model_parameters, instructor_parameters):
         assert isinstance(model_parameters, Dict)
@@ -131,7 +122,7 @@ class Hyperparam_Optimizer:
         # while (time.time() - startTime) < self.duration:
         #     self.run_trial()
 
-        self.study.optimize(self.run_trial, n_trials=2)
+        self.study.optimize(self.run_trial, n_trials=self.n_trials)
 
     def run_trial(self, trial=None):
         if trial is None:
