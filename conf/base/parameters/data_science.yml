@@ -66,7 +66,7 @@ backend: "aer_simulator" # aer_simulator, aer_simulator_statevector, ibm_perth
 quantum_optimizer:
 
 #TODO specify when available
-n_trials: "localhost"
+n_trials: 200
 timeout: 3600
 optuna_path: "studies/partiqledtr.db"
 
