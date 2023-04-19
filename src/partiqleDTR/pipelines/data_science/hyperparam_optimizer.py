@@ -1,4 +1,5 @@
 import optuna as o
+from optuna_dashboard import set_objective_names
 from typing import List, Dict
 import time
 import mlflow
@@ -26,7 +27,7 @@ class Hyperparam_Optimizer:
             study_name=name,
             storage=f"sqlite:///{path}",
         )
-
+        set_objective_names(self.study, ["Accuracy", "Loss", "Perfect LCAG"])
 
     def set_variable_parameters(self, model_parameters, instructor_parameters):
         assert isinstance(model_parameters, Dict)
@@ -117,11 +118,6 @@ class Hyperparam_Optimizer:
         return updated_variable_parameters
 
     def minimize(self):
-        startTime = time.time()
-
-        # while (time.time() - startTime) < self.duration:
-        #     self.run_trial()
-
         self.study.optimize(self.run_trial, n_trials=self.n_trials)
 
     def run_trial(self, trial=None):
