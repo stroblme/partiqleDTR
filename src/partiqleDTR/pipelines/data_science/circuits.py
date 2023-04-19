@@ -84,6 +84,89 @@ class iec_circuits:
 
 class pqc_circuits:
     @staticmethod
+    def circuit_16(qc, n_qubits, identifier):
+        """
+        Original circuit 19 implementation
+
+        Args:
+            qc (_type_): _description_
+            n_qubits (_type_): _description_
+            identifier (_type_): _description_
+        """
+        for i in range(n_qubits):
+            qc.rx(
+                q.circuit.Parameter(f"{identifier}_rx_0_{i}"),
+                i,
+                f"{identifier}_rx_0_{i}",
+            )
+            qc.rz(
+                q.circuit.Parameter(f"{identifier}_rz_1_{i}"),
+                i,
+                f"{identifier}_rz_1_{i}",
+            )
+
+        for i in range(n_qubits-1):
+            if (i+1)%2:
+                qc.crz(
+                    q.circuit.Parameter(f"{identifier}_crz_{i+1}_{i}"),
+                    i+1,
+                    i,
+                    f"{identifier}_crz_{i+1}_{i}",
+                )
+                
+        for i in range(n_qubits-1):
+            if i%2:
+                qc.crz(
+                    q.circuit.Parameter(f"{identifier}_crz_{i+1}_{i}"),
+                    i+1,
+                    i,
+                    f"{identifier}_crz_{i+1}_{i}",
+                )
+        
+
+    @staticmethod
+    def circuit_17(qc, n_qubits, identifier):
+        """
+        Original circuit 19 implementation
+
+        Args:
+            qc (_type_): _description_
+            n_qubits (_type_): _description_
+            identifier (_type_): _description_
+        """
+        for i in range(n_qubits):
+            qc.rx(
+                q.circuit.Parameter(f"{identifier}_rx_0_{i}"),
+                i,
+                f"{identifier}_rx_0_{i}",
+            )
+            qc.rz(
+                q.circuit.Parameter(f"{identifier}_rz_1_{i}"),
+                i,
+                f"{identifier}_rz_1_{i}",
+            )
+
+        for i in range(n_qubits-1):
+            if (i+1) %2:
+                qc.crx(
+                    q.circuit.Parameter(f"{identifier}_crx_{i+1}_{i}"),
+                    i+1,
+                    i,
+                    f"{identifier}_crx_{i+1}_{i}",
+                )
+
+        for i in range(n_qubits-1):
+            if i%2:
+                qc.crx(
+                    q.circuit.Parameter(f"{identifier}_crx_{i+1}_{i}"),
+                    i+1,
+                    i,
+                    f"{identifier}_crx_{i+1}_{i}",
+                )
+        
+
+
+    @staticmethod
     def variational(qc, n_qubits, identifier):
         for i in range(n_qubits):
             # if add_rot_gates:
