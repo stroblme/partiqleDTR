@@ -27,16 +27,13 @@ def register_pipelines() -> Dict[str, Pipeline]:
     validation_qgnn_pipeline = ds.create_validation_qgnn_pipeline()
 
     debug_training_pipeline = ds.create_debug_training_pipeline()
-    debug_training_optuna_pipeline = ds.create_debug_training_optuna_pipeline()
+    training_optuna_pipeline = ds.create_training_optuna_pipeline()
 
     # split_training_qgnn_pipeline = ds.create_split_training_qgnn_pipeline()
     # training_qgnn_pipeline_no_param_log = ds.create_training_qgnn_pipeline_no_param_log()
 
     return {
         "__default__": data_generation_pipeline
-        + data_processing_pipeline
-        + training_pipeline,
-        "default": data_generation_pipeline
         + data_processing_pipeline
         + training_pipeline,
         "data_generation": data_generation_pipeline,
@@ -48,7 +45,7 @@ def register_pipelines() -> Dict[str, Pipeline]:
         "resume_training": resume_training_pipeline,
         "validation": validation_qgnn_pipeline,
         "debug_training": debug_training_pipeline,
-        "debug_training_optuna": debug_training_optuna_pipeline,
+        "training_optuna": training_optuna_pipeline,
         "evaluate_seeds": data_generation_eval_pipeline
         # "split_training_qgnn_pipeline": split_training_qgnn_pipeline,
     }
