@@ -325,9 +325,9 @@ class Instructor:
                 self.optimizer, step_size=learning_rate_decay, gamma=gamma
             ) # use secheduling only for the classical optim
 
-
-        self.gradient_curvature_threshold = float(gradient_curvature_threshold)
-        self.gradient_curvature_history = int(gradient_curvature_history)
+        if self.model._get_name() == "qgnn":
+            self.gradient_curvature_threshold = float(gradient_curvature_threshold)
+            self.gradient_curvature_history = int(gradient_curvature_history)
 
         self.n_classes = n_classes
 
@@ -336,7 +336,7 @@ class Instructor:
         if optimizer_state_dict is not None:
             self.optimizer.load_state_dict(optimizer_state_dict)
 
-        self.detectAnomaly = detectAnomaly  # TODO: introduce as parameter if helpful
+        self.detectAnomaly = detectAnomaly
 
     def train(self, start_epoch=1, enabled_modes=["train", "val"]):
         t.autograd.set_detect_anomaly(self.detectAnomaly)

@@ -95,20 +95,20 @@ def create_hyperparam_optimizer(
     dropout_rate_range: List,
     batchnorm: bool,
     symmetrize: bool,
-    data_reupload_range: bool,
+    data_reupload_range_quant: bool,
     add_rot_gates: bool,
-    n_layers_vqc_range: List,
+    n_layers_vqc_range_quant: List,
     padding_dropout: bool,
-    predefined_vqc_range: List,
+    predefined_vqc_range_quant: List,
     predefined_iec: str,
     measurement: str,
     backend: str,
-    n_shots_range: int,
+    n_shots_range_quant: int,
     n_fsps: int,
 
     device: str,
-    initialization_constant_range: List,
-    initialization_offset: float,
+    initialization_constant_range_quant: List,
+    initialization_offset_range_quant: float,
     parameter_seed:int, 
     dataset_lca_and_leaves: Dict,
     learning_rate_range: List,
@@ -125,8 +125,8 @@ def create_hyperparam_optimizer(
     gradients_clamp: int,
     gradients_spreader: float,
     torch_seed: int,
-    gradient_curvature_threshold_range: float,
-    gradient_curvature_history_range: int,
+    gradient_curvature_threshold_range_quant: float,
+    gradient_curvature_history_range_quant: int,
     quantum_optimizer: str,
     classical_optimizer: str,
     detectAnomaly: bool,
@@ -136,12 +136,18 @@ def create_hyperparam_optimizer(
     optuna_sampler_seed: int,
 ) -> Hyperparam_Optimizer:
 
+    if "q" in model_sel:
+        ignore_quant = False
+    else:
+        ignore_quant = True
+
     hyperparam_optimizer = Hyperparam_Optimizer(
-        name="hyperparam_optimizer",
+        name=mlflow.active_run().info.run_id,
         seed=optuna_sampler_seed,
         n_trials=n_trials,
         timeout=timeout,
         path=optuna_path,
+        ignore_quant=ignore_quant
     )
 
     hyperparam_optimizer.set_variable_parameters(
@@ -152,18 +158,19 @@ def create_hyperparam_optimizer(
             "n_additional_mlp_layers_range": n_additional_mlp_layers_range,
             "n_final_mlp_layers_range": n_final_mlp_layers_range,
             "dropout_rate_range": dropout_rate_range,
-            "data_reupload_range": data_reupload_range,
-            "n_layers_vqc_range": n_layers_vqc_range,
-            "predefined_vqc_range": predefined_vqc_range,
-            "initialization_constant_range": initialization_constant_range,
-            "n_shots_range": n_shots_range,
+            "data_reupload_range_quant": data_reupload_range_quant,
+            "n_layers_vqc_range_quant": n_layers_vqc_range_quant,
+            "predefined_vqc_range_quant": predefined_vqc_range_quant,
+            "initialization_constant_range_quant": initialization_constant_range_quant,
+            "initialization_offset_range_quant": initialization_offset_range_quant,
+            "n_shots_range_quant": n_shots_range_quant,
         },
         {
             "learning_rate_range": learning_rate_range,
             "learning_rate_decay_range": learning_rate_decay_range,
             "batch_size_range": batch_size_range,
-            "gradient_curvature_history_range": gradient_curvature_history_range,
-            "gradient_curvature_threshold_range": gradient_curvature_threshold_range,
+            "gradient_curvature_history_range_quant": gradient_curvature_history_range_quant,
+            "gradient_curvature_threshold_range_quant": gradient_curvature_threshold_range_quant,
         },
     )
 
@@ -183,7 +190,6 @@ def create_hyperparam_optimizer(
             "backend": backend,
             "n_fsps": n_fsps,
             "device": device,
-            "initialization_offset": initialization_offset,
             "parameter_seed": parameter_seed,
         },
         {
@@ -228,6 +234,7 @@ def train_optuna(hyperparam_optimizer: Hyperparam_Optimizer):
 
 def create_model(
     n_classes,
+    n_fsps: int,
     n_momenta,
     model_sel,
     n_blocks: int,
@@ -240,20 +247,19 @@ def create_model(
     dropout_rate: float,
     batchnorm: bool,
     symmetrize: bool,
-    data_reupload: bool,
-    add_rot_gates: bool,
-    n_layers_vqc: bool,
-    padding_dropout: bool,
-    predefined_vqc: str,
-    predefined_iec: str,
-    measurement: str,
-    backend: str,
-    n_shots: int,
-    n_fsps: int,
-    device: str,
-    initialization_constant: str,
-    initialization_offset: int,
-    parameter_seed:int,
+    data_reupload: bool=None,
+    add_rot_gates: bool=None,
+    n_layers_vqc: bool=None,
+    padding_dropout: bool=None,
+    predefined_vqc: str=None,
+    predefined_iec: str=None,
+    measurement: str=None,
+    backend: str=None,
+    n_shots: int=None,
+    device: str=None,
+    initialization_constant: str=None,
+    initialization_offset: int=None,
+    parameter_seed:int=None,
     pre_trained_model: DataParallel = None,
     **kwargs,
 ) -> DataParallel:
@@ -321,10 +327,10 @@ def create_instructor(
     gradients_clamp: int,
     gradients_spreader: float,
     torch_seed: int,
-    gradient_curvature_threshold: float,
-    gradient_curvature_history: float,
     quantum_optimizer: str,
     classical_optimizer: str,
+    gradient_curvature_threshold: float=None,
+    gradient_curvature_history: float=None,
     **kwargs: Dict,
 ) -> Instructor:
     instructor = Instructor(

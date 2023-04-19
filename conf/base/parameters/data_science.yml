@@ -16,14 +16,14 @@ dim_feedforward_range: [8, 16, 32, 64, 128] # must be an even number
 batchnorm: True
 
 dropout_rate: 0.2
-dropout_rate_range: [0.1, 1.0, "linear"]
+dropout_rate_range: [0.05, 0.5, "linear"]
 learning_rate: 0.001
 learning_rate_range: [0.00001, 0.1, "log"]
 learning_rate_decay: 100
 learning_rate_decay_range: [1, 1000, "log"]
 gamma: 0.5
 batch_size: 8
-batch_size_range: [1, 64, "log"]
+batch_size_range: [1, 2, 4, 8, 16, 32, 64]
 gradients_clamp: 1000
 gradients_spreader: 1e-10
 classical_optimizer: "Adam"
@@ -31,35 +31,45 @@ classical_optimizer: "Adam"
 # GNN
 n_blocks: 3
 n_blocks_range: [1, 5, "linear"]
+
 n_layers_mlp: 2 # initial mlp layers before the blocks
 n_layers_mlp_range: [1, 5, "linear"]
-n_additional_mlp_layers: 0 # additional layers within a block
 
+n_additional_mlp_layers: 0 # additional layers within a block
 n_additional_mlp_layers_range: [1, 5, "linear"]
+
 n_final_mlp_layers: 2 # layers after the blocks
 n_final_mlp_layers_range: [1, 5, "linear"]
+
 symmetrize: True
 skip_block: True # activates skip connections on local scales
 skip_global: True # activates skip connections on global scales
 
 # Quantum
 data_reupload: True
-data_reupload_range: [True, False]
+data_reupload_range_quant: [True, False]
 add_rot_gates: True
-add_rot_gates_range: [True, False]
-n_shots: 
+add_rot_gates_range_quant: [True, False]
+
+n_shots: 2048
+n_shots_range_quant: [512, 1024, 2048, 4096]
+
 n_layers_vqc: 3
-n_layers_vqc_range: [1, 5, "linear"]
+n_layers_vqc_range_quant: [1, 5, "linear"]
 gradient_curvature_threshold: 1e-10
+gradient_curvature_threshold_range_quant: [1e-12, 1e-11, 1e-10, 1e-9]
 gradient_curvature_history: 0  # set to 0 to disable gradient curvature/ parameter pruning
-gradient_curvature_history_range: [1, 5, "linear"]  # set to 0 to disable gradient curvature/ parameter pruning
+gradient_curvature_history_range_quant: [1, 5, "linear"]  # set to 0 to disable gradient curvature/ parameter pruning
 initialization_constant: 1 # this scales the interval [-a pi .. a pi]
-initialization_constant_range: [0.1, 1.0, "linear"]  # this scales the interval [-a pi .. a pi]
+initialization_constant_range_quant: [0.1, 1.0, "linear"]  # this scales the interval [-a pi .. a pi]
 initialization_offset: 0 # this offsets the with a factor pi
+initialization_offset_range_quant: [0, 0.5, 1, 2] # this offsets the with a factor pi
 parameter_seed: 1111
 padding_dropout: False
-predefined_vqc: "circuit_191" # "", "circuit_191", "circuit_192", "circuit_19", .. tba.
-predefined_vqc_range: ["circuit_191", "circuit_192", "circuit_19"]
+
+predefined_vqc: "circuit_19" # "", "circuit_191", "circuit_192", "circuit_19", .. tba.
+predefined_vqc_range_quant: ["circuit_191", "circuit_192", "circuit_19", "circuit_18", "circuit_17", "circuit_16"]
+
 predefined_iec: "direct_mapping" 
 measurement: "entangled" # mutually_exclusive, all, entangled
 backend: "aer_simulator" # aer_simulator, aer_simulator_statevector, ibm_perth

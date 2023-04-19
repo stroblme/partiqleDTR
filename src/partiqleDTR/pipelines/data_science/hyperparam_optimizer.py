@@ -7,7 +7,7 @@ import mlflow
 
 class Hyperparam_Optimizer:
     def __init__(
-        self, name: str, seed: int, path:str, n_trials: int, timeout: int
+        self, name: str, seed: int, path:str, n_trials: int, timeout: int, ignore_quant:bool=False
     ):
         # storage = self.initialize_storage(host, port, path, password)
 
@@ -18,12 +18,13 @@ class Hyperparam_Optimizer:
 
         self.n_trials = n_trials
         self.timeout = timeout
+        self.ignore_quant = ignore_quant
 
         self.study = o.create_study(
             pruner=pruner,
             sampler=sampler,
             directions=["maximize", "minimize", "maximize"],
-            load_if_exists=True,
+            load_if_exists=False,
             study_name=name,
             storage=f"sqlite:///{path}",
         )
@@ -71,7 +72,13 @@ class Hyperparam_Optimizer:
     def update_variable_parameters(self, trial, parameters):
         updated_variable_parameters = dict()
         for parameter, value in parameters.items():
-            param_name = parameter.replace("_range", "")
+            if "_range_quant" in parameter:
+                if self.ignore_quant:
+                    continue
+                param_name = parameter.replace("_range_quant", "")
+            else:
+                param_name = parameter.replace("_range", "")
+
 
             assert isinstance(value, List)
 
