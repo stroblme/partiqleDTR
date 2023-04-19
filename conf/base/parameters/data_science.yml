@@ -7,7 +7,7 @@ default_modes: ["train", "val"]
 validation_mode: ["val"]
 
 # Classical
-epochs: 10
+epochs: 1
 normalize: "smartone" # one, smartone, zmuv
 normalize_individually: False
 zero_mean: False
@@ -65,10 +65,11 @@ measurement: "entangled" # mutually_exclusive, all, entangled
 backend: "aer_simulator" # aer_simulator, aer_simulator_statevector, ibm_perth
 quantum_optimizer:
 
-#TODO specify when available
+# Optuna
 n_trials: 200
 timeout: 3600
 optuna_path: "studies/partiqledtr.db"
+optuna_sampler_seed: 1111
 
 # PyTorch
 detect_anomaly: False # enables torch' anomaly detector

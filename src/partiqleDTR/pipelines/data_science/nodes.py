@@ -133,11 +133,12 @@ def create_hyperparam_optimizer(
     n_trials: str,
     timeout: int,
     optuna_path: str,
+    optuna_sampler_seed: int,
 ) -> Hyperparam_Optimizer:
 
     hyperparam_optimizer = Hyperparam_Optimizer(
         name="hyperparam_optimizer",
-        id=0,
+        seed=optuna_sampler_seed,
         n_trials=n_trials,
         timeout=timeout,
         path=optuna_path,

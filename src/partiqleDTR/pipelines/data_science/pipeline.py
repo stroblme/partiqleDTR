@@ -183,6 +183,7 @@ def create_training_optuna_pipeline(**kwargs) -> Pipeline:
                     "n_trials": "params:n_trials",
                     "timeout": "params:timeout",
                     "optuna_path": "params:optuna_path",
+                    "optuna_sampler_seed": "params:optuna_sampler_seed",
                 },
                 outputs={"hyperparam_optimizer": "hyperparam_optimizer"},
                 name="create_instructor",

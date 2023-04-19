@@ -6,14 +6,14 @@ import mlflow
 
 class Hyperparam_Optimizer:
     def __init__(
-        self, name: str, id: int, path:str, n_trials: int, timeout: int
+        self, name: str, seed: int, path:str, n_trials: int, timeout: int
     ):
         # storage = self.initialize_storage(host, port, path, password)
 
         pruner = o.pruners.NopPruner()
         # pruner = o.pruners.PercentilePruner(10.0, n_warmup_steps=2, n_startup_trials=20)
 
-        sampler = o.samplers.TPESampler(seed=id, multivariate=True)
+        sampler = o.samplers.TPESampler(seed=seed, multivariate=True)
 
         self.n_trials = n_trials
         self.timeout = timeout
