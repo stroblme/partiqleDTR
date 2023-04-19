@@ -1,6 +1,6 @@
 ---
 # General
-model_sel: "gnn" # qmlp, qftgnn, qgnn
+model_sel: "qgnn" # qmlp, qftgnn, qgnn
 post_model_sel: "pqgnn" # only for split training
 n_momenta: 4
 default_modes: ["train", "val"]
@@ -11,34 +11,34 @@ epochs: 10
 normalize: "smartone" # one, smartone, zmuv
 normalize_individually: False
 zero_mean: False
-dim_feedforward: 32
+dim_feedforward: 16 #32
 dim_feedforward_range: [8, 16, 32, 64, 128] # must be an even number
 batchnorm: True
 
-dropout_rate: 0.2
+dropout_rate: 0.45 #0.2
 dropout_rate_range: [0.05, 0.5, "linear"]
-learning_rate: 0.001
+learning_rate: 0.0026 #0.001
 learning_rate_range: [0.00001, 0.1, "log"]
-learning_rate_decay: 100
+learning_rate_decay: 4 #100
 learning_rate_decay_range: [1, 1000, "log"]
 gamma: 0.5
-batch_size: 8
+batch_size: 4 #8
 batch_size_range: [1, 2, 4, 8, 16, 32, 64]
 gradients_clamp: 1000
 gradients_spreader: 1e-10
 classical_optimizer: "Adam"
 
 # GNN
-n_blocks: 3
+n_blocks: 1 #3
 n_blocks_range: [1, 5, "linear"]
 
 n_layers_mlp: 2 # initial mlp layers before the blocks
 n_layers_mlp_range: [1, 5, "linear"]
 
-n_additional_mlp_layers: 0 # additional layers within a block
+n_additional_mlp_layers: 3 #0 # additional layers within a block
 n_additional_mlp_layers_range: [1, 5, "linear"]
 
-n_final_mlp_layers: 2 # layers after the blocks
+n_final_mlp_layers: 4 #2 # layers after the blocks
 n_final_mlp_layers_range: [1, 5, "linear"]
 
 symmetrize: True

@@ -7,7 +7,7 @@ import mlflow
 
 class Hyperparam_Optimizer:
     def __init__(
-        self, name: str, seed: int, path:str, n_trials: int, timeout: int, ignore_quant:bool=False
+        self, name: str, seed: int, path:str, n_trials: int, timeout: int, toggle_classical_quant:bool=False
     ):
         # storage = self.initialize_storage(host, port, path, password)
 
@@ -18,7 +18,7 @@ class Hyperparam_Optimizer:
 
         self.n_trials = n_trials
         self.timeout = timeout
-        self.ignore_quant = ignore_quant
+        self.toggle_classical_quant = toggle_classical_quant
 
         self.study = o.create_study(
             pruner=pruner,
@@ -73,10 +73,12 @@ class Hyperparam_Optimizer:
         updated_variable_parameters = dict()
         for parameter, value in parameters.items():
             if "_range_quant" in parameter:
-                if self.ignore_quant:
-                    continue
+                if not self.toggle_classical_quant:
+                    continue # continue if its a quantum parameter and we are classical
                 param_name = parameter.replace("_range_quant", "")
             else:
+                if self.toggle_classical_quant:
+                    continue # continue if its a classical parameter and we are quantum
                 param_name = parameter.replace("_range", "")
 
 

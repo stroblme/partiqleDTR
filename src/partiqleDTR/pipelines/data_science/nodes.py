@@ -137,9 +137,9 @@ def create_hyperparam_optimizer(
 ) -> Hyperparam_Optimizer:
 
     if "q" in model_sel:
-        ignore_quant = False
+        toggle_classical_quant = True
     else:
-        ignore_quant = True
+        toggle_classical_quant = False
 
     hyperparam_optimizer = Hyperparam_Optimizer(
         name=mlflow.active_run().info.run_id,
@@ -147,7 +147,7 @@ def create_hyperparam_optimizer(
         n_trials=n_trials,
         timeout=timeout,
         path=optuna_path,
-        ignore_quant=ignore_quant
+        toggle_classical_quant=toggle_classical_quant
     )
 
     hyperparam_optimizer.set_variable_parameters(
