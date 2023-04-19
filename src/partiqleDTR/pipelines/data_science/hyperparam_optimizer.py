@@ -1,4 +1,5 @@
 import optuna as o
+from optuna_dashboard import set_objective_names
 from typing import List, Dict
 import time
 import mlflow
@@ -6,27 +7,28 @@ import mlflow
 
 class Hyperparam_Optimizer:
     def __init__(
-        self, name: str, id: int, path:str, n_trials: int, timeout: int
+        self, name: str, seed: int, path:str, n_trials: int, timeout: int, ignore_quant:bool=False
     ):
         # storage = self.initialize_storage(host, port, path, password)
 
         pruner = o.pruners.NopPruner()
         # pruner = o.pruners.PercentilePruner(10.0, n_warmup_steps=2, n_startup_trials=20)
 
-        sampler = o.samplers.TPESampler(seed=id, multivariate=True)
+        sampler = o.samplers.TPESampler(seed=seed, multivariate=True)
 
         self.n_trials = n_trials
         self.timeout = timeout
+        self.ignore_quant = ignore_quant
 
         self.study = o.create_study(
             pruner=pruner,
             sampler=sampler,
             directions=["maximize", "minimize", "maximize"],
-            load_if_exists=True,
+            load_if_exists=False,
             study_name=name,
             storage=f"sqlite:///{path}",
         )
-
+        set_objective_names(self.study, ["Accuracy", "Loss", "Perfect LCAG"])
 
     def set_variable_parameters(self, model_parameters, instructor_parameters):
         assert isinstance(model_parameters, Dict)
@@ -70,7 +72,13 @@ class Hyperparam_Optimizer:
     def update_variable_parameters(self, trial, parameters):
         updated_variable_parameters = dict()
         for parameter, value in parameters.items():
-            param_name = parameter.replace("_range", "")
+            if "_range_quant" in parameter:
+                if self.ignore_quant:
+                    continue
+                param_name = parameter.replace("_range_quant", "")
+            else:
+                param_name = parameter.replace("_range", "")
+
 
             assert isinstance(value, List)
 
@@ -117,11 +125,6 @@ class Hyperparam_Optimizer:
         return updated_variable_parameters
 
     def minimize(self):
-        startTime = time.time()
-
-        # while (time.time() - startTime) < self.duration:
-        #     self.run_trial()
-
         self.study.optimize(self.run_trial, n_trials=self.n_trials)
 
     def run_trial(self, trial=None):
