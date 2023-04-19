@@ -153,7 +153,7 @@ def create_training_optuna_pipeline(**kwargs) -> Pipeline:
                     "predefined_iec": "params:predefined_iec",
                     "measurement": "params:measurement",
                     "backend": "params:backend",
-                    "n_shots": "params:n_shots",
+                    "n_shots_range": "params:n_shots_range",
                     "n_fsps": "n_fsps",
 
                     "device": "params:device",
@@ -175,7 +175,7 @@ def create_training_optuna_pipeline(**kwargs) -> Pipeline:
                     "gradients_clamp": "params:gradients_clamp",
                     "gradients_spreader": "params:gradients_spreader",
                     "torch_seed": "params:torch_seed",
-                    "gradient_curvature_threshold": "params:gradient_curvature_threshold",
+                    "gradient_curvature_threshold_range": "params:gradient_curvature_threshold_range",
                     "gradient_curvature_history_range": "params:gradient_curvature_history_range",
                     "quantum_optimizer": "params:quantum_optimizer",
                     "classical_optimizer": "params:classical_optimizer",

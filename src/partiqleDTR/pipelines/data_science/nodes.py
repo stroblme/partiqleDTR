@@ -103,7 +103,7 @@ def create_hyperparam_optimizer(
     predefined_iec: str,
     measurement: str,
     backend: str,
-    n_shots: int,
+    n_shots_range: int,
     n_fsps: int,
 
     device: str,
@@ -125,7 +125,7 @@ def create_hyperparam_optimizer(
     gradients_clamp: int,
     gradients_spreader: float,
     torch_seed: int,
-    gradient_curvature_threshold: float,
+    gradient_curvature_threshold_range: float,
     gradient_curvature_history_range: int,
     quantum_optimizer: str,
     classical_optimizer: str,
@@ -156,12 +156,14 @@ def create_hyperparam_optimizer(
             "n_layers_vqc_range": n_layers_vqc_range,
             "predefined_vqc_range": predefined_vqc_range,
             "initialization_constant_range": initialization_constant_range,
+            "n_shots_range": n_shots_range,
         },
         {
             "learning_rate_range": learning_rate_range,
             "learning_rate_decay_range": learning_rate_decay_range,
             "batch_size_range": batch_size_range,
             "gradient_curvature_history_range": gradient_curvature_history_range,
+            "gradient_curvature_threshold_range": gradient_curvature_threshold_range,
         },
     )
 
@@ -179,7 +181,6 @@ def create_hyperparam_optimizer(
             "predefined_iec": predefined_iec,
             "measurement": measurement,
             "backend": backend,
-            "n_shots": n_shots,
             "n_fsps": n_fsps,
             "device": device,
             "initialization_offset": initialization_offset,
@@ -203,7 +204,6 @@ def create_hyperparam_optimizer(
             "gradients_clamp": gradients_clamp,
             "gradients_spreader": gradients_spreader,
             "torch_seed": torch_seed,
-            "gradient_curvature_threshold": gradient_curvature_threshold,
             "quantum_optimizer": quantum_optimizer,
             "classical_optimizer": classical_optimizer,
             "logging": False
