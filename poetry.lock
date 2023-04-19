@@ -221,6 +221,14 @@ examples = ["matplotlib", "netCDF4", "numba", "uproot3", "xarray", "xhistogram"]
 test = ["cloudpickle", "hypothesis (>=6.0)", "pytest (>=6.0)", "pytest-benchmark"]
 
 [[package]]
+name = "bottle"
+version = "0.12.25"
+description = "Fast and simple WSGI-framework for small web-applications."
+category = "main"
+optional = false
+python-versions = "*"
+
+[[package]]
 name = "build"
 version = "0.10.0"
 description = "A simple, correct Python build frontend"
@@ -1838,6 +1846,20 @@ document = ["cma", "distributed", "fvcore", "lightgbm", "matplotlib (!=3.6.0)", 
 integration = ["allennlp (>=2.2.0)", "botorch (>=0.4.0,<0.8.0)", "cached-path (<=1.1.2)", "catalyst (>=21.3)", "catboost (>=0.26)", "chainer (>=5.0.0)", "cma", "distributed", "fastai", "lightgbm", "mlflow", "mpi4py", "mxnet", "pandas", "pytorch-ignite", "pytorch-lightning (>=1.5.0)", "scikit-learn (>=0.24.2)", "scikit-optimize", "shap", "skorch", "tensorflow", "tensorflow-datasets", "torch (==1.11.0)", "torchaudio (==0.11.0)", "torchvision (==0.12.0)", "wandb", "xgboost"]
 optional = ["matplotlib (!=3.6.0)", "pandas", "plotly (>=4.9.0)", "redis", "scikit-learn (>=0.24.2)"]
 test = ["codecov", "fakeredis[lua]", "kaleido", "pytest", "scipy (>=1.9.2)"]
+
+[[package]]
+name = "optuna-dashboard"
+version = "0.9.1"
+description = "Real-time dashboard for Optuna"
+category = "main"
+optional = false
+python-versions = ">=3.7"
+
+[package.dependencies]
+bottle = "*"
+optuna = ">=2.4.0"
+packaging = "*"
+scikit-learn = "*"
 
 [[package]]
 name = "ordered-set"
@@ -3583,7 +3605,7 @@ testing = ["big-O", "flake8 (<5)", "jaraco.functools", "jaraco.itertools", "more
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.8.1,<3.11"
-content-hash = "f9118d3ab01ad6f2d54b8058c59879c05070102fcc660ff4bf81d87cf5a3075c"
+content-hash = "ff64458cdaeaf9c6e064200def4ad41ca9d246a25c5309cc8d517c2700310eb3"
 
 [metadata.files]
 absl-py = [
@@ -3728,6 +3750,10 @@ boost-histogram = [
     {file = "boost_histogram-1.3.2-pp39-pypy39_pp73-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:329352c910ce4a34d301df485c08e9c9a7051ac7f0e0d2dfe7a9536b948bc232"},
     {file = "boost_histogram-1.3.2-pp39-pypy39_pp73-win_amd64.whl", hash = "sha256:ba1703f305be45539c434e8f170a55867f537533b666e9c5d03224185bc2beb5"},
     {file = "boost_histogram-1.3.2.tar.gz", hash = "sha256:e175efbc1054a27bc53fbbe95472cac9ea93999c91d0611840d776b99588d51a"},
+]
+bottle = [
+    {file = "bottle-0.12.25-py3-none-any.whl", hash = "sha256:d6f15f9d422670b7c073d63bd8d287b135388da187a0f3e3c19293626ce034ea"},
+    {file = "bottle-0.12.25.tar.gz", hash = "sha256:e1a9c94970ae6d710b3fb4526294dfeb86f2cb4a81eff3a4b98dc40fb0e5e021"},
 ]
 build = [
     {file = "build-0.10.0-py3-none-any.whl", hash = "sha256:af266720050a66c893a6096a2f410989eeac74ff9a68ba194b3f6473e8e26171"},
@@ -4901,6 +4927,10 @@ opt-einsum = [
 optuna = [
     {file = "optuna-3.1.1-py3-none-any.whl", hash = "sha256:4d641b4bdd896f48a766803a5b64286281fa3e5dbbeedc549f8e1ee6c6e3eea8"},
     {file = "optuna-3.1.1.tar.gz", hash = "sha256:f3c8fcdb7ed4dd473485f6f61de2f2ceb9d4ad56afbae42e663e15c3f00a4c10"},
+]
+optuna-dashboard = [
+    {file = "optuna-dashboard-0.9.1.tar.gz", hash = "sha256:ef85410e9cb4a664d520388abe976230e2dfd60584a5302e466a60dc83c12eb3"},
+    {file = "optuna_dashboard-0.9.1-py3-none-any.whl", hash = "sha256:be05f62e0cdffbf12caf41c9096d34288e2b1937b060fa7f7a1a792316183236"},
 ]
 ordered-set = [
     {file = "ordered-set-4.1.0.tar.gz", hash = "sha256:694a8e44c87657c59292ede72891eb91d34131f6531463aab3009191c77364a8"},
