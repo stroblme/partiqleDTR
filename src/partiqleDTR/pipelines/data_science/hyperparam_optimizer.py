@@ -3,11 +3,11 @@ from optuna_dashboard import set_objective_names
 from typing import List, Dict
 import time
 import mlflow
-
+from concurrent.futures import ProcessPoolExecutor, wait
 
 class Hyperparam_Optimizer:
     def __init__(
-        self, name: str, seed: int, path:str, n_trials: int, timeout: int, selective_optimization:bool=False, toggle_classical_quant:bool=False, resume_study:bool=False
+        self, name: str, seed: int, path:str, n_trials: int, timeout: int, n_jobs: int=1, selective_optimization:bool=False, toggle_classical_quant:bool=False, resume_study:bool=False
     ):
         # storage = self.initialize_storage(host, port, path, password)
 
@@ -21,15 +21,18 @@ class Hyperparam_Optimizer:
         self.toggle_classical_quant = toggle_classical_quant
         self.selective_optimization = selective_optimization
 
-        self.study = o.create_study(
-            pruner=pruner,
-            sampler=sampler,
-            directions=["maximize", "minimize", "maximize"],
-            load_if_exists=resume_study,
-            study_name=name,
-            storage=f"sqlite:///{path}",
-        )
-        set_objective_names(self.study, ["Accuracy", "Loss", "Perfect LCAG"])
+        self.studies = []
+        for jobs in range(n_jobs):
+            resume_study = resume_study or (n_jobs > 1 and jobs != 0)
+            self.studies.append(o.create_study(
+                pruner=pruner,
+                sampler=sampler,
+                directions=["maximize", "minimize", "maximize"],
+                load_if_exists=resume_study,
+                study_name=name,
+                storage=f"sqlite:///{path}",
+            ))
+            set_objective_names(self.studies[-1], ["Accuracy", "Loss", "Perfect LCAG"])
 
     def set_variable_parameters(self, model_parameters, instructor_parameters):
         assert isinstance(model_parameters, Dict)
@@ -62,7 +65,7 @@ class Hyperparam_Optimizer:
         return False
 
     def log_study(self):
-        for trial in self.study.best_trials:
+        for trial in self.studies.best_trials:
             mlflow.log_params({f"trial_{trial.number}_{k}":v for k, v in trial.params.items()})
 
             mlflow.log_metric(f"trial_{trial.number}_accuracy", trial.values[0])
@@ -128,12 +131,14 @@ class Hyperparam_Optimizer:
         return updated_variable_parameters
 
     def minimize(self):
-        self.study.optimize(self.run_trial, n_trials=self.n_trials)
+        with ProcessPoolExecutor(max_workers=len(self.studies)) as pool:
+            futures = []
+            for study in self.studies:
+                futures.append(pool.submit(study.optimize, self.run_trial, n_trials=self.n_trials))
 
-    def run_trial(self, trial=None):
-        if trial is None:
-            trial = self.study.ask()
-
+            wait(futures)
+            
+    def run_trial(self, trial):
         updated_variable_model_parameters = self.update_variable_parameters(
             trial, self.variable_model_parameters
         )

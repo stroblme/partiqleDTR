@@ -76,12 +76,13 @@ backend: "aer_simulator" # aer_simulator, aer_simulator_statevector, ibm_perth
 quantum_optimizer:
 
 # Optuna
-n_trials: 10
+n_trials: 20
 timeout: 10800 #30h
 optuna_path: "studies/partiqledtr.db"
 optuna_sampler_seed: 1111
 selective_optimization: False
 resume_study: False
+n_jobs: 2
 
 # PyTorch
 detect_anomaly: False # enables torch' anomaly detector
