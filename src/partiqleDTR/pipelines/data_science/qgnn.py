@@ -256,9 +256,9 @@ class qgnn(nn.Module):
 
         x = self.quantum_layer(x)
 
-        if self.evaluation_timestamp is not None:
-            print(f"Duration: {time.time()-self.evaluation_timestamp}")
-        self.evaluation_timestamp = time.time()
+        # if self.evaluation_timestamp is not None:
+        #     print(f"Duration: {time.time()-self.evaluation_timestamp}")
+        # self.evaluation_timestamp = time.time()
 
         if self.measurement == "mutually_exclusive":
             x = get_binary_shots(
