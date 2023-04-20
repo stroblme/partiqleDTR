@@ -134,7 +134,8 @@ def create_hyperparam_optimizer(
     timeout: int,
     optuna_path: str,
     optuna_sampler_seed: int,
-    selective_optimization: bool
+    selective_optimization: bool,
+    resume_study: bool
 ) -> Hyperparam_Optimizer:
 
     if "q" in model_sel:
@@ -149,7 +150,8 @@ def create_hyperparam_optimizer(
         timeout=timeout,
         path=optuna_path,
         selective_optimization=selective_optimization,
-        toggle_classical_quant=toggle_classical_quant
+        toggle_classical_quant=toggle_classical_quant,
+        resume_study=resume_study
     )
 
     hyperparam_optimizer.set_variable_parameters(

@@ -185,6 +185,7 @@ def create_training_optuna_pipeline(**kwargs) -> Pipeline:
                     "optuna_path": "params:optuna_path",
                     "optuna_sampler_seed": "params:optuna_sampler_seed",
                     "selective_optimization": "params:selective_optimization"
+                    "resume_study": "params:resume_study"
                 },
                 outputs={"hyperparam_optimizer": "hyperparam_optimizer"},
                 name="create_instructor",

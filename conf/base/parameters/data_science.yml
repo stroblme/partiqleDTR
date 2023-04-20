@@ -81,6 +81,7 @@ timeout: 3600 #10h
 optuna_path: "studies/partiqledtr.db"
 optuna_sampler_seed: 1111
 selective_optimization: False
+resume_study: False
 
 # PyTorch
 detect_anomaly: False # enables torch' anomaly detector

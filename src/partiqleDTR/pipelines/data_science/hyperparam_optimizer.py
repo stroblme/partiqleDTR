@@ -7,7 +7,7 @@ import mlflow
 
 class Hyperparam_Optimizer:
     def __init__(
-        self, name: str, seed: int, path:str, n_trials: int, timeout: int, selective_optimization:bool=False, toggle_classical_quant:bool=False
+        self, name: str, seed: int, path:str, n_trials: int, timeout: int, selective_optimization:bool=False, toggle_classical_quant:bool=False, resume_study:bool=False
     ):
         # storage = self.initialize_storage(host, port, path, password)
 
@@ -25,7 +25,7 @@ class Hyperparam_Optimizer:
             pruner=pruner,
             sampler=sampler,
             directions=["maximize", "minimize", "maximize"],
-            load_if_exists=False,
+            load_if_exists=resume_study,
             study_name=name,
             storage=f"sqlite:///{path}",
         )
