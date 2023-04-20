@@ -224,7 +224,7 @@ def create_hyperparam_optimizer(
 
     hyperparam_optimizer.create_model = create_model
     hyperparam_optimizer.create_instructor = create_instructor
-    hyperparam_optimizer.objective = train
+    hyperparam_optimizer.objective = train_optuna
 
     return {"hyperparam_optimizer": hyperparam_optimizer}
 
@@ -233,7 +233,7 @@ def train_optuna(hyperparam_optimizer: Hyperparam_Optimizer):
 
     hyperparam_optimizer.minimize()
 
-    artifacts = hyperparam_optimizer.log_study()
+    # artifacts = hyperparam_optimizer.log_study()
 
     return {}
     
@@ -380,4 +380,14 @@ def train(instructor: Instructor, start_epoch=1, enabled_modes=["train", "val"])
         'trained_model': result['trained_model'],
         'checkpoint': result['checkpoint'],
         'gradients': result['gradients']
+    }
+
+def train_optuna(instructor: Instructor, start_epoch=1, enabled_modes=["train", "val"]):
+
+    result = instructor.train(
+        start_epoch=start_epoch, enabled_modes=enabled_modes
+    )  # returns a dict of e.g. the model, checkpoints and the gradients
+
+    return {
+        'metrics': result['metrics']
     }

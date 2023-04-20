@@ -65,12 +65,13 @@ class Hyperparam_Optimizer:
         return False
 
     def log_study(self):
-        for trial in self.studies.best_trials:
-            mlflow.log_params({f"trial_{trial.number}_{k}":v for k, v in trial.params.items()})
+        for study in self.studies:
+            for trial in study.best_trials:
+                mlflow.log_params({f"trial_{trial.number}_{k}":v for k, v in trial.params.items()})
 
-            mlflow.log_metric(f"trial_{trial.number}_accuracy", trial.values[0])
-            mlflow.log_metric(f"trial_{trial.number}_loss", trial.values[1])
-            mlflow.log_metric(f"trial_{trial.number}_perfect_lcag", trial.values[2])
+                mlflow.log_metric(f"trial_{trial.number}_accuracy", trial.values[0])
+                mlflow.log_metric(f"trial_{trial.number}_loss", trial.values[1])
+                mlflow.log_metric(f"trial_{trial.number}_perfect_lcag", trial.values[2])
 
 
     def update_variable_parameters(self, trial, parameters):
