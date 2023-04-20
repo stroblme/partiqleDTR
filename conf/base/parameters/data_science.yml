@@ -7,23 +7,23 @@ default_modes: ["train", "val"]
 validation_mode: ["val"]
 
 # Classical
-epochs: 10
+epochs: 6
 normalize: "smartone" # one, smartone, zmuv
 normalize_individually: False
 zero_mean: False
 dim_feedforward: 16 #32
-dim_feedforward_range: [8, 16, 32, 64, 128] # must be an even number
+dim_feedforward_range: [8, 16, 32, 64] # must be an even number
 batchnorm: True
 
 dropout_rate: 0.45 #0.2
 dropout_rate_range: [0.05, 0.5, "linear"]
 learning_rate: 0.0026 #0.001
-learning_rate_range: [0.00001, 0.1, "log"]
+learning_rate_range: [0.0001, 0.1, "log"]
 learning_rate_decay: 4 #100
-learning_rate_decay_range: [1, 1000, "log"]
+learning_rate_decay_range: [1, 400, "log"]
 gamma: 0.5
 batch_size: 4 #8
-batch_size_range: [1, 2, 4, 8, 16, 32, 64]
+batch_size_range: [1, 2, 4, 8, 16, 32]
 gradients_clamp: 1000
 gradients_spreader: 1e-10
 classical_optimizer: "Adam"
@@ -59,7 +59,7 @@ n_layers_vqc_range_quant: [1, 5, "linear"]
 gradient_curvature_threshold: 1e-10
 gradient_curvature_threshold_range_quant: [1e-12, 1e-11, 1e-10, 1e-9]
 gradient_curvature_history: 0  # set to 0 to disable gradient curvature/ parameter pruning
-gradient_curvature_history_range_quant: [1, 5, "linear"]  # set to 0 to disable gradient curvature/ parameter pruning
+gradient_curvature_history_range_quant: [2, 3, 4, 5]  # set to 0 to disable gradient curvature/ parameter pruning
 initialization_constant: 1 # this scales the interval [-a pi .. a pi]
 initialization_constant_range_quant: [0.1, 1.0, "linear"]  # this scales the interval [-a pi .. a pi]
 initialization_offset: 0 # this offsets the with a factor pi
@@ -76,7 +76,7 @@ backend: "aer_simulator" # aer_simulator, aer_simulator_statevector, ibm_perth
 quantum_optimizer:
 
 # Optuna
-n_trials: 300
+n_trials: 10
 timeout: 3600 #10h
 optuna_path: "studies/partiqledtr.db"
 optuna_sampler_seed: 1111
