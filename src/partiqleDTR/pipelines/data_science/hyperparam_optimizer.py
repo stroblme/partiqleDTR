@@ -73,15 +73,14 @@ class Hyperparam_Optimizer:
     def update_variable_parameters(self, trial, parameters):
         updated_variable_parameters = dict()
         for parameter, value in parameters.items():
-            if self.selective_optimization:
-                if "_range_quant" in parameter:
-                    if not self.toggle_classical_quant:
-                        continue # continue if its a quantum parameter and we are classical
-                    param_name = parameter.replace("_range_quant", "")
-                else:
-                    if self.toggle_classical_quant:
-                        continue # continue if its a classical parameter and we are quantum
-                    param_name = parameter.replace("_range", "")
+            if "_range_quant" in parameter:
+                if not self.toggle_classical_quant and self.selective_optimization:
+                    continue # continue if its a quantum parameter and we are classical
+                param_name = parameter.replace("_range_quant", "")
+            else:
+                if self.toggle_classical_quant and self.selective_optimization:
+                    continue # continue if its a classical parameter and we are quantum
+                param_name = parameter.replace("_range", "")
 
 
             assert isinstance(value, List)
