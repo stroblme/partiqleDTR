@@ -59,7 +59,7 @@ n_layers_vqc_range_quant: [1, 5, "linear"]
 gradient_curvature_threshold: 1e-10
 gradient_curvature_threshold_range_quant: [1e-12, 1e-11, 1e-10, 1e-9]
 gradient_curvature_history: 0  # set to 0 to disable gradient curvature/ parameter pruning
-gradient_curvature_history_range_quant: [2, 3, 4, 5]  # set to 0 to disable gradient curvature/ parameter pruning
+gradient_curvature_history_range_quant: [0, 2, 3, 4, 5]  # set to 0 to disable gradient curvature/ parameter pruning
 initialization_constant: 1 # this scales the interval [-a pi .. a pi]
 initialization_constant_range_quant: [0.1, 1.0, "linear"]  # this scales the interval [-a pi .. a pi]
 initialization_offset: 0 # this offsets the with a factor pi
