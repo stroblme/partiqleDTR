@@ -134,6 +134,7 @@ def create_hyperparam_optimizer(
     timeout: int,
     optuna_path: str,
     optuna_sampler_seed: int,
+    selective_optimization: bool
 ) -> Hyperparam_Optimizer:
 
     if "q" in model_sel:
@@ -147,6 +148,7 @@ def create_hyperparam_optimizer(
         n_trials=n_trials,
         timeout=timeout,
         path=optuna_path,
+        selective_optimization=selective_optimization,
         toggle_classical_quant=toggle_classical_quant
     )
 
@@ -370,4 +372,8 @@ def train(instructor: Instructor, start_epoch=1, enabled_modes=["train", "val"])
         start_epoch=start_epoch, enabled_modes=enabled_modes
     )  # returns a dict of e.g. the model, checkpoints and the gradients
 
-    return result
+    return {
+        'trained_model': result['trained_model'],
+        'checkpoint': result['checkpoint'],
+        'gradients': result['gradients']
+    }
