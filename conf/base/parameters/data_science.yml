@@ -68,7 +68,7 @@ parameter_seed: 1111
 padding_dropout: False
 
 predefined_vqc: "circuit_19" # "", "circuit_191", "circuit_192", "circuit_19", .. tba.
-predefined_vqc_range_quant: ["circuit_191", "circuit_192", "circuit_19", "circuit_18", "circuit_17", "circuit_16"]
+predefined_vqc_range_quant: ["circuit_191", "circuit_19", "circuit_18", "circuit_17", "circuit_16"]
 
 predefined_iec: "direct_mapping" 
 measurement: "entangled" # mutually_exclusive, all, entangled
