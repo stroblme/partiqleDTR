@@ -77,7 +77,7 @@ quantum_optimizer:
 
 # Optuna
 n_trials: 10
-timeout: 3600 #10h
+timeout: 10800 #30h
 optuna_path: "studies/partiqledtr.db"
 optuna_sampler_seed: 1111
 selective_optimization: False
