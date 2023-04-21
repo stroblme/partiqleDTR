@@ -14,7 +14,7 @@ class Hyperparam_Optimizer:
         pruner = o.pruners.NopPruner()
         # pruner = o.pruners.PercentilePruner(10.0, n_warmup_steps=2, n_startup_trials=20)
 
-        sampler = o.samplers.TPESampler(seed=seed, multivariate=True)
+        sampler = o.samplers.TPESampler(seed=seed, multivariate=True, constant_liar=True)
 
         self.n_trials = n_trials
         self.timeout = timeout
