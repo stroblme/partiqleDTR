@@ -137,6 +137,7 @@ def create_hyperparam_optimizer(
     selective_optimization: bool,
     resume_study: bool,
     n_jobs: int,
+    run_id: str,
 ) -> Hyperparam_Optimizer:
 
     if "q" in model_sel:
@@ -144,8 +145,13 @@ def create_hyperparam_optimizer(
     else:
         toggle_classical_quant = False
 
+    if run_id is None:
+        name = mlflow.active_run().info.run_id
+    else:
+        name = run_id
+
     hyperparam_optimizer = Hyperparam_Optimizer(
-        name=mlflow.active_run().info.run_id,
+        name=name,
         seed=optuna_sampler_seed,
         n_trials=n_trials,
         timeout=timeout,

@@ -1,13 +1,13 @@
 ---
 # General
-model_sel: "qgnn" # qmlp, qftgnn, qgnn
+model_sel: "gnn" # qmlp, qftgnn, qgnn
 post_model_sel: "pqgnn" # only for split training
 n_momenta: 4
 default_modes: ["train", "val"]
 validation_mode: ["val"]
 
 # Classical
-epochs: 6
+epochs: 1
 normalize: "smartone" # one, smartone, zmuv
 normalize_individually: False
 zero_mean: False
@@ -76,13 +76,14 @@ backend: "aer_simulator" # aer_simulator, aer_simulator_statevector, ibm_perth
 quantum_optimizer:
 
 # Optuna
-n_trials: 45
+n_trials: 4
 timeout: 10800 #30h
 optuna_path: "studies/partiqledtr.db"
-optuna_sampler_seed: 1111
+optuna_sampler_seed: 
 selective_optimization: False
 resume_study: False
-n_jobs: 15
+n_jobs: 2
+run_id: 
 
 # PyTorch
 detect_anomaly: False # enables torch' anomaly detector
