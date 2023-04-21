@@ -229,7 +229,7 @@ def create_hyperparam_optimizer(
     return {"hyperparam_optimizer": hyperparam_optimizer}
 
 
-def train_optuna(hyperparam_optimizer: Hyperparam_Optimizer):
+def run_optuna(hyperparam_optimizer: Hyperparam_Optimizer):
 
     hyperparam_optimizer.minimize()
 

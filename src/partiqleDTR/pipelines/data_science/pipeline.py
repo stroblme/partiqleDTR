@@ -192,14 +192,11 @@ def create_training_optuna_pipeline(**kwargs) -> Pipeline:
                 name="create_instructor",
             ),
             node(
-                func=train_optuna,
-                inputs={
-                    "instructor": "instructor",
-                    "enabled_modes": "params:default_modes",
-                },
+                func=run_optuna,
+                inputs={"hyperparam_optimizer": "hyperparam_optimizer"},
                 outputs={
                 },
-                name="train_optuna",
+                name="run_optuna",
             ),
         ]
     )
