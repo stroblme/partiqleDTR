@@ -1,44 +1,44 @@
 ---
 # General
-model_sel: "gnn" # qmlp, qftgnn, qgnn
+model_sel: "qgnn" # qmlp, qftgnn, qgnn
 post_model_sel: "pqgnn" # only for split training
 n_momenta: 4
 default_modes: ["train", "val"]
 validation_mode: ["val"]
 
 # Classical
-epochs: 1
+epochs: 10
 normalize: "smartone" # one, smartone, zmuv
 normalize_individually: False
 zero_mean: False
-dim_feedforward: 16 #32
+dim_feedforward: 64 #32
 dim_feedforward_range: [8, 16, 32, 64] # must be an even number
 batchnorm: True
 
-dropout_rate: 0.45 #0.2
+dropout_rate: 0.15 #0.2
 dropout_rate_range: [0.05, 0.5, "linear"]
-learning_rate: 0.0026 #0.001
+learning_rate: 0.018 #0.001
 learning_rate_range: [0.0001, 0.1, "log"]
-learning_rate_decay: 4 #100
+learning_rate_decay: 132 #100
 learning_rate_decay_range: [1, 400, "log"]
 gamma: 0.5
-batch_size: 4 #8
+batch_size: 16 #8
 batch_size_range: [1, 2, 4, 8, 16, 32]
 gradients_clamp: 1000
 gradients_spreader: 1e-10
 classical_optimizer: "Adam"
 
 # GNN
-n_blocks: 1 #3
+n_blocks: 2 #3
 n_blocks_range: [1, 5, "linear"]
 
-n_layers_mlp: 2 # initial mlp layers before the blocks
+n_layers_mlp: 3 # initial mlp layers before the blocks
 n_layers_mlp_range: [1, 5, "linear"]
 
-n_additional_mlp_layers: 3 #0 # additional layers within a block
+n_additional_mlp_layers: 2 #0 # additional layers within a block
 n_additional_mlp_layers_range: [1, 5, "linear"]
 
-n_final_mlp_layers: 4 #2 # layers after the blocks
+n_final_mlp_layers: 5 #2 # layers after the blocks
 n_final_mlp_layers_range: [1, 5, "linear"]
 
 symmetrize: True
@@ -46,23 +46,23 @@ skip_block: True # activates skip connections on local scales
 skip_global: True # activates skip connections on global scales
 
 # Quantum
-data_reupload: True
+data_reupload: False
 data_reupload_range_quant: [True, False]
 add_rot_gates: True
 add_rot_gates_range_quant: [True, False]
 
-n_shots: 2048
+n_shots: 1024
 n_shots_range_quant: [512, 1024, 2048, 4096]
 
-n_layers_vqc: 3
+n_layers_vqc: 1
 n_layers_vqc_range_quant: [1, 5, "linear"]
 gradient_curvature_threshold: 1e-10
 gradient_curvature_threshold_range_quant: [1e-12, 1e-11, 1e-10, 1e-9]
-gradient_curvature_history: 0  # set to 0 to disable gradient curvature/ parameter pruning
+gradient_curvature_history: 5  # set to 0 to disable gradient curvature/ parameter pruning
 gradient_curvature_history_range_quant: [0, 2, 3, 4, 5]  # set to 0 to disable gradient curvature/ parameter pruning
-initialization_constant: 1 # this scales the interval [-a pi .. a pi]
+initialization_constant: 0.8 # this scales the interval [-a pi .. a pi]
 initialization_constant_range_quant: [0.1, 1.0, "linear"]  # this scales the interval [-a pi .. a pi]
-initialization_offset: 0 # this offsets the with a factor pi
+initialization_offset: 2 # this offsets the with a factor pi
 initialization_offset_range_quant: [0, 0.5, 1, 2] # this offsets the with a factor pi
 parameter_seed: 1111
 padding_dropout: False
@@ -76,14 +76,14 @@ backend: "aer_simulator" # aer_simulator, aer_simulator_statevector, ibm_perth
 quantum_optimizer:
 
 # Optuna
-n_trials: 4
+n_trials: 20
 timeout: 10800 #30h
 optuna_path: "studies/partiqledtr.db"
 optuna_sampler_seed: 
 selective_optimization: False
-resume_study: False
-n_jobs: 2
-run_id: 
+resume_study: True
+n_jobs: 1
+run_id: "OptunaOptimization#005"
 
 # PyTorch
 detect_anomaly: False # enables torch' anomaly detector
