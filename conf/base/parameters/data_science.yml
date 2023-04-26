@@ -52,7 +52,7 @@ add_rot_gates: True
 add_rot_gates_range_quant: [True, False]
 
 n_shots: 1024
-n_shots_range_quant: [512, 1024, 2048, 4096]
+n_shots_range_quant: [16, 64, 256, 1024, 2048]
 
 n_layers_vqc: 2
 n_layers_vqc_range_quant: [1, 5, "linear"]
