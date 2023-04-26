@@ -215,7 +215,7 @@ class Instructor:
         data: dict,
         learning_rate: float,
         learning_rate_decay: int,
-        gamma: float,
+        decay_after: float,
         batch_size: int,
         epochs: int,
         normalize: str,
@@ -234,6 +234,7 @@ class Instructor:
         gradient_curvature_threshold=1e-10,
         gradient_curvature_history=2,
         quantum_optimizer=None,
+        quantum_momentum: float=None,
         quantum_learning_rate: float=None,
         quantum_learning_rate_decay: int=None,
         classical_optimizer="Adam",
@@ -310,20 +311,27 @@ class Instructor:
             except AttributeError:
                 raise AttributeError(f"Did not found {quantum_optimizer}")
         
+            if quantum_momentum is not None:
+                q_optim = sel_q_optim(
+                        self.model.quantum_layer.parameters(), lr=quantum_learning_rate, momentum=quantum_momentum
+                    )
+            else:
+                q_optim = sel_q_optim(
+                        self.model.quantum_layer.parameters(), lr=quantum_learning_rate,
+                    )
+                    
             self.optimizer = SplitOptimizer(
-                sel_q_optim(
-                    self.model.quantum_layer.parameters(), lr=quantum_learning_rate, amsgrad=False
-                ),
+                q_optim,
                 sel_c_optim(
-                    self.model.gnn.parameters(), lr=learning_rate, amsgrad=False
+                    self.model.gnn.parameters(), lr=learning_rate
                 )
             )
             self.scheduler = SplitScheduler(
                 StepLR(
-                    self.optimizer.optimizers[0], step_size=quantum_learning_rate_decay, gamma=gamma
+                    self.optimizer.optimizers[0], step_size=decay_after, gamma=quantum_learning_rate_decay
                 ),
                 StepLR(
-                    self.optimizer.optimizers[1], step_size=learning_rate_decay, gamma=gamma
+                    self.optimizer.optimizers[1], step_size=decay_after, gamma=learning_rate_decay
                 )
             )
         else:
@@ -336,7 +344,7 @@ class Instructor:
                 self.model.parameters(), lr=learning_rate, amsgrad=False
             )
             self.scheduler = StepLR(
-                self.optimizer, step_size=learning_rate_decay, gamma=gamma
+                self.optimizer, step_size=learning_rate_decay, decay_after=decay_after
             ) # use secheduling only for the classical optim
 
         if self.model._get_name() == "qgnn":
