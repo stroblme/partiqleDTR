@@ -4,10 +4,12 @@ from typing import List, Dict
 import time
 import mlflow
 from concurrent.futures import ProcessPoolExecutor, wait
+from joblib import parallel_backend
+
 
 class Hyperparam_Optimizer:
     def __init__(
-        self, name: str, seed: int, path:str, n_trials: int, timeout: int, n_jobs: int=1, selective_optimization:bool=False, toggle_classical_quant:bool=False, resume_study:bool=False
+        self, name: str, seed: int, path:str, n_trials: int, timeout: int, n_jobs: int=1, selective_optimization:bool=False, toggle_classical_quant:bool=False, resume_study:bool=False, pool_process=True
     ):
         # storage = self.initialize_storage(host, port, path, password)
 
@@ -20,10 +22,16 @@ class Hyperparam_Optimizer:
         self.timeout = timeout
         self.toggle_classical_quant = toggle_classical_quant
         self.selective_optimization = selective_optimization
+        self.pool_process = pool_process
 
         self.studies = []
-        for jobs in range(n_jobs):
-            resume_study = resume_study or (n_jobs > 1 and jobs != 0)
+        self.n_jobs = n_jobs
+
+        n_studies = self.n_jobs if self.pool_process else 1
+        
+        for jobs in range(n_studies):
+            resume_study = resume_study or (n_studies > 1 and n_studies != 0)
+
             self.studies.append(o.create_study(
                 pruner=pruner,
                 sampler=sampler,
@@ -32,6 +40,7 @@ class Hyperparam_Optimizer:
                 study_name=name,
                 storage=f"sqlite:///{path}",
             ))
+
             set_objective_names(self.studies[-1], ["Accuracy", "Loss", "Perfect LCAG"])
 
     def set_variable_parameters(self, model_parameters, instructor_parameters):
@@ -132,12 +141,16 @@ class Hyperparam_Optimizer:
         return updated_variable_parameters
 
     def minimize(self):
-        with ProcessPoolExecutor(max_workers=len(self.studies)) as pool:
-            futures = []
-            for study in self.studies:
-                futures.append(pool.submit(study.optimize, self.run_trial, n_trials=self.n_trials))
+        if self.pool_process:
+            with ProcessPoolExecutor(max_workers=len(self.studies)) as pool:
+                futures = []
+                for study in self.studies:
+                    futures.append(pool.submit(study.optimize, self.run_trial, n_trials=self.n_trials))
 
-            wait(futures)
+                wait(futures)
+        else:
+            with parallel_backend('multiprocessing'):
+                self.studies[0].optimize(self.run_trial, n_trials=self.n_trials, n_jobs=self.n_jobs)
             
     def run_trial(self, trial):
         updated_variable_model_parameters = self.update_variable_parameters(

@@ -174,6 +174,13 @@ def get_mlflow_metric(key, return_type: type, formatting: str = None):
     return result
 
 
+class SplitScheduler(object):
+    def __init__(self, *sd):
+        self.schedulers = sd
+
+    def step(self):
+        for sd in self.schedulers:
+            sd.step()
 class SplitOptimizer(object):
     def __init__(self, *op):
         self.optimizers = op
@@ -208,7 +215,7 @@ class Instructor:
         data: dict,
         learning_rate: float,
         learning_rate_decay: int,
-        gamma: float,
+        decay_after: float,
         batch_size: int,
         epochs: int,
         normalize: str,
@@ -226,8 +233,11 @@ class Instructor:
         torch_seed=1111,
         gradient_curvature_threshold=1e-10,
         gradient_curvature_history=2,
-        quantum_optimizer="Adam",
-        classical_optimizer=None,
+        quantum_optimizer=None,
+        quantum_momentum: float=None,
+        quantum_learning_rate: float=None,
+        quantum_learning_rate_decay: int=None,
+        classical_optimizer="Adam",
         model_state_dict=None,
         optimizer_state_dict=None,
         report_callback=None,
@@ -301,28 +311,40 @@ class Instructor:
             except AttributeError:
                 raise AttributeError(f"Did not found {quantum_optimizer}")
         
+            if quantum_momentum is not None:
+                q_optim = sel_q_optim(
+                        self.model.quantum_layer.parameters(), lr=quantum_learning_rate, momentum=quantum_momentum
+                    )
+            else:
+                q_optim = sel_q_optim(
+                        self.model.quantum_layer.parameters(), lr=quantum_learning_rate,
+                    )
+                    
             self.optimizer = SplitOptimizer(
-                sel_q_optim(
-                    self.model.quantum_layer.parameters(), lr=learning_rate, amsgrad=False
-                ),
+                q_optim,
                 sel_c_optim(
-                    self.model.gnn.parameters(), lr=learning_rate, amsgrad=False
+                    self.model.gnn.parameters(), lr=learning_rate
                 )
             )
-            self.scheduler = StepLR(
-                self.optimizer.optimizers[1], step_size=learning_rate_decay, gamma=gamma
-            ) # use secheduling only for the classical optim
+            self.scheduler = SplitScheduler(
+                StepLR(
+                    self.optimizer.optimizers[0], step_size=decay_after, gamma=quantum_learning_rate_decay
+                ),
+                StepLR(
+                    self.optimizer.optimizers[1], step_size=decay_after, gamma=learning_rate_decay
+                )
+            )
         else:
             try:
                 sel_optim = getattr(t.optim, quantum_optimizer or classical_optimizer)
             except AttributeError:
-                raise AttributeError(f"Did not found {quantum_optimizer}")
+                raise AttributeError(f"Did not found {quantum_optimizer or classical_optimizer}")
 
             self.optimizer = sel_optim(
                 self.model.parameters(), lr=learning_rate, amsgrad=False
             )
             self.scheduler = StepLR(
-                self.optimizer, step_size=learning_rate_decay, gamma=gamma
+                self.optimizer, step_size=learning_rate_decay, decay_after=decay_after
             ) # use secheduling only for the classical optim
 
         if self.model._get_name() == "qgnn":
@@ -629,8 +651,8 @@ class Instructor:
                         mlflow.log_metric(
                             key=f"{mode}_perfect_lcag", value=epoch_perfect_lcag, step=epoch
                         )
-                    # learning rate scheduling
-                    self.scheduler.step()
+                # learning rate scheduling after epoch
+                self.scheduler.step()
 
             error_raised = False
 

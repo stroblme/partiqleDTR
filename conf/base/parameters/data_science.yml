@@ -7,7 +7,7 @@ default_modes: ["train", "val"]
 validation_mode: ["val"]
 
 # Classical
-epochs: 10
+epochs: 8
 normalize: "smartone" # one, smartone, zmuv
 normalize_individually: False
 zero_mean: False
@@ -16,17 +16,17 @@ dim_feedforward_range: [8, 16, 32, 64] # must be an even number
 batchnorm: True
 
 dropout_rate: 0.05 #0.2
+classical_optimizer: "Adam"
 dropout_rate_range: [0.05, 0.5, "linear"]
 learning_rate: 0.008 #0.001
-learning_rate_range: [0.0001, 0.1, "log"]
-learning_rate_decay: 44 #100
-learning_rate_decay_range: [1, 400, "log"]
-gamma: 0.5
+learning_rate_range: [0.001, 0.1, "log"]
+learning_rate_decay: 0.5 #100
+learning_rate_decay_range: [0.01, 1.0, "log"]
+decay_after: 3
 batch_size: 16 #8
 batch_size_range: [1, 2, 4, 8, 16, 32]
 gradients_clamp: 1000
 gradients_spreader: 1e-10
-classical_optimizer: "Adam"
 
 # GNN
 n_blocks: 3 #3
@@ -52,18 +52,18 @@ add_rot_gates: True
 add_rot_gates_range_quant: [True, False]
 
 n_shots: 1024
-n_shots_range_quant: [512, 1024, 2048, 4096]
+n_shots_range_quant: [16, 64, 256, 1024, 2048]
 
 n_layers_vqc: 2
-n_layers_vqc_range_quant: [1, 5, "linear"]
+n_layers_vqc_range_quant: [1, 3, "linear"]
 gradient_curvature_threshold: 1e-10
 gradient_curvature_threshold_range_quant: [1e-12, 1e-11, 1e-10, 1e-9]
 gradient_curvature_history: 5  # set to 0 to disable gradient curvature/ parameter pruning
-gradient_curvature_history_range_quant: [0, 2, 3, 4, 5]  # set to 0 to disable gradient curvature/ parameter pruning
-initialization_constant: 0.8 # this scales the interval [-a pi .. a pi]
-initialization_constant_range_quant: [0.1, 1.0, "linear"]  # this scales the interval [-a pi .. a pi]
-initialization_offset: 2 # this offsets the with a factor pi
-initialization_offset_range_quant: [0, 0.5, 1, 2] # this offsets the with a factor pi
+gradient_curvature_history_range_quant: [0, 2, 4, 6, 8]  # set to 0 to disable gradient curvature/ parameter pruning
+initialization_constant: 1 # this scales the interval [-a pi .. a pi]
+# initialization_constant_range_quant: [0.1, 1.0, "linear"]  # this scales the interval [-a pi .. a pi]
+initialization_offset: 0 # this offsets the with a factor pi
+# initialization_offset_range_quant: [0, 0.5, 1, 2] # this offsets the with a factor pi
 parameter_seed: 1111
 padding_dropout: False
 
@@ -73,17 +73,22 @@ predefined_vqc_range_quant: ["circuit_191", "circuit_19", "circuit_18", "circuit
 predefined_iec: "direct_mapping" 
 measurement: "entangled" # mutually_exclusive, all, entangled
 backend: "aer_simulator" # aer_simulator, aer_simulator_statevector, ibm_perth
-quantum_optimizer:
+quantum_optimizer: "Adam" #SGD, Adam
+quantum_momentum: #0.9 #0.001
+quantum_learning_rate: 0.01 #0.001
+quantum_learning_rate_range_quant: [0.001, 0.1, "log"]
+quantum_learning_rate_decay: 0.5 #100
+quantum_learning_rate_decay_range_quant: [0.01, 1.0, "log"]
 
 # Optuna
 n_trials: 20
 timeout: 10800 #30h
 optuna_path: "studies/partiqledtr.db"
-optuna_sampler_seed: 
-selective_optimization: False
-resume_study: True
+optuna_sampler_seed:  # should be None, if n_jobs=1 and separate processes are triggered from console
+selective_optimization: False # if true, only optimize classical params
+resume_study: False
 n_jobs: 1
-run_id: "OptunaOptimization#006"
+run_id: "OptunaOptimization#007"
 
 # PyTorch
 detect_anomaly: False # enables torch' anomaly detector
