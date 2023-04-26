@@ -74,7 +74,7 @@ predefined_iec: "direct_mapping"
 measurement: "entangled" # mutually_exclusive, all, entangled
 backend: "aer_simulator" # aer_simulator, aer_simulator_statevector, ibm_perth
 quantum_optimizer: "Adam"
-quantum_learning_rate: 0.008 #0.001
+quantum_learning_rate: 0.01 #0.001
 quantum_learning_rate_range_quant: [0.0001, 0.1, "log"]
 quantum_learning_rate_decay: 44 #100
 quantum_learning_rate_decay_range_quant: [1, 400, "log"]
