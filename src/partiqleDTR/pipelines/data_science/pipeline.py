@@ -159,8 +159,8 @@ def create_training_optuna_pipeline(**kwargs) -> Pipeline:
                     "n_fsps": "n_fsps",
 
                     "device": "params:device",
-                    "initialization_constant_range_quant": "params:initialization_constant_range_quant",
-                    "initialization_offset_range_quant": "params:initialization_offset_range_quant",
+                    # "initialization_constant_range_quant": "params:initialization_constant_range_quant",
+                    # "initialization_offset_range_quant": "params:initialization_offset_range_quant",
                     "parameter_seed": "params:parameter_seed",
                     "dataset_lca_and_leaves": "dataset_lca_and_leaves",
                     "learning_rate_range": "params:learning_rate_range",
