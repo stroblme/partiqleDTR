@@ -330,7 +330,7 @@ class Instructor:
             try:
                 sel_optim = getattr(t.optim, quantum_optimizer or classical_optimizer)
             except AttributeError:
-                raise AttributeError(f"Did not found {quantum_optimizer}")
+                raise AttributeError(f"Did not found {quantum_optimizer or classical_optimizer}")
 
             self.optimizer = sel_optim(
                 self.model.parameters(), lr=learning_rate, amsgrad=False
