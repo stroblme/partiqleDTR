@@ -11,6 +11,8 @@ from torch.nn.functional import cross_entropy
 from torch.optim.lr_scheduler import StepLR
 from torch.utils.data import Dataset, DataLoader
 
+from optuna import TrialPruned
+
 import numpy as np
 
 import mlflow
@@ -360,7 +362,7 @@ class Instructor:
 
         self.detectAnomaly = detectAnomaly
 
-    def train(self, start_epoch=1, enabled_modes=["train", "val"]):
+    def train(self, trial=None, start_epoch=1, enabled_modes=["train", "val"]):
         t.autograd.set_detect_anomaly(self.detectAnomaly)
 
         if self.logging:
@@ -382,12 +384,22 @@ class Instructor:
         if self.log_gradients:
             all_grads = []
 
+        if not self.logging and trial is None:
+            log.warning(f"Logging is disabled and the provided trial is None. There will be NO RECORDINGS of this training!")
+
         error_raised = True
 
         try:  # catch things like gradient nan exceptions
+            ################################################################
+            # EPOCH LOOP
+
             for epoch in range(start_epoch, 1 + self.epochs):
                 logits_for_plotting = []
                 labels_for_plotting = []
+
+                ################################################################
+                # MODE LOOP
+
                 for mode in enabled_modes:
                     data_batch = DataLoader(
                         DataWrapper(
@@ -423,6 +435,10 @@ class Instructor:
                         log.info(
                             f"Running epoch {epoch} in mode {mode} over {len(data_batch)*self.batch_size} samples"
                         )
+
+                    ################################################################
+                    # DATA Loop
+
                     for i, (states, labels) in enumerate(data_batch):
                         sample_start = time.time()
                         states = [s.to(self.device) for s in states]
@@ -538,12 +554,11 @@ class Instructor:
                             labels_for_plotting.extend(
                                 [*labels]
                             )  # flatten along the batch size
-                        # if len(logits_for_plotting) > self.plotting_rows:
-                        #     selected_logits = [random.choice(logits_for_plotting).cpu() for i in range(self.plotting_rows)]
-                        #     selected_labels = [random.choice(labels_for_plotting) for i in range(self.plotting_rows)]
 
-                        #     c_plt = self.plotBatchGraphs(selected_logits, selected_labels, rows=self.plotting_rows, cols=2)
+                    # DATA Loop
+                    ################################################################
 
+                    # EPOCH METRIC calculation
                     epoch_loss /= len(
                         data_batch
                     )  # to the already scaled loss, apply the number of all iterations (no. of mini batches)
@@ -557,7 +572,7 @@ class Instructor:
                         data_batch
                     )  # to the already scaled perfect_lcag, apply the number of all iterations (no. of mini batches)
 
-                    # Plotting if improvement
+                    # do sth IF IMPROVEMENT
                     if epoch_acc > best_accuracy and mode == self.plot_mode:
                         # update the current best model when approaching a higher accuray
                         best_accuracy = epoch_acc
@@ -622,6 +637,7 @@ class Instructor:
                     if epoch_perfect_lcag > best_perfect_lcag and mode == self.plot_mode:
                         best_perfect_lcag = epoch_perfect_lcag
 
+                    # do sth WITH GRADIENTS
                     if self.log_gradients and mode == "train":
                         all_grads.append(
                             t.stack(epoch_grad)
@@ -639,7 +655,8 @@ class Instructor:
                                 selected_parameters
                             )
 
-                    if self.logging:
+                    # in-epoch LOGGING
+                    if self.logging:    # only if logging is enabled
                         mlflow.log_metric(key=f"{mode}_loss", value=epoch_loss, step=epoch)
                         mlflow.log_metric(
                             key=f"{mode}_accuracy", value=epoch_acc, step=epoch
@@ -650,8 +667,20 @@ class Instructor:
                         mlflow.log_metric(
                             key=f"{mode}_perfect_lcag", value=epoch_perfect_lcag, step=epoch
                         )
+                    elif trial is not None: # if logging is not enabled we are most likely in an optuna run, but check for the trial to be sure
+                        trial.report(epoch_acc, epoch) # trial.report is not supported for multi-objective study
+
+                        if trial.should_prune():
+                            raise TrialPruned()
+                        
+                    # MODE LOOP
+                    ################################################################
+
                 # learning rate scheduling after epoch
                 self.scheduler.step()
+
+                # EPOCH LOOP
+                ################################################################
 
             error_raised = False
 
