@@ -643,8 +643,8 @@ class Instructor:
                         mlflow.log_metric(
                             key=f"{mode}_perfect_lcag", value=epoch_perfect_lcag, step=epoch
                         )
-                    # learning rate scheduling
-                    self.scheduler.step()
+                # learning rate scheduling after epoch
+                self.scheduler.step()
 
             error_raised = False
 
