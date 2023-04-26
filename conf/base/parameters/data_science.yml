@@ -20,9 +20,9 @@ classical_optimizer: "Adam"
 dropout_rate_range: [0.05, 0.5, "linear"]
 learning_rate: 0.008 #0.001
 learning_rate_range: [0.0001, 0.1, "log"]
-learning_rate_decay: 44 #100
-learning_rate_decay_range: [1, 400, "log"]
-gamma: 0.5
+learning_rate_decay: 0.5 #100
+learning_rate_decay_range: [0.01, 1.0, "log"]
+decay_after: 3
 batch_size: 16 #8
 batch_size_range: [1, 2, 4, 8, 16, 32]
 gradients_clamp: 1000
@@ -73,21 +73,22 @@ predefined_vqc_range_quant: ["circuit_191", "circuit_19", "circuit_18", "circuit
 predefined_iec: "direct_mapping" 
 measurement: "entangled" # mutually_exclusive, all, entangled
 backend: "aer_simulator" # aer_simulator, aer_simulator_statevector, ibm_perth
-quantum_optimizer: "Adam"
+quantum_optimizer: "SGD" #SGD, Adam
+quantum_momentum: 0.9 #0.001
 quantum_learning_rate: 0.01 #0.001
 quantum_learning_rate_range_quant: [0.0001, 0.1, "log"]
-quantum_learning_rate_decay: 44 #100
-quantum_learning_rate_decay_range_quant: [1, 400, "log"]
+quantum_learning_rate_decay: 0.5 #100
+quantum_learning_rate_decay_range_quant: [0.01, 1.0, "log"]
 
 # Optuna
 n_trials: 20
 timeout: 10800 #30h
 optuna_path: "studies/partiqledtr.db"
-optuna_sampler_seed: 
-selective_optimization: False
-resume_study: True
+optuna_sampler_seed:  # should be None, if n_jobs=1 and separate processes are triggered from console
+selective_optimization: False # if true, only optimize classical params
+resume_study: False #True
 n_jobs: 1
-run_id: "OptunaOptimization#005"
+run_id: #"OptunaOptimization#005"
 
 # PyTorch
 detect_anomaly: False # enables torch' anomaly detector
