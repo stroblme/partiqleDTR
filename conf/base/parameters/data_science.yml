@@ -73,8 +73,8 @@ predefined_vqc_range_quant: ["circuit_191", "circuit_19", "circuit_18", "circuit
 predefined_iec: "direct_mapping" 
 measurement: "entangled" # mutually_exclusive, all, entangled
 backend: "aer_simulator" # aer_simulator, aer_simulator_statevector, ibm_perth
-quantum_optimizer: "SGD" #SGD, Adam
-quantum_momentum: 0.9 #0.001
+quantum_optimizer: "Adam" #SGD, Adam
+quantum_momentum: #0.9 #0.001
 quantum_learning_rate: 0.01 #0.001
 quantum_learning_rate_range_quant: [0.001, 0.1, "log"]
 quantum_learning_rate_decay: 0.5 #100
@@ -88,7 +88,7 @@ optuna_sampler_seed:  # should be None, if n_jobs=1 and separate processes are t
 selective_optimization: False # if true, only optimize classical params
 resume_study: True
 n_jobs: 1
-run_id: "OptunaOptimization#007"
+run_id: "OptunaOptimization#008"
 
 pool_process: True # alternative pool processing
 pruner_startup_trials: 10
