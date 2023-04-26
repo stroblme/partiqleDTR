@@ -174,6 +174,13 @@ def get_mlflow_metric(key, return_type: type, formatting: str = None):
     return result
 
 
+class SplitScheduler(object):
+    def __init__(self, *sd):
+        self.schedulers = sd
+
+    def step(self):
+        for sd in self.schedulers:
+            sd.step()
 class SplitOptimizer(object):
     def __init__(self, *op):
         self.optimizers = op
@@ -226,8 +233,10 @@ class Instructor:
         torch_seed=1111,
         gradient_curvature_threshold=1e-10,
         gradient_curvature_history=2,
-        quantum_optimizer="Adam",
-        classical_optimizer=None,
+        quantum_optimizer=None,
+        quantum_learning_rate: float=None,
+        quantum_learning_rate_decay: int=None,
+        classical_optimizer="Adam",
         model_state_dict=None,
         optimizer_state_dict=None,
         report_callback=None,
@@ -303,15 +312,20 @@ class Instructor:
         
             self.optimizer = SplitOptimizer(
                 sel_q_optim(
-                    self.model.quantum_layer.parameters(), lr=learning_rate, amsgrad=False
+                    self.model.quantum_layer.parameters(), lr=quantum_learning_rate, amsgrad=False
                 ),
                 sel_c_optim(
                     self.model.gnn.parameters(), lr=learning_rate, amsgrad=False
                 )
             )
-            self.scheduler = StepLR(
-                self.optimizer.optimizers[1], step_size=learning_rate_decay, gamma=gamma
-            ) # use secheduling only for the classical optim
+            self.scheduler = SplitScheduler(
+                StepLR(
+                    self.optimizer.optimizers[0], step_size=quantum_learning_rate_decay, gamma=gamma
+                ),
+                StepLR(
+                    self.optimizer.optimizers[1], step_size=learning_rate_decay, gamma=gamma
+                )
+            )
         else:
             try:
                 sel_optim = getattr(t.optim, quantum_optimizer or classical_optimizer)
