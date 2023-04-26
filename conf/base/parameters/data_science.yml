@@ -7,7 +7,7 @@ default_modes: ["train", "val"]
 validation_mode: ["val"]
 
 # Classical
-epochs: 8
+epochs: 10
 normalize: "smartone" # one, smartone, zmuv
 normalize_individually: False
 zero_mean: False
@@ -88,7 +88,7 @@ optuna_sampler_seed:  # should be None, if n_jobs=1 and separate processes are t
 selective_optimization: False # if true, only optimize classical params
 resume_study: True
 n_jobs: 1
-run_id: #"OptunaOptimization#007"
+run_id: "OptunaOptimization#008"
 
 pool_process: True # alternative pool processing
 pruner_startup_trials: 10
