@@ -9,11 +9,13 @@ from joblib import parallel_backend
 
 class Hyperparam_Optimizer:
     def __init__(
-        self, name: str, seed: int, path:str, n_trials: int, timeout: int, n_jobs: int=1, selective_optimization:bool=False, toggle_classical_quant:bool=False, resume_study:bool=False, pool_process=True
+        self, name: str, seed: int, path:str, n_trials: int, timeout: int, n_jobs: int=1, selective_optimization:bool=False, toggle_classical_quant:bool=False, resume_study:bool=False, pool_process=True, pruner_startup_trials=10, pruner_warmup_steps=5, pruner_interval_steps=1, pruner_min_trials=20
     ):
         # storage = self.initialize_storage(host, port, path, password)
 
-        pruner = o.pruners.NopPruner()
+        pruner=o.pruners.MedianPruner(
+            n_startup_trials=pruner_startup_trials, n_warmup_steps=pruner_warmup_steps, interval_steps=pruner_interval_steps, n_min_trials=pruner_min_trials
+        )
         # pruner = o.pruners.PercentilePruner(10.0, n_warmup_steps=2, n_startup_trials=20)
 
         sampler = o.samplers.TPESampler(seed=seed, multivariate=True, constant_liar=True)
@@ -29,19 +31,21 @@ class Hyperparam_Optimizer:
 
         n_studies = self.n_jobs if self.pool_process else 1
         
-        for jobs in range(n_studies):
-            resume_study = resume_study or (n_studies > 1 and n_studies != 0)
+        for n_it in range(n_studies):
+            resume_study = resume_study or (n_studies > 1 and n_it != 0)
 
             self.studies.append(o.create_study(
                 pruner=pruner,
                 sampler=sampler,
-                directions=["maximize", "minimize", "maximize"],
+                # directions=["maximize", "minimize", "maximize"],
+                direction="maximize",
                 load_if_exists=resume_study,
                 study_name=name,
                 storage=f"sqlite:///{path}",
             ))
 
-            set_objective_names(self.studies[-1], ["Accuracy", "Loss", "Perfect LCAG"])
+            # set_objective_names(self.studies[-1], ["Accuracy", "Loss", "Perfect LCAG"])
+            set_objective_names(self.studies[-1], ["Accuracy"])
 
     def set_variable_parameters(self, model_parameters, instructor_parameters):
         assert isinstance(model_parameters, Dict)
@@ -175,6 +179,7 @@ class Hyperparam_Optimizer:
         instructor_parameters["early_stop_callback"] = self.early_stop_callback
         instructor = self.create_instructor(**instructor_parameters)["instructor"]
 
-        metrics = self.objective(instructor)["metrics"]
+        metrics = self.objective(instructor, trial)["metrics"]
 
-        return [metrics["accuracy"], metrics["loss"], metrics["perfect_lcag"]]
+        return metrics["accuracy"]
+        # return [metrics["accuracy"], metrics["loss"], metrics["perfect_lcag"]]

@@ -137,6 +137,11 @@ def create_hyperparam_optimizer(
     timeout: int,
     optuna_path: str,
     optuna_sampler_seed: int,
+    pool_process: bool,
+    pruner_startup_trials: int,
+    pruner_warmup_steps: int,
+    pruner_interval_steps: int,
+    pruner_min_trials: int,
     selective_optimization: bool,
     resume_study: bool,
     n_jobs: int,
@@ -162,7 +167,12 @@ def create_hyperparam_optimizer(
         n_jobs=n_jobs,
         selective_optimization=selective_optimization,
         toggle_classical_quant=toggle_classical_quant,
-        resume_study=resume_study
+        resume_study=resume_study,
+        pool_process=pool_process,
+        pruner_startup_trials=pruner_startup_trials,
+        pruner_warmup_steps=pruner_warmup_steps,
+        pruner_interval_steps=pruner_interval_steps,
+        pruner_min_trials=pruner_min_trials
     )
 
     hyperparam_optimizer.set_variable_parameters(
@@ -402,9 +412,9 @@ def train(instructor: Instructor, start_epoch=1, enabled_modes=["train", "val"])
         'gradients': result['gradients']
     }
 
-def train_optuna(instructor: Instructor, start_epoch=1, enabled_modes=["train", "val"]):
+def train_optuna(instructor: Instructor, trial, start_epoch=1, enabled_modes=["train", "val"]):
 
-    result = instructor.train(
+    result = instructor.train(trial,
         start_epoch=start_epoch, enabled_modes=enabled_modes
     )  # returns a dict of e.g. the model, checkpoints and the gradients
 
