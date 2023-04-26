@@ -22,14 +22,13 @@ class Hyperparam_Optimizer:
         self.timeout = timeout
         self.toggle_classical_quant = toggle_classical_quant
         self.selective_optimization = selective_optimization
+        self.pool_process = pool_process
 
         self.studies = []
         self.n_jobs = n_jobs
         
-        n_studies = n_jobs if pool_process else 1
-
-        for jobs in range(n_studies):
-            resume_study = resume_study or (n_studies > 1 and n_studies != 0)
+        for jobs in range(self.n_jobs):
+            resume_study = resume_study or (self.n_jobs > 1 and self.n_jobs != 0)
 
             self.studies.append(o.create_study(
                 pruner=pruner,
@@ -140,6 +139,7 @@ class Hyperparam_Optimizer:
         return updated_variable_parameters
 
     def minimize(self):
+        self.pool_process = True
         if self.pool_process:
             with ProcessPoolExecutor(max_workers=len(self.studies)) as pool:
                 futures = []
