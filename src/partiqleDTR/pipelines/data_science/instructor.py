@@ -377,7 +377,7 @@ class Instructor:
             self.epochs = 1
 
         # TODO: logging gradients currently only enabled for qgnn
-        self.log_gradients = self.log_gradients and self.model._get_name() == "qgnn" and self.logging
+        self.log_gradients = self.log_gradients and self.model._get_name() == "qgnn"
 
         if self.log_gradients:
             all_grads = []
@@ -557,6 +557,7 @@ class Instructor:
                         data_batch
                     )  # to the already scaled perfect_lcag, apply the number of all iterations (no. of mini batches)
 
+                    # Plotting if improvement
                     if epoch_acc > best_accuracy and mode == self.plot_mode:
                         # update the current best model when approaching a higher accuray
                         best_accuracy = epoch_acc
@@ -616,10 +617,8 @@ class Instructor:
                             "model_state_dict": model_state_dict,
                             "optimizer_state_dict": optimizer_state_dict,
                         }
-
                     if epoch_loss < best_loss and mode == self.plot_mode:
                         best_loss = epoch_loss
-
                     if epoch_perfect_lcag > best_perfect_lcag and mode == self.plot_mode:
                         best_perfect_lcag = epoch_perfect_lcag
 
