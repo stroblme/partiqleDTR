@@ -399,7 +399,6 @@ class Instructor:
 
                 ################################################################
                 # MODE LOOP
-
                 for mode in enabled_modes:
                     data_batch = DataLoader(
                         DataWrapper(
@@ -686,6 +685,8 @@ class Instructor:
 
         except GradientsNanException as e:
             log.error(f"Gradients became NAN during training\n{traceback.print_exc()}")
+        except TrialPruned as e:
+            raise TrialPruned()
         except Exception as e:
             log.error(f"Exception occured during training\n{traceback.print_exc()}\n")
 
