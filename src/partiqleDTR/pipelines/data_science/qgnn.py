@@ -14,6 +14,7 @@ from .gnn import gnn
 from .custom_sampler_qnn import CustomSamplerQNN
 
 import qiskit as q
+from qiskit_aer import AerSimulator
 from qiskit.visualization import *
 from qiskit.primitives import BackendSampler
 from qiskit_machine_learning.connectors import TorchConnector
@@ -116,20 +117,7 @@ class qgnn(nn.Module):
 
         start = time.time()
 
-        if "simulator" not in backend:
-            from .ibmq_access import token, hub, group, project
-
-            log.info(
-                f"Searching for backend {backend} on IBMQ using token {token[:10]}****, hub {hub}, group {group} and project {project}"
-            )
-            self.provider = q.IBMQ.enable_account(
-                token=token,
-                hub=hub,
-                group=group,
-                project=project,
-            )
-            self.backend = self.provider.get_backend(backend)
-        else:
+        if "simulator" in backend:
             log.info(f"Using simulator backend {backend}")
             self.backend = q.Aer.get_backend(backend)
             # # self.backend = QasmSimulator()
@@ -148,6 +136,58 @@ class qgnn(nn.Module):
                 },
                 # skip_transpilation=False,
             )
+        elif "fake" in backend:
+            backend = backend.replace("fake_", "")
+            from .ibmq_access import token, hub, group, project
+
+            log.info(
+                f"Searching for backend {backend} on IBMQ using token {token[:10]}****, hub {hub}, group {group} and project {project}"
+            )
+            try:
+                self.provider = q.IBMQ.enable_account(
+                    token=token,
+                    hub=hub,
+                    group=group,
+                    project=project,
+                )
+            except:
+                try:
+                    self.provider = q.IBMQ.load_account()
+                except:
+                    log.error("Failed to load accounts")
+                    raise RuntimeError
+                    
+            device_backend = self.provider.get_backend(backend)
+            self.backend = AerSimulator.from_backend(device_backend)
+            # # self.backend = QasmSimulator()
+
+            # n_workers = 5
+            # exc = Client(address=LocalCluster(n_workers=n_workers, processes=True))
+            # # exc = ThreadPoolExecutor(max_workers=n_workers)
+            # # Set executor and max_job_size
+            # self.backend.set_options(executor=exc)
+            # self.backend.set_options(max_job_size=1) # see doc: https://qiskit.org/documentation/apidoc/parallel.html#usage-of-executor
+
+            bs = BackendSampler(
+                self.backend,
+                options={
+                    "shots": self.n_shots,
+                },
+                # skip_transpilation=False,
+            )
+        else:
+            from .ibmq_access import token, hub, group, project
+
+            log.info(
+                f"Searching for backend {backend} on IBMQ using token {token[:10]}****, hub {hub}, group {group} and project {project}"
+            )
+            self.provider = q.IBMQ.enable_account(
+                token=token,
+                hub=hub,
+                group=group,
+                project=project,
+            )
+            self.backend = self.provider.get_backend(backend)
 
         qnn = CustomSamplerQNN(
             circuit=self.qc,
