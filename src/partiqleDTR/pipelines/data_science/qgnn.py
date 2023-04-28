@@ -134,7 +134,6 @@ class qgnn(nn.Module):
                 options={
                     "shots": self.n_shots,
                 },
-                # skip_transpilation=False,
             )
         elif "fake" in backend:
             backend = backend.replace("fake_", "")
@@ -156,24 +155,15 @@ class qgnn(nn.Module):
                 except:
                     log.error("Failed to load accounts")
                     raise RuntimeError
-                    
+
             device_backend = self.provider.get_backend(backend)
             self.backend = AerSimulator.from_backend(device_backend)
-            # # self.backend = QasmSimulator()
-
-            # n_workers = 5
-            # exc = Client(address=LocalCluster(n_workers=n_workers, processes=True))
-            # # exc = ThreadPoolExecutor(max_workers=n_workers)
-            # # Set executor and max_job_size
-            # self.backend.set_options(executor=exc)
-            # self.backend.set_options(max_job_size=1) # see doc: https://qiskit.org/documentation/apidoc/parallel.html#usage-of-executor
 
             bs = BackendSampler(
                 self.backend,
                 options={
                     "shots": self.n_shots,
                 },
-                # skip_transpilation=False,
             )
         else:
             from .ibmq_access import token, hub, group, project
