@@ -255,7 +255,7 @@ class Instructor:
         """
 
         if torch_seed is not None:
-            t.use_deterministic_algorithms(True)
+            # t.use_deterministic_algorithms(True)
             self.rng = t.manual_seed(torch_seed)
 
         self.device = t.device(
@@ -451,6 +451,7 @@ class Instructor:
 
                         if mode == "train":
                             self.model.train()  # set the module in training mode
+                            self.optimizer.zero_grad()
 
                             logits = self.model(states)
                             loss = cross_entropy(
@@ -467,7 +468,6 @@ class Instructor:
                             # self.plotBatchGraphs(logits, labels)
 
                             # do the actual optimization
-                            self.optimizer.zero_grad()
                             loss.backward()
                             self.optimizer.step()
 
@@ -489,10 +489,10 @@ class Instructor:
                                     )
 
                             labels = labels.cpu()
-                            if labels.numpy().min() < -1:
-                                raise Exception(
-                                    f"Found graph with negative values: {labels.numpy()}"
-                                )
+                            # if labels.numpy().min() < -1:
+                            #     raise Exception(
+                            #         f"Found graph with negative values: {labels.numpy()}"
+                            #     )
                         elif mode == "val":
                             self.model.eval()  # trigger evaluation forward mode
                             with t.no_grad():  # disable autograd in tensors
