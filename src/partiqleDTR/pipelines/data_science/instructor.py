@@ -303,7 +303,12 @@ class Instructor:
         self.zero_mean = zero_mean
         self.batch_size = batch_size
 
-        if quantum_optimizer and classical_optimizer:
+        if "q" in self.model._get_name():
+            self.gradient_curvature_threshold = float(gradient_curvature_threshold)
+            self.gradient_curvature_history = int(gradient_curvature_history)
+
+
+        if quantum_optimizer and classical_optimizer and "q" in self.model._get_name():
             try:
                 sel_q_optim = getattr(t.optim, quantum_optimizer)
             except AttributeError:
@@ -346,12 +351,9 @@ class Instructor:
                 self.model.parameters(), lr=learning_rate, amsgrad=False
             )
             self.scheduler = StepLR(
-                self.optimizer, step_size=learning_rate_decay, decay_after=decay_after
+                self.optimizer, step_size=decay_after, gamma=learning_rate_decay
             ) # use secheduling only for the classical optim
 
-        if self.model._get_name() == "qgnn":
-            self.gradient_curvature_threshold = float(gradient_curvature_threshold)
-            self.gradient_curvature_history = int(gradient_curvature_history)
 
         self.n_classes = n_classes
 
