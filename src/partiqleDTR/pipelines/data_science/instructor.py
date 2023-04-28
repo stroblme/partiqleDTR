@@ -691,7 +691,7 @@ class Instructor:
             log.error(f"Exception occured during training\n{traceback.print_exc()}\n")
 
         # quickly print the gradients..
-        if self.log_gradients and len(all_grads) > 0:
+        if self.logging and self.log_gradients and len(all_grads) > 0:
             all_grads = t.stack(all_grads)
 
             g_plt, g3d_plt = self.plotGradients(
