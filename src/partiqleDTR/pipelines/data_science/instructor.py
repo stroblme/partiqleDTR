@@ -669,7 +669,8 @@ class Instructor:
                         mlflow.log_metric(
                             key=f"{mode}_perfect_lcag", value=epoch_perfect_lcag, step=epoch
                         )
-                    elif trial is not None: # if logging is not enabled we are most likely in an optuna run, but check for the trial to be sure
+                    # we only care about the validation accuracy
+                    elif trial is not None and mode == self.plot_mode: # if logging is not enabled we are most likely in an optuna run, but check for the trial to be sure
                         trial.report(epoch_acc, epoch) # trial.report is not supported for multi-objective study
 
                         if trial.should_prune():
