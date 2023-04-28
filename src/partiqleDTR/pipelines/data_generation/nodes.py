@@ -310,9 +310,9 @@ def gen_events_from_structure(
         #     modes = modes_names[1:]
         # else:
         #     modes = modes_names[2:]
+        # modes = [m for m, e in events_per_top.items() if e >= i]
         # save_dir.mkdir(parents=True, exist_ok=True)
         # ----------------------------------------------------------------
-        # modes = [m for m, e in events_per_top.items() if e >= i]
         modes = modes_names
 
         if i >= n_topologies:
