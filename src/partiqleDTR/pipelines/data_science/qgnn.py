@@ -144,18 +144,10 @@ class qgnn(nn.Module):
                 f"Searching for backend {backend} on IBMQ using token {token[:10]}****, hub {hub}, group {group} and project {project}"
             )
             try:
-                self.provider = IBMProvider(
-                    token=token,
-                    hub=hub,
-                    group=group,
-                    project=project,
-                )
+                self.provider = IBMProvider(token=token, instance=f"{hub}/{group}/{project}")
             except:
-                try:
-                    self.provider = IBMProvider()
-                except:
-                    log.error("Failed to load accounts")
-                    raise RuntimeError
+                log.error("Failed to load accounts")
+                raise RuntimeError
 
             device_backend = self.provider.get_backend(backend)
             self.backend = AerSimulator.from_backend(device_backend)
@@ -172,12 +164,12 @@ class qgnn(nn.Module):
             log.info(
                 f"Searching for backend {backend} on IBMQ using token {token[:10]}****, hub {hub}, group {group} and project {project}"
             )
-            self.provider = IBMProvider(
-                token=token,
-                hub=hub,
-                group=group,
-                project=project,
-            )
+            try:
+                self.provider = IBMProvider(token=token, instance=f"{hub}/{group}/{project}")
+            except:
+                log.error("Failed to load accounts")
+                raise RuntimeError
+                
             self.backend = self.provider.get_backend(backend)
 
         qnn = CustomSamplerQNN(
