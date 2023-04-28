@@ -256,7 +256,7 @@ class Instructor:
 
         if torch_seed is not None:
             t.use_deterministic_algorithms(True)
-            t.manual_seed(torch_seed)
+            self.rng = t.manual_seed(torch_seed)
 
         self.device = t.device(
             "cuda" if t.cuda.is_available() and device != "cpu" else "cpu"
@@ -412,6 +412,7 @@ class Instructor:
                         batch_size=self.batch_size,
                         shuffle=True,
                         collate_fn=rel_pad_collate_fn,
+                        generator=self.rng
                     )  # to handle varying input size
 
                     # might seem better to be put in data processing or sth.
@@ -434,7 +435,7 @@ class Instructor:
                     # mlflow.log_figure(g_plt.gcf(), f"gradients.png")
                     if self.logging:
                         log.info(
-                            f"Running epoch {epoch} in mode {mode} over {len(data_batch)*self.batch_size} samples"
+                            f"Running epoch {epoch} in mode {mode} over {len(self.data[mode].x)} samples"
                         )
 
                     ################################################################
