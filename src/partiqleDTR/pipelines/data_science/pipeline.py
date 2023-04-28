@@ -178,7 +178,7 @@ def create_training_optuna_pipeline(**kwargs) -> Pipeline:
                     "torch_seed": "params:torch_seed",
                     "gradient_curvature_threshold_range_quant": "params:gradient_curvature_threshold_range_quant",
                     "gradient_curvature_history_range_quant": "params:gradient_curvature_history_range_quant",
-                    "quantum_optimizer": "params:quantum_optimizer",
+                    "quantum_optimizer_range_quant": "params:quantum_optimizer_range_quant",
                     "quantum_momentum": "params:quantum_momentum",
                     "quantum_learning_rate_range_quant": "params:quantum_learning_rate_range_quant",
                     "quantum_learning_rate_decay_range_quant": "params:quantum_learning_rate_decay_range_quant",

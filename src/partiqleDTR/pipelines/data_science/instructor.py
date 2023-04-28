@@ -318,11 +318,11 @@ class Instructor:
             except AttributeError:
                 raise AttributeError(f"Did not found {quantum_optimizer}")
         
-            if quantum_momentum is not None:
+            if quantum_optimizer == "SGD":
                 q_optim = sel_q_optim(
                         self.model.quantum_layer.parameters(), lr=quantum_learning_rate, momentum=quantum_momentum
                     )
-            else:
+            elif quantum_optimizer == "Adam":
                 q_optim = sel_q_optim(
                         self.model.quantum_layer.parameters(), lr=quantum_learning_rate,
                     )

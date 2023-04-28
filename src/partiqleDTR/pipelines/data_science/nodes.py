@@ -126,7 +126,7 @@ def create_hyperparam_optimizer(
     torch_seed: int,
     gradient_curvature_threshold_range_quant: float,
     gradient_curvature_history_range_quant: int,
-    quantum_optimizer: str,
+    quantum_optimizer_range_quant: List,
     quantum_momentum: float,
     quantum_learning_rate_range_quant: List,
     quantum_learning_rate_decay_range_quant: List,
@@ -196,6 +196,7 @@ def create_hyperparam_optimizer(
             "quantum_learning_rate_decay_range_quant": quantum_learning_rate_decay_range_quant,
             "batch_size_range": batch_size_range,
             "gradient_curvature_history_range_quant": gradient_curvature_history_range_quant,
+            "quantum_optimizer_range_quant": quantum_optimizer_range_quant,
             "gradient_curvature_threshold_range_quant": gradient_curvature_threshold_range_quant,
         },
     )
@@ -237,7 +238,6 @@ def create_hyperparam_optimizer(
             "gradients_clamp": gradients_clamp,
             "gradients_spreader": gradients_spreader,
             "torch_seed": torch_seed,
-            "quantum_optimizer": quantum_optimizer,
             "quantum_momentum": quantum_momentum,
             "classical_optimizer": classical_optimizer,
             "logging": False
