@@ -55,6 +55,7 @@ bokeh = "2.4.3"
 plotly = "^5.13.1"
 pytest-cov = "^4.0.0"
 optuna-dashboard = "^0.9.1"
+qiskit-ibm-provider = "^0.5.2"
 
 [[tool.poetry.source]]
 name = "torch"

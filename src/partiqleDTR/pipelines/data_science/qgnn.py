@@ -18,6 +18,7 @@ from qiskit_aer import AerSimulator
 from qiskit.visualization import *
 from qiskit.primitives import BackendSampler
 from qiskit_machine_learning.connectors import TorchConnector
+from qiskit_ibm_provider import IBMProvider
 
 from dask.distributed import LocalCluster, Client
 from concurrent.futures import ThreadPoolExecutor
@@ -143,7 +144,7 @@ class qgnn(nn.Module):
                 f"Searching for backend {backend} on IBMQ using token {token[:10]}****, hub {hub}, group {group} and project {project}"
             )
             try:
-                self.provider = q.IBMQ.enable_account(
+                self.provider = IBMProvider(
                     token=token,
                     hub=hub,
                     group=group,
@@ -151,7 +152,7 @@ class qgnn(nn.Module):
                 )
             except:
                 try:
-                    self.provider = q.IBMQ.load_account()
+                    self.provider = IBMProvider()
                 except:
                     log.error("Failed to load accounts")
                     raise RuntimeError
@@ -171,7 +172,7 @@ class qgnn(nn.Module):
             log.info(
                 f"Searching for backend {backend} on IBMQ using token {token[:10]}****, hub {hub}, group {group} and project {project}"
             )
-            self.provider = q.IBMQ.enable_account(
+            self.provider = IBMProvider(
                 token=token,
                 hub=hub,
                 group=group,

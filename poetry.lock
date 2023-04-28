@@ -2488,6 +2488,28 @@ scipy = ">=1.0"
 dask = ["dask", "distributed"]
 
 [[package]]
+name = "qiskit-ibm-provider"
+version = "0.5.2"
+description = "Qiskit IBM Quantum Provider for accessing the quantum devices and simulators at IBM"
+category = "main"
+optional = false
+python-versions = ">=3.7"
+
+[package.dependencies]
+numpy = ">=1.13"
+python-dateutil = ">=2.8.0"
+qiskit-terra = ">=0.23.1"
+requests = ">=2.19"
+requests-ntlm = ">=1.1.0"
+typing-extensions = ">=4.3"
+urllib3 = ">=1.21.1"
+websocket-client = ">=1.5.1"
+websockets = ">=10.0"
+
+[package.extras]
+visualization = ["ipython (>=5.0.0)", "ipyvue (>=1.8.5)", "ipyvuetify (>=1.1)", "ipywidgets (<8.0.0)", "matplotlib (>=2.1)", "plotly (>=4.4)", "pyperclip (>=1.7)", "seaborn (>=0.9.0)", "traitlets (!=5.0.5)"]
+
+[[package]]
 name = "qiskit-ibmq-provider"
 version = "0.20.2"
 description = "Qiskit provider for accessing the quantum devices and simulators at IBMQ"
@@ -3605,7 +3627,7 @@ testing = ["big-O", "flake8 (<5)", "jaraco.functools", "jaraco.itertools", "more
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.8.1,<3.11"
-content-hash = "ff64458cdaeaf9c6e064200def4ad41ca9d246a25c5309cc8d517c2700310eb3"
+content-hash = "aee2b2df06d65b618d8d82d54fec3a43050d7979702f3ab8cb141b4e257f27e5"
 
 [metadata.files]
 absl-py = [
@@ -5429,6 +5451,10 @@ qiskit-aer = [
     {file = "qiskit_aer-0.12.0-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:af97dd2edae5052416814c4ad4e7cda3a6dba2c0cac38a53a3312f16873b3c9d"},
     {file = "qiskit_aer-0.12.0-cp39-cp39-win32.whl", hash = "sha256:85193c7eb0d42ba0f7a41ad2e7777361f75076ca93bbd423ad9a1b2c30510c1c"},
     {file = "qiskit_aer-0.12.0-cp39-cp39-win_amd64.whl", hash = "sha256:01e59a4ca332b423ad1852f3925c9e237eb1e03a28068f99eff0e817d145dd77"},
+]
+qiskit-ibm-provider = [
+    {file = "qiskit-ibm-provider-0.5.2.tar.gz", hash = "sha256:4ecd5c456102d09280a23664b4dbd6275dc95bcad8e0d1be8d3163da3da66419"},
+    {file = "qiskit_ibm_provider-0.5.2-py3-none-any.whl", hash = "sha256:73935b783db2f904a7249abd1f8d45a5f4f76905db4f5405c715a65349f1e4e4"},
 ]
 qiskit-ibmq-provider = [
     {file = "qiskit-ibmq-provider-0.20.2.tar.gz", hash = "sha256:f343025ca1ddaa6aad071e53f5b4c60df798aff0f3681266a8de35e933e61a9c"},
