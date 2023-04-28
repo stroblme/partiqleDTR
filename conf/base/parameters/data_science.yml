@@ -48,8 +48,6 @@ skip_global: True # activates skip connections on global scales
 # Quantum
 data_reupload: False
 data_reupload_range_quant: [True, False]
-add_rot_gates: True
-add_rot_gates_range_quant: [True, False]
 
 n_shots: 1024
 n_shots_range_quant: [16, 64, 256, 1024, 2048]
