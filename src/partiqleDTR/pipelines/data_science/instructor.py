@@ -277,17 +277,17 @@ class Instructor:
                 ),
                 "model_printout.txt",
             )
-        for p in self.model.parameters():
-            p.register_hook(
-                lambda grad: t.clamp(grad, -gradients_clamp, gradients_clamp)
-            )
-            p.register_hook(
-                lambda grad: t.where(
-                    grad < float(gradients_spreader),
-                    t.rand(1) * float(gradients_spreader) * 1e1,
-                    grad,
-                )
-            )
+        # for p in self.model.parameters():
+        #     p.register_hook(
+        #         lambda grad: t.clamp(grad, -gradients_clamp, gradients_clamp)
+        #     )
+        #     p.register_hook(
+        #         lambda grad: t.where(
+        #             grad < float(gradients_spreader),
+        #             t.rand(1) * float(gradients_spreader) * 1e1,
+        #             grad,
+        #         )
+        #     )
 
         self.pytorch_total_params = sum(p.numel() for p in model.parameters())
         if self.logging:
