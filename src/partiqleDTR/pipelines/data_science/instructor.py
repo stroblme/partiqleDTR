@@ -302,6 +302,7 @@ class Instructor:
         self.normalize_individually = normalize_individually
         self.zero_mean = zero_mean
         self.batch_size = batch_size
+        self.n_classes = n_classes
 
         if "q" in self.model._get_name():
             self.gradient_curvature_threshold = float(gradient_curvature_threshold)
@@ -355,7 +356,6 @@ class Instructor:
             ) # use secheduling only for the classical optim
 
 
-        self.n_classes = n_classes
 
         if model_state_dict is not None:
             self.model.load_state_dict(model_state_dict)
@@ -451,8 +451,8 @@ class Instructor:
 
                         if mode == "train":
                             self.model.train()  # set the module in training mode
-                            self.optimizer.zero_grad()
 
+                            self.optimizer.zero_grad()
                             logits = self.model(states)
                             loss = cross_entropy(
                                 logits, labels, weight=weights, ignore_index=-1
@@ -488,7 +488,7 @@ class Instructor:
                                         f"Gradients in epoch {epoch}, iteration {i}: {self.model.quantum_layer.weight.grad}"
                                     )
 
-                            labels = labels.cpu()
+                            # labels = labels.cpu()
                             # if labels.numpy().min() < -1:
                             #     raise Exception(
                             #         f"Found graph with negative values: {labels.numpy()}"
@@ -554,7 +554,7 @@ class Instructor:
                                 [*logits]
                             )  # flatten along the batch size
                             labels_for_plotting.extend(
-                                [*labels]
+                                [*labels.cpu()]
                             )  # flatten along the batch size
 
                     # DATA Loop
