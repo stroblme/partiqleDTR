@@ -149,9 +149,9 @@ def gen_structure_from_parameters(
 
     topology_isomorphism_invariates = []
 
-    total_topologies = n_topologies
+    # total_topologies = n_topologies
     # if generate_unknown:
-    #     total_topologies = 3 * n_topologies
+    total_topologies = 3 * n_topologies
 
     decay_tree_structure = list()
 
