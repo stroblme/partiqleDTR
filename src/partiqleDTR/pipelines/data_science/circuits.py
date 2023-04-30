@@ -365,7 +365,7 @@ class pqc_circuits:
                 )
             else:
                 qc.crz(
-                    q.circuit.Parameter(f"{identifier}_crx_{i+1}_{i}"),
+                    q.circuit.Parameter(f"{identifier}_crz_{i+1}_{i}"),
                     n_qubits - i - 1,
                     n_qubits - i,
                     f"{identifier}_crz_{i+1}_{i}",
