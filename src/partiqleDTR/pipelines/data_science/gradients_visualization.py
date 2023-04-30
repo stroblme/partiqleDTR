@@ -71,8 +71,8 @@ def heatmap_3d(
     fig = go.Figure(
         [
             go.Surface(
-                x=row_labels,
-                y=col_labels,
+                x=col_labels,
+                y=row_labels,
                 z=data,
                 colorscale=cmap,
                 colorbar=dict(title=dict(text=cbarlabel, side="right")),
@@ -83,8 +83,8 @@ def heatmap_3d(
     fig.update_layout(
         title=dict(text=title),
         scene=dict(
-            yaxis=dict(title="Parameter Index"),
-            xaxis=dict(title="Epoch"),
+            xaxis=dict(title="Parameter Index"),
+            yaxis=dict(title="Epoch"),
             zaxis_title="Gradient"
         )
     )
