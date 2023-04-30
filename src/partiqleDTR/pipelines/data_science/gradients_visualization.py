@@ -71,8 +71,8 @@ def heatmap_3d(
     fig = go.Figure(
         [
             go.Surface(
-                x=col_labels,
-                y=row_labels,
+                x=row_labels,
+                y=col_labels,
                 z=data,
                 colorscale=cmap,
                 colorbar=dict(title=dict(text=cbarlabel, side="right")),
