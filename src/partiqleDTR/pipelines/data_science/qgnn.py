@@ -320,7 +320,7 @@ class qgnn(nn.Module):
         return x
 
 
-    def print_layer(x):
+    def print_layer(self, x):
         from plotly import graph_objects as go
         from plotly.subplots import make_subplots
 
@@ -329,7 +329,7 @@ class qgnn(nn.Module):
 
         for i in range(rows):
             fig.add_trace(go.Heatmap(
-                    z=x[i],
+                    z=x.detach().numpy()[i],
                     type="heatmap",
                 ),
                 col=1, row=i+1)
