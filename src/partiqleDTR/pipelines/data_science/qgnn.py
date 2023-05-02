@@ -318,3 +318,20 @@ class qgnn(nn.Module):
             x = t.div(x + t.transpose(x, 2, 3), 2)  # (b, c, l, l)
 
         return x
+
+
+    def print_layer(x):
+        from plotly import graph_objects as go
+        from plotly.subplots import make_subplots
+
+        rows = x.shape[0]
+        fig = make_subplots(rows=8, cols=1)
+
+        for i in range(rows):
+            fig.add_trace(go.Heatmap(
+                    z=x[i],
+                    type="heatmap",
+                ),
+                col=1, row=i+1)
+
+        fig.show()
