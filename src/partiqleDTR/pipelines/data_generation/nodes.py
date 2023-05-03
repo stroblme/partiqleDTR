@@ -151,14 +151,11 @@ def gen_structure_from_parameters(
 
     # total_topologies = n_topologies
     # if generate_unknown:
-    total_topologies = 3 * n_topologies
+    total_topologies = n_topologies
 
     decay_tree_structure = list()
 
     rd = np.random.default_rng(seed)  # rd.choice #TODO: check that
-    # n_seeds = total_topologies * max(
-    #     1, iso_retries
-    # )  # TODO: this is chosen on gut feeling..
 
     for i in range(total_topologies):
         # t_rd = np.random.default_rng(rd.integers(1000*total_topologies))
@@ -380,5 +377,18 @@ def evaluate_seeds_fsps(
             seeds_fsp_dict[max_fsps] = []
         seeds_fsp_dict[max_fsps].append(cur_seed)
 
-    return {"seeds_fsp_dict":pd.DataFrame(dict([ (k,pd.Series(v)) for k,v in seeds_fsp_dict.items() ])).fillna(0.0).astype(int)} #from https://stackoverflow.com/questions/19736080/creating-dataframe-from-a-dictionary-where-entries-have-different-lengths
+    data = pd.DataFrame(dict([ (k,pd.Series(v)) for k,v in seeds_fsp_dict.items() ]))
+
+    visualize_seeds_fsps(data)
+
+    return {"seeds_fsp_dict":data.fillna(0.0).astype(int)} #from https://stackoverflow.com/questions/19736080/creating-dataframe-from-a-dictionary-where-entries-have-different-lengths
     
+def visualize_seeds_fsps(data):
+    import plotly.express as px
+    
+    hist = data.count()
+
+    fig = px.bar(hist, labels={"index":"Finite State Particles", "value":"Counts"})
+
+    fig.show()
+
