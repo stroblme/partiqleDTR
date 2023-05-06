@@ -61,6 +61,8 @@ handles = []
 labels = []
 
 for i, metric in enumerate(metrics):
+    if "logic" in metric:
+        continue
     if "loss" in metric:
         best = min(metric_histories[metric][1])
         best_idx = np.argmin(metric_histories[metric][1])
@@ -75,7 +77,7 @@ for i, metric in enumerate(metrics):
     ax.tick_params(labelsize=SMALL_SIZE)
 
     # highlight the best line
-    # plt.axhline(y=best, xmin=hline_offset/(len(metric_histories[metric][0])), xmax=(best_idx+hline_offset)/(len(metric_histories[metric][0])), color=cmap(i), linewidth=0.8, linestyle=':', label=f"best_{metric}")
+    plt.axhline(y=best, xmin=hline_offset/(len(metric_histories[metric][0])), xmax=(best_idx+hline_offset)/(len(metric_histories[metric][0])), color=cmap(i), linewidth=0.8, linestyle=':', label=f"best_{metric}")
 
     handles.append(cmap(i))
     labels.append(f"best_{metric}")
@@ -91,7 +93,7 @@ ax.spines["bottom"].set_visible(False)
 ax.spines["left"].set_visible(False)
 ax.set_xlabel("Epoch", fontsize=MEDIUM_SIZE)
 ax.set_ylabel("Metric", fontsize=MEDIUM_SIZE)
-ax.set_ylim([0.0, 0.85])
+ax.set_ylim([0.0, 0.9])
 
 plt.axvline(x=1, color="#666666", linewidth=0.7)
 plt.axhline(y=0, color="#666666", linewidth=0.7)
