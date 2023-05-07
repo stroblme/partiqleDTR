@@ -70,7 +70,7 @@ predefined_vqc_range_quant: ["circuit_191", "circuit_19", "circuit_18", "circuit
 
 predefined_iec: "direct_mapping" 
 measurement: "entangled" # mutually_exclusive, all, entangled
-backend: "aer_simulator" # aer_simulator, aer_simulator_statevector, ibm_perth, fake_ibm_perth
+backend: "fake_ibm_perth" # aer_simulator, aer_simulator_statevector, ibm_perth, fake_ibm_perth
 quantum_optimizer: "SGD" #SGD, Adam
 quantum_optimizer_range_quant: ["Adam", "SGD"] #SGD, Adam
 quantum_momentum: 0.95 #0.001
