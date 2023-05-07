@@ -59,7 +59,7 @@
             "label": "Optuna Dashboard",
             "type": "shell",
             "command": "poetry",
-            "args": ["run", "optuna-dashboard", "sqlite:///studies/partiqledtr/db"],
+            "args": ["run", "optuna-dashboard", "sqlite:///studies/partiqledtr.db"],
             "group": "none",
             "presentation": {
                 "reveal": "never",

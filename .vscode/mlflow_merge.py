@@ -5,7 +5,7 @@ import shutil
 
 mlflow_path = "./mlruns/1"
 
-merge_from = ["/storage/mstrobl/PartiqleGAN", "/home/mstrobl/ssd_storage/partiqleDTR", "/local/scratch/mstrobl/partiqleDTR"]
+merge_from = ["/storage/mstrobl/PartiqleGAN", "/home/mstrobl/ssd_storage/partiqleDTR", "/local/scratch/mstrobl/partiqleDTR", "/home/ubuntu/partiqleDTR"]
 replace_with = "/home/lc3267/Documents/CodeWorkspace/PartiqleGAN"
 
 runs = glob.glob(os.path.join(mlflow_path, "*"))
