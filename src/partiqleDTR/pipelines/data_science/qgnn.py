@@ -130,12 +130,6 @@ class qgnn(nn.Module):
             # self.backend.set_options(executor=exc)
             # self.backend.set_options(max_job_size=1) # see doc: https://qiskit.org/documentation/apidoc/parallel.html#usage-of-executor
 
-            bs = BackendSampler(
-                self.backend,
-                options={
-                    "shots": self.n_shots,
-                },
-            )
         elif "fake" in backend:
             backend = backend.replace("fake_", "")
             from .ibmq_access import token, hub, group, project
@@ -152,12 +146,7 @@ class qgnn(nn.Module):
             device_backend = self.provider.get_backend(backend)
             self.backend = AerSimulator.from_backend(device_backend)
 
-            bs = BackendSampler(
-                self.backend,
-                options={
-                    "shots": self.n_shots,
-                },
-            )
+            
         else:
             from .ibmq_access import token, hub, group, project
 
@@ -171,6 +160,13 @@ class qgnn(nn.Module):
                 raise RuntimeError
                 
             self.backend = self.provider.get_backend(backend)
+
+        bs = BackendSampler(
+                self.backend,
+                options={
+                    "shots": self.n_shots,
+                },
+            )
 
         qnn = CustomSamplerQNN(
             circuit=self.qc,
