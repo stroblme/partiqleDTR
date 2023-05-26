@@ -93,7 +93,7 @@ ax.spines["bottom"].set_visible(False)
 ax.spines["left"].set_visible(False)
 ax.set_xlabel("Epoch", fontsize=MEDIUM_SIZE)
 ax.set_ylabel("Metric", fontsize=MEDIUM_SIZE)
-ax.set_ylim([0.0, 0.9])
+ax.set_ylim([0.0, 1.0]) #0.9
 
 plt.axvline(x=1, color="#666666", linewidth=0.7)
 plt.axhline(y=0, color="#666666", linewidth=0.7)
