@@ -102,11 +102,12 @@ class Hyperparam_Optimizer:
 
             assert isinstance(value, List)
 
-            # if we have three values (-> no bool) and they are not categorical (str)
+            # if we have three values (-> no bool) and they are not categorical (str) and the last one is a str (linear/log)
             if (
                 len(value) == 3
                 and not isinstance(value[0], str)
                 and not isinstance(value[1], str)
+                and isinstance(value[2], str)
             ):
                 low = value[0]
                 high = value[1]
