@@ -344,7 +344,7 @@ class Instructor:
             )
         else:
             try:
-                sel_optim = getattr(t.optim, quantum_optimizer or classical_optimizer)
+                sel_optim = getattr(t.optim, classical_optimizer)
             except AttributeError:
                 raise AttributeError(f"Did not found {quantum_optimizer or classical_optimizer}")
 
